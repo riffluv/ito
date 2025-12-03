@@ -11,6 +11,7 @@ import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
 import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import { useRevealGate } from "@/lib/hooks/useRevealGate";
+import { useRoundTimeline } from "@/lib/hooks/useRoundTimeline";
 import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
 import { isTopicType, type TopicType } from "@/lib/topics";
 import type { PlayerDoc } from "@/lib/types";
@@ -431,6 +432,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     updateOptimisticProposal: updateOptimisticProposalOverride,
   });
 
+  const { showSpinner, spinnerText, emit: emitStageEvent, reset: resetStage } =
+    useRoundTimeline();
+
+  React.useEffect(() => {
+    resetStage();
+  }, [resetStage, roomId]);
+
+
   const {
     autoStartLocked,
     beginLock: beginAutoStartLock,
@@ -469,6 +478,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     presenceReady,
     onFeedback: setInlineFeedback,
     showtimeIntents: showtimeIntentHandlers,
+    onStageEvent: emitStageEvent,
   });
 
   const effectiveDefaultTopicType = hostDefaultTopicType;
@@ -571,7 +581,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const playCardDeal = useSoundEffect("card_deal");
   const playTopicShuffle = useSoundEffect("topic_shuffle");
   const showQuickStartProgress =
-    quickStartPending || autoStartLocked || roundPreparing || isRestarting;
+    showSpinner ||
+    quickStartPending ||
+    autoStartLocked ||
+    roundPreparing ||
+    isRestarting;
+
+  React.useEffect(() => {
+    if (
+      !quickStartPending &&
+      !autoStartLocked &&
+      !roundPreparing &&
+      !isRestarting
+    ) {
+      resetStage();
+    }
+  }, [
+    quickStartPending,
+    autoStartLocked,
+    roundPreparing,
+    isRestarting,
+    resetStage,
+  ]);
 
   const preparing = !!(
     autoStartLocked ||
@@ -651,7 +682,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               },
             }}
           >
-            カードを配布しています…
+            {spinnerText}
           </Text>
         </Box>
       )}

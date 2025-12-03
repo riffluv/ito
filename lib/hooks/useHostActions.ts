@@ -5,6 +5,9 @@ import {
   type HostActionsController,
 } from "@/lib/host/HostActionsController";
 import {
+  type RoundStageEvent,
+} from "@/lib/hooks/useRoundTimeline";
+import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
@@ -65,6 +68,7 @@ type UseHostActionsOptions = {
   presenceDegraded?: boolean;
   playerCount?: number;
   showtimeIntents?: ShowtimeIntentHandlers;
+  onStageEvent?: (event: RoundStageEvent) => void;
 };
 
 export function useHostActions({
@@ -86,6 +90,7 @@ export function useHostActions({
   presenceDegraded = false,
   playerCount,
   showtimeIntents,
+  onStageEvent,
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -272,6 +277,7 @@ export function useHostActions({
 
       markActionStart("quickStart");
       setQuickStartPending(true);
+      onStageEvent?.("round:prepare");
       notify({
         id: toastIds.genericInfo(roomId, "quickstart-pending"),
         title: "ゲーム開始の準備中…",
@@ -362,6 +368,8 @@ export function useHostActions({
         });
 
         success = true;
+        onStageEvent?.("round:start");
+        onStageEvent?.("round:end");
         return true;
       } catch (error) {
         clearAutoStartLock();
@@ -420,6 +428,9 @@ export function useHostActions({
         return false;
       } finally {
         setQuickStartPending(false);
+        if (!success) {
+          onStageEvent?.("round:abort");
+        }
         finalizeAction("quickStart", success ? "success" : "error");
       }
     },
@@ -442,6 +453,7 @@ export function useHostActions({
       finalizeAction,
       hostActions,
       roomStatus,
+      onStageEvent,
     ]
   );
 
@@ -454,6 +466,7 @@ export function useHostActions({
         options?.recallSpectators ?? true;
       markActionStart("reset");
       setIsResetting(true);
+      onStageEvent?.("reset:start");
       if (shouldPlaySound) {
         playResetGame();
       }
@@ -511,6 +524,7 @@ export function useHostActions({
         finalizeAction("reset", "error");
       } finally {
         setIsResetting(false);
+        onStageEvent?.("reset:done");
       }
     },
     [
@@ -522,6 +536,7 @@ export function useHostActions({
       markActionStart,
       finalizeAction,
       hostActions,
+      onStageEvent,
     ]
   );
 
@@ -561,6 +576,7 @@ export function useHostActions({
     const startedAt =
       typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
+    onStageEvent?.("round:prepare");
     let markedRoundPreparing = false;
     try {
       const roundPreparingStart =
@@ -597,6 +613,12 @@ export function useHostActions({
           Math.round(performance.now() - startedAt)
         );
       }
+      if (markedRoundPreparing) {
+        onStageEvent?.("round:start");
+        onStageEvent?.("round:end");
+      } else {
+        onStageEvent?.("round:abort");
+      }
     }
   }, [
     isHost,
@@ -610,6 +632,7 @@ export function useHostActions({
     clearAutoStartLock,
     roomId,
     syncRoundPreparing,
+    onStageEvent,
   ]);
 
   const REVEAL_DELAY_MS = 500;
