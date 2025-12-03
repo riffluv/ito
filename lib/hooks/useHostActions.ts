@@ -558,13 +558,24 @@ export function useHostActions({
     if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
 
-    let markedRoundPreparing = false;
-    await syncRoundPreparing(true);
-    markedRoundPreparing = true;
-    traceAction("ui.host.nextGame", { roomId });
-    beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
+    const startedAt =
+      typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
+    let markedRoundPreparing = false;
     try {
+      const roundPreparingStart =
+        typeof performance !== "undefined" ? performance.now() : null;
+      await syncRoundPreparing(true);
+      markedRoundPreparing = true;
+      if (roundPreparingStart !== null) {
+        setMetric(
+          "hostAction",
+          "nextGame.roundPreparingSetMs",
+          Math.round(performance.now() - roundPreparingStart)
+        );
+      }
+      traceAction("ui.host.nextGame", { roomId });
+      beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
       playOrderConfirm();
       const ok = await restartGame({ playSound: false });
       if (!ok) {
@@ -578,6 +589,13 @@ export function useHostActions({
       setIsRestarting(false);
       if (markedRoundPreparing) {
         await syncRoundPreparing(false);
+      }
+      if (startedAt !== null) {
+        setMetric(
+          "hostAction",
+          "nextGame.totalMs",
+          Math.round(performance.now() - startedAt)
+        );
       }
     }
   }, [
