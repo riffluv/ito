@@ -5,26 +5,21 @@ import {
   pixiBackgroundHost,
   type SetSceneResult,
 } from "@/lib/pixi/backgroundHost";
+import {
+  BACKGROUND_EVENT_NAME,
+  bootstrapBackgroundTheme,
+  DEFAULT_BACKGROUND_THEME,
+  normalizeBackgroundTheme,
+  persistBackgroundTheme,
+  resolveEffectiveBackground,
+  type BackgroundTheme,
+} from "@/lib/pixi/backgroundPreference";
 import { type PixiBackgroundProfile } from "@/lib/pixi/backgroundTypes";
 import { logError, logInfo, logWarn } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-type BackgroundType = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
-
-const normalizeBackgroundType = (value: string | null): BackgroundType => {
-  if (value === "pixi-simple" || value === "pixi-lite") {
-    return "pixi-simple";
-  }
-  if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
-    return "pixi-dq";
-  }
-  if (value === "pixi-inferno" || value === "inferno") {
-    return "pixi-inferno";
-  }
-  return "css";
-};
 
 const logPixiBackground = (
   level: "info" | "warn" | "error",
@@ -103,6 +98,16 @@ export interface PixiBackgroundProps {
   className?: string;
 }
 
+const getQualityForBackground = (id: BackgroundTheme): BackgroundQuality => {
+  if (id === "pixi-dq" || id === "pixi-inferno") {
+    return "high";
+  }
+  if (id === "pixi-simple") {
+    return "low";
+  }
+  return "low";
+};
+
 export function PixiBackground({ className }: PixiBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const { supports3D, gpuCapability, softwareRenderer } =
@@ -111,8 +116,11 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     softwareRenderer || gpuCapability === "low" ? "software" : "default";
   const shouldForceCssFallback = !supports3D || softwareRenderer;
 
-  const [backgroundType, setBackgroundType] =
-    useState<BackgroundType>("pixi-dq");
+  const [backgroundType, setBackgroundType] = useState<BackgroundTheme>(
+    typeof window !== "undefined"
+      ? bootstrapBackgroundTheme()
+      : DEFAULT_BACKGROUND_THEME
+  );
   const [sceneNonce, setSceneNonce] = useState(0);
   const [backgroundReady, setBackgroundReady] = useState(false);
   const [fallbackNotice, setFallbackNotice] = useState<{
@@ -121,7 +129,7 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   } | null>(null);
   const retryRef = useRef(0);
   const suppressPersistCssRef = useRef(false);
-  const fallbackPreviousTypeRef = useRef<BackgroundType | null>(null);
+  const fallbackPreviousTypeRef = useRef<BackgroundTheme | null>(null);
   const fallbackRestoreTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -161,7 +169,7 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
       if (backgroundType === "css" && suppressPersistCssRef.current) {
         return;
       }
-      localStorage.setItem("backgroundType", backgroundType);
+      persistBackgroundTheme(backgroundType, { emit: false });
       suppressPersistCssRef.current = false;
     } catch {
       // noop
@@ -169,35 +177,26 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   }, [backgroundType]);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("backgroundType");
-      if (saved) {
-        const normalized = normalizeBackgroundType(saved);
-        // Recover from previously persisted forced CSS fallback on devices that
-        // can render Pixi again. We rarely have a user-facing toggle to choose
-        // CSS explicitly, so prefer Pixi here.
-        setBackgroundType(normalized === "css" ? "pixi-dq" : normalized);
-      } else {
-        localStorage.setItem("backgroundType", "pixi-dq");
-        setBackgroundType("pixi-dq");
-      }
-    } catch {
-      // noop
-    }
+    const saved = bootstrapBackgroundTheme();
+    // Recover from previously persisted forced CSS fallback on devices that
+    // can render Pixi again. We rarely have a user-facing toggle to choose
+    // CSS explicitly, so prefer Pixi here.
+    setBackgroundType(saved === "css" ? DEFAULT_BACKGROUND_THEME : saved);
+
     const handleBackgroundChange = (event: Event) => {
       if (event instanceof CustomEvent) {
         setBackgroundType(
-          normalizeBackgroundType(event.detail?.backgroundType ?? null)
+          normalizeBackgroundTheme(event.detail?.backgroundType ?? null)
         );
       }
     };
     window.addEventListener(
-      "backgroundTypeChanged",
+      BACKGROUND_EVENT_NAME,
       handleBackgroundChange as EventListener
     );
     return () => {
       window.removeEventListener(
-        "backgroundTypeChanged",
+        BACKGROUND_EVENT_NAME,
         handleBackgroundChange as EventListener
       );
     };
@@ -245,16 +244,6 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     };
   }, [backgroundType]);
 
-  const effectiveQuality = useMemo<BackgroundQuality>(() => {
-    if (backgroundType === "pixi-dq" || backgroundType === "pixi-inferno") {
-      return "high";
-    }
-    if (backgroundType === "pixi-simple") {
-      return "low";
-    }
-    return "low";
-  }, [backgroundType]);
-
   const applySceneResult = useCallback((result: SetSceneResult) => {
     if (result.renderer === "pixi") {
       updateGlobalBackground({
@@ -278,7 +267,16 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   }, []);
 
   const applyBackgroundScene = useCallback(async () => {
-    const currentType = backgroundType;
+    const capability = {
+      supportsPixi: !shouldForceCssFallback,
+      allowHighQuality: gpuCapability !== "low" && !softwareRenderer,
+    };
+    const currentType = resolveEffectiveBackground({
+      hostTheme: undefined,
+      localTheme: backgroundType,
+      capability,
+    });
+    const effectiveQuality = getQualityForBackground(currentType);
     setBackgroundReady(false);
 
     if (currentType === "css" || shouldForceCssFallback) {
@@ -293,7 +291,7 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     }
 
     try {
-      const pixiKey = currentType as Exclude<BackgroundType, "css">;
+      const pixiKey = currentType as Exclude<BackgroundTheme, "css">;
       const initStart = performance.now();
       pixiBackgroundHost.setCanvasVisible(true);
       const result = await pixiBackgroundHost.setScene({
@@ -356,7 +354,6 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   }, [
     applySceneResult,
     backgroundType,
-    effectiveQuality,
     gpuCapability,
     performanceProfile,
     recordBackgroundMetric,

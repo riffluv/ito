@@ -10,13 +10,19 @@ import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Dialog, HStack, Stack, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useState as useLocalState, useState, useRef, useCallback } from "react";
+import {
+  bootstrapBackgroundTheme,
+  DEFAULT_BACKGROUND_THEME,
+  persistBackgroundTheme,
+  type BackgroundTheme,
+} from "@/lib/pixi/backgroundPreference";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import PIXI from "@/lib/pixi/instance";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 
-type BackgroundOption = "css" | "pixi-simple" | "pixi-dq" | "pixi-inferno";
+type BackgroundOption = BackgroundTheme;
 type SceneryVariant = "night" | "inferno";
 type SettingsTab = "game" | "graphics" | "sound";
 type GraphicsTab = "background" | "animation";
@@ -49,21 +55,6 @@ const CARD_ANIMATION_OPTIONS: ReadonlyArray<{
     description: "回転を省いて軽量表示にします",
   },
 ];
-
-const normalizeBackgroundOption = (
-  value: string | null
-): BackgroundOption => {
-  if (value === "pixi-simple" || value === "pixi-lite") {
-    return "pixi-simple";
-  }
-  if (value === "pixi-dq" || value === "pixi" || value === "pixijs") {
-    return "pixi-dq";
-  }
-  if (value === "pixi-inferno" || value === "inferno") {
-    return "pixi-inferno";
-  }
-  return "css";
-};
 
 // 背景タイプからバリエーションへのマッピング
 const getVariantFromBackground = (bg: BackgroundOption): SceneryVariant | null => {
@@ -124,8 +115,11 @@ export function SettingsModal({
   const [activeTab, setActiveTab] = useState<SettingsTab>("game");
 
   // 背景設定のstate（localStorageから読み込み）
-  const [backgroundType, setBackgroundType] =
-    useLocalState<BackgroundOption>("pixi-dq");
+  const [backgroundType, setBackgroundType] = useLocalState<BackgroundOption>(
+    typeof window !== "undefined"
+      ? bootstrapBackgroundTheme()
+      : DEFAULT_BACKGROUND_THEME
+  );
   const [graphicsTab, setGraphicsTab] = useState<GraphicsTab>("background");
   const soundManager = useSoundManager();
   const soundSettings = useSoundSettings();
@@ -253,32 +247,14 @@ export function SettingsModal({
 
   // localStorageから背景設定を読み込み
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("backgroundType");
-      if (saved) {
-        setBackgroundType(normalizeBackgroundOption(saved));
-      } else {
-        localStorage.setItem("backgroundType", "pixi-dq");
-        setBackgroundType("pixi-dq");
-      }
-    } catch {
-      // noop
-    }
+    const saved = bootstrapBackgroundTheme();
+    setBackgroundType(saved);
   }, [setBackgroundType]);
 
   // 背景設定のリアルタイム更新
   const handleBackgroundChange = (newType: BackgroundOption) => {
     setBackgroundType(newType);
-    try {
-      localStorage.setItem("backgroundType", newType);
-      window.dispatchEvent(
-        new CustomEvent("backgroundTypeChanged", {
-          detail: { backgroundType: newType },
-        })
-      );
-    } catch {
-      // noop
-    }
+    persistBackgroundTheme(newType);
   };
 
   // バリエーション変更ハンドラ
@@ -334,7 +310,8 @@ export function SettingsModal({
       try {
         if (typeof window !== "undefined") {
           window.localStorage.setItem("defaultTopicType", defaultTopicType);
-          window.localStorage.setItem("backgroundType", backgroundType);
+          // 背景はローカル専用の好みとして永続化（ホスト強制は今後追加予定）
+          persistBackgroundTheme(backgroundType, { emit: false });
           // 🧩 他UIへ即時反映用のカスタムイベント
           window.dispatchEvent(
             new CustomEvent("defaultTopicTypeChanged", {
