@@ -45,6 +45,11 @@ export type RoomDoc = {
   hostName?: string; // ホスト名（Firestore最適化のため直接埋め込み）
   creatorId: string;
   creatorName?: string;
+  /**
+   * 部屋作成時点のアプリバージョン（クライアントの世界線を固定するためのメタ情報）
+   * 旧データ互換のため optional だが、新規作成では必ず付与する想定。
+   */
+  appVersion?: string;
   options: RoomOptions;
   // フェーズは waiting -> clue -> (reveal) -> finished に限定
   status: "waiting" | "clue" | "reveal" | "finished";

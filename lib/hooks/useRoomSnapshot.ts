@@ -5,7 +5,12 @@ import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { notify } from "@/components/ui/notify";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
-import { ensureMember, joinRoomFully } from "@/lib/services/roomService";
+import {
+  ensureMember,
+  joinRoomFully,
+  getRoomServiceErrorCode,
+  RoomServiceError,
+} from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { logDebug, logError } from "@/lib/utils/log";
@@ -13,6 +18,7 @@ import { setMetric } from "@/lib/utils/metrics";
 import { traceError } from "@/lib/utils/trace";
 import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import deepEqual from "fast-deep-equal/es6";
 import {
   doc,
@@ -398,7 +404,7 @@ export function useRoomSnapshot(
       displayName,
       timestamp: now,
     };
-    ensureMember({ roomId, uid, displayName }).catch(() => void 0);
+    ensureMember({ roomId, uid, displayName, clientVersion: APP_VERSION }).catch(() => void 0);
   }, [room, uid, roomId, displayName]);
 
   // auto join / join retry loop
@@ -439,6 +445,23 @@ export function useRoomSnapshot(
           setJoinStatus("joined");
         })
         .catch((error) => {
+          const code = getRoomServiceErrorCode(error);
+          if (code === "ROOM_VERSION_MISMATCH") {
+            const mismatch = error instanceof RoomServiceError ? error : null;
+            const roomVersion = mismatch?.roomVersion ?? "不明";
+            const clientVersion = mismatch?.clientVersion ?? APP_VERSION;
+            notify({
+              title: "この部屋には参加できません",
+              description: `部屋はバージョン ${roomVersion} で進行中です。お使いのバージョン (${clientVersion}) からは参加できません。新しい部屋を作成するか、招待を確認してください。`,
+              type: "error",
+            });
+            joinCompletedRef.current = true;
+            joinLimitNotifiedRef.current = true;
+            clearRetryTimer();
+            setJoinStatus("idle");
+            return;
+          }
+
           joinCompletedRef.current = false;
           const nextAttempt = attemptBeforeCall + 1;
           joinAttemptRef.current = nextAttempt;
@@ -515,7 +538,7 @@ export function useRoomSnapshot(
         displayName,
         timestamp: now,
       };
-      ensureMember({ roomId, uid, displayName }).catch(() => void 0);
+      ensureMember({ roomId, uid, displayName, clientVersion: APP_VERSION }).catch(() => void 0);
     }, ENSURE_MEMBER_MIN_INTERVAL_MS);
 
     return () => clearInterval(interval);

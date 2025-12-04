@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { db, firebaseEnabled } from "@/lib/firebase/client";
 import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import { createInitialRoomStats } from "@/lib/game/roomStats";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
 import { AVATAR_LIST } from "@/lib/utils";
@@ -152,6 +153,45 @@ export function CreateRoomModal({
     setSubmitting(true);
 
     try {
+      let resolvedAppVersion = APP_VERSION;
+      try {
+        const res = await fetch("/api/rooms/version-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clientVersion: APP_VERSION }),
+        });
+        const body = (await res.json().catch(() => ({}))) as {
+          appVersion?: string;
+          error?: string;
+          roomVersion?: string;
+          clientVersion?: string;
+        };
+
+        if (!res.ok) {
+          if (body?.error === "room/create/update-required") {
+            notify({
+              title: "アップデートが必要です",
+              description: "このバージョンでは新しい部屋を作成できません。ページを更新して最新バージョンでお試しください。",
+              type: "error",
+            });
+            return;
+          }
+          throw new Error(body?.error || "version-check-failed");
+        }
+
+        if (typeof body?.appVersion === "string" && body.appVersion.trim().length > 0) {
+          resolvedAppVersion = body.appVersion.trim();
+        }
+      } catch (error) {
+        logError("rooms", "create-room-version-check-failed", error);
+        notify({
+          title: "バージョン確認に失敗しました",
+          description: "最新のアプリに更新してからもう一度お試しください。",
+          type: "error",
+        });
+        return;
+      }
+
       const options: RoomOptions = {
         allowContinueAfterFail: true,
         resolveMode: "sort-submit",
@@ -169,6 +209,7 @@ export function CreateRoomModal({
         hostName: sanitizedDisplayName || "匿名",
         creatorId: user.uid,
         creatorName: sanitizedDisplayName || "匿名",
+        appVersion: resolvedAppVersion,
         options,
         status: "waiting",
         createdAt: serverTimestamp(),

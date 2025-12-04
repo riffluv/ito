@@ -1,14 +1,11 @@
-const env = (typeof process !== "undefined" ? process.env : {}) as {
-  NEXT_PUBLIC_APP_VERSION?: string;
-  NEXT_PUBLIC_SW_VERSION?: string;
-  NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?: string;
-  VERCEL_GIT_COMMIT_SHA?: string;
-  NEXT_BUILD_ID?: string;
-};
-
-const rawVersion = env.NEXT_PUBLIC_APP_VERSION ?? env.NEXT_PUBLIC_SW_VERSION ?? null;
+const rawVersion =
+  (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_APP_VERSION : undefined) ??
+  (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SW_VERSION : undefined) ??
+  null;
 const commitSha =
-  env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ?? env.VERCEL_GIT_COMMIT_SHA ?? null;
+  (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA : undefined) ??
+  (typeof process !== "undefined" ? process.env.VERCEL_GIT_COMMIT_SHA : undefined) ??
+  null;
 
 // Next.js の buildId（クライアントで __NEXT_DATA__.buildId として取れる）が
 // commit/APP_VERSION とれない場合のフォールバックとして使える。
@@ -17,7 +14,9 @@ const runtimeBuildId =
     ? window.__NEXT_DATA__.buildId ?? null
     : typeof window !== "undefined" && typeof (window as { __nextBuildId?: string }).__nextBuildId === "string"
       ? (window as { __nextBuildId?: string }).__nextBuildId ?? null
-      : env.NEXT_BUILD_ID ?? null;
+      : typeof process !== "undefined"
+        ? process.env.NEXT_BUILD_ID ?? null
+        : null;
 
 const shortCommit = commitSha ? commitSha.slice(0, 7) : null;
 

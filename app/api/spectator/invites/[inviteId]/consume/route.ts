@@ -4,6 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { logDebug, logError } from "@/lib/utils/log";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,7 @@ type IncomingBody = {
   token?: unknown;
   roomId?: unknown;
   viewerUid?: unknown;
+  clientVersion?: unknown;
 };
 
 export async function POST(
@@ -82,6 +84,7 @@ export async function POST(
     typeof payload.roomId === "string" && payload.roomId.trim().length > 0
       ? payload.roomId.trim()
       : null;
+  const clientVersion = payload.clientVersion;
   const requestedViewerUid =
     typeof payload.viewerUid === "string" && payload.viewerUid.trim().length > 0
       ? payload.viewerUid.trim()
@@ -109,6 +112,18 @@ export async function POST(
   const viewerUid = verifiedUid ?? requestedViewerUid ?? null;
 
   try {
+    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion);
+    if (!versionCheck.ok) {
+      return NextResponse.json(
+        {
+          error: versionCheck.error,
+          roomVersion: versionCheck.roomVersion,
+          clientVersion: versionCheck.clientVersion,
+        },
+        { status: versionCheck.status }
+      );
+    }
+
     const db = resolveDb();
     const inviteRef = db.collection("spectatorInvites").doc(inviteId);
     const inviteSnap = await inviteRef.get();
