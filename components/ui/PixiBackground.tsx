@@ -178,10 +178,8 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
 
   useEffect(() => {
     const saved = bootstrapBackgroundTheme();
-    // Recover from previously persisted forced CSS fallback on devices that
-    // can render Pixi again. We rarely have a user-facing toggle to choose
-    // CSS explicitly, so prefer Pixi here.
-    setBackgroundType(saved === "css" ? DEFAULT_BACKGROUND_THEME : saved);
+    // ユーザーが明示的に選んだテーマをそのまま尊重する
+    setBackgroundType(saved);
 
     const handleBackgroundChange = (event: Event) => {
       if (event instanceof CustomEvent) {
