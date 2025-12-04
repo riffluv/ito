@@ -16,8 +16,11 @@ import {
   createInfernoBackground,
   type InfernoBackgroundController,
 } from "./infernoBackground";
+import {
+  createSceneRegistry,
+  type PixiSceneKey,
+} from "./sceneRegistry";
 
-type PixiSceneKey = "pixi-simple" | "pixi-dq" | "pixi-inferno";
 type BackgroundQuality = "low" | "med" | "high";
 type PixiBackgroundProfile = "default" | "software";
 
@@ -71,6 +74,8 @@ type SceneController = {
   effects: SceneEffects;
 };
 
+type SceneOptions = { key: PixiSceneKey; quality: BackgroundQuality };
+
 type OutgoingMessage =
   | { type: "ready"; requestId?: number }
   | { type: "scene-ready"; requestId?: number; quality: BackgroundQuality }
@@ -79,6 +84,8 @@ type OutgoingMessage =
   | { type: "context-lost"; count: number }
   | { type: "debug"; message: string; detail?: unknown }
   | { type: "pong" };
+
+const sceneRegistry = createSceneRegistry<SceneOptions, SceneController>();
 
 if (typeof globalThis.requestAnimationFrame === "undefined") {
   const rafIds = new Map<number, ReturnType<typeof setTimeout>>();
@@ -449,22 +456,29 @@ const createInfernoScene = async (
   };
 };
 
+sceneRegistry.registerScene("pixi-simple", ({ quality }) => {
+  const baseColor = 0x0a0d14;
+  const accentColor = 0x0f2038;
+  return createSimpleScene(quality, baseColor, accentColor);
+});
+
+sceneRegistry.registerScene("pixi-dq", async () =>
+  createDragonQuestScene(currentProfile)
+);
+
+sceneRegistry.registerScene("pixi-inferno", async () =>
+  createInfernoScene(currentProfile)
+);
+
 const setScene = async (
   sceneKey: PixiSceneKey,
   quality: BackgroundQuality
 ) => {
   if (!app || !stageRoot) throw new Error("Pixi worker app not ready");
   debug("setScene:start", { sceneKey, quality });
-  let next: SceneController | null = null;
-  if (sceneKey === "pixi-simple") {
-    const baseColor = 0x0a0d14;
-    const accentColor = 0x0f2038;
-    next = createSimpleScene(quality, baseColor, accentColor);
-  } else if (sceneKey === "pixi-dq") {
-    next = await createDragonQuestScene(currentProfile);
-  } else if (sceneKey === "pixi-inferno") {
-    next = await createInfernoScene(currentProfile);
-  }
+  let next =
+    (await sceneRegistry.createScene(sceneKey, { key: sceneKey, quality })) ||
+    null;
   if (!next) {
     next = createSimpleScene(quality, 0x0a0d14, 0x0f2038);
   }
