@@ -17,10 +17,13 @@ import {
   type SimpleBackgroundController,
   type SimpleBackgroundMetrics,
 } from "@/lib/pixi/simpleBackground";
+import {
+  createSceneRegistry,
+  type PixiSceneKey,
+  type SceneOptionsBase,
+} from "@/lib/pixi/sceneRegistry";
 import { logError, logInfo } from "@/lib/utils/log";
 import { traceError } from "@/lib/utils/trace";
-
-type PixiSceneKey = "pixi-simple" | "pixi-dq" | "pixi-inferno";
 
 type SceneEffects = {
   lightSweep?: () => void;
@@ -77,11 +80,8 @@ const buildWorkerAssetUrl = (): string | null => {
   return `${base}${PIXI_WORKER_PUBLIC_PATH}${cacheBust}`;
 };
 
-type SceneOptions = {
-  key: PixiSceneKey;
-  quality: BackgroundQuality;
+type SceneOptions = SceneOptionsBase & {
   onMetrics?: (metrics: SimpleBackgroundMetrics) => void;
-  profile?: PixiBackgroundProfile;
 };
 
 class WorkerBackgroundHost implements BackgroundHostLike {
@@ -544,6 +544,19 @@ class PixiBackgroundHost {
   private lastSceneOptions: SceneOptions | null = null;
   private lossCount = 0;
   private recovering = false;
+  private sceneRegistry = createSceneRegistry<SceneOptions, SceneInstance>();
+
+  constructor() {
+    this.sceneRegistry.registerScene("pixi-simple", (options) =>
+      this.createSimpleScene(options)
+    );
+    this.sceneRegistry.registerScene("pixi-dq", (options) =>
+      this.createDragonQuestScene(options.profile ?? this.requestedProfile)
+    );
+    this.sceneRegistry.registerScene("pixi-inferno", (options) =>
+      this.createInfernoScene(options.profile ?? this.requestedProfile)
+    );
+  }
 
   private handleResize = () => {
     if (!this.app) return;
@@ -945,14 +958,10 @@ class PixiBackgroundHost {
         effects: this.current.effects,
       };
     }
-    let next: SceneInstance | null = null;
-    if (options.key === "pixi-simple") {
-      next = await this.createSimpleScene(options);
-    } else if (options.key === "pixi-dq") {
-      next = await this.createDragonQuestScene(profile);
-    } else if (options.key === "pixi-inferno") {
-      next = await this.createInfernoScene(profile);
-    }
+    const next = await this.sceneRegistry.createScene(options.key, {
+      ...options,
+      profile,
+    });
     if (!next) {
       return { renderer: "dom", quality: options.quality };
     }

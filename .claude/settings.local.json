@@ -144,7 +144,9 @@
       "Bash(if [ -f .env.local ])",
       "Bash(then grep -n \"PERF_WARMUP\" .env.local)",
       "Bash(else echo \".env.localファイルが見つかりません\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(wc:*)",
+      "Bash(git -C /home/hr-hm/Project/jomonsho log --oneline)"
     ],
     "deny": [],
     "ask": []
