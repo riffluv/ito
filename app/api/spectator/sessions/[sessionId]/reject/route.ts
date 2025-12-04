@@ -3,6 +3,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { logDebug, logError } from "@/lib/utils/log";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,7 @@ type IncomingBody = {
   token?: unknown;
   roomId?: unknown;
   reason?: unknown;
+  clientVersion?: unknown;
 };
 
 const MAX_REASON_LENGTH = 160;
@@ -74,6 +76,7 @@ export async function POST(
     typeof payload.roomId === "string" && payload.roomId.trim().length > 0
       ? payload.roomId.trim()
       : null;
+  const clientVersion = payload.clientVersion;
   const reason = sanitizeReason(payload.reason);
 
   if (!token) {
@@ -99,6 +102,18 @@ export async function POST(
   }
 
   try {
+    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion);
+    if (!versionCheck.ok) {
+      return NextResponse.json(
+        {
+          error: versionCheck.error,
+          roomVersion: versionCheck.roomVersion,
+          clientVersion: versionCheck.clientVersion,
+        },
+        { status: versionCheck.status }
+      );
+    }
+
     const db = resolveDb();
     const sessionRef = db.collection("spectatorSessions").doc(sessionId);
     const sessionSnap = await sessionRef.get();
@@ -173,4 +188,3 @@ export async function POST(
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
 }
-

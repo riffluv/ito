@@ -123,13 +123,14 @@ service cloud.firestore {
           'topic', 'topicOptions', 'topicBox',
           'order', 'result', 'stats', 'deal', 'round', 'mvpVotes',
           'requiresPassword', 'passwordHash', 'passwordSalt', 'passwordVersion',
-          'ui'
+          'ui', 'appVersion'
         ])
         && (!('name' in data) || safeText(data.name, 1, 48))
         && (!('hostId' in data) || (data.hostId is string && data.hostId.size() > 0))
         && (!('hostName' in data) || optionalSafeText(data.hostName, 1, 32))
         && (!('creatorId' in data) || (data.creatorId is string && data.creatorId.size() > 0))
         && (!('creatorName' in data) || optionalSafeText(data.creatorName, 1, 32))
+        && (!('appVersion' in data) || (data.appVersion is string && data.appVersion.size() >= 1 && data.appVersion.size() <= 64))
         && (!('options' in data) || isValidRoomOptions(data.options))
         && (!('status' in data) || data.status in ['waiting', 'clue', 'reveal', 'finished'])
         && (!('requiresPassword' in data) || data.requiresPassword is bool)

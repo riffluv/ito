@@ -1,6 +1,7 @@
 import { auth, db } from "@/lib/firebase/client";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { doc, onSnapshot, Timestamp, type DocumentData, type Unsubscribe } from "firebase/firestore";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 
 import type {
   SpectatorRejoinSnapshot,
@@ -57,7 +58,9 @@ async function callSpectatorApi<TResponse>(
 
   const execute = async (token: string | null) => {
     const payload =
-      token && token.length > 0 ? { ...body, token } : body;
+      token && token.length > 0
+        ? { ...body, token, clientVersion: APP_VERSION }
+        : { ...body, clientVersion: APP_VERSION };
 
     const response = await fetch(path, {
       method: "POST",

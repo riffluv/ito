@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase/client";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
@@ -29,6 +30,68 @@ type DealState = NonNullable<RoomDoc["deal"]>;
 type OrderState = NonNullable<RoomDoc["order"]>;
 
 const avatarCache = new Map<string, AvatarCacheEntry>();
+const versionGateCache = new Map<
+  string,
+  | { status: "ok"; appVersion: string | null; checkedAt: number }
+  | { status: "mismatch"; roomVersion: string | null; checkedAt: number }
+>();
+const VERSION_CHECK_TTL_MS = 60_000;
+
+async function ensureRoomVersionAllowed(
+  roomId: string,
+  clientVersion: string
+): Promise<{ status: "ok"; appVersion: string | null } | { status: "mismatch"; roomVersion: string | null }>
+{
+  const now = Date.now();
+  const cached = versionGateCache.get(roomId);
+  if (cached && now - cached.checkedAt < VERSION_CHECK_TTL_MS) {
+    return cached.status === "ok"
+      ? { status: "ok", appVersion: cached.appVersion }
+      : { status: "mismatch", roomVersion: cached.roomVersion };
+  }
+
+  try {
+    const response = await fetch("/api/rooms/version-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId, clientVersion }),
+      keepalive: true,
+    });
+
+    if (response.ok) {
+      const data = (await response.json()) as { appVersion?: string | null };
+      const appVersion = typeof data?.appVersion === "string" ? data.appVersion : null;
+      versionGateCache.set(roomId, { status: "ok", appVersion, checkedAt: now });
+      return { status: "ok", appVersion };
+    }
+
+    let errorBody: { error?: unknown; roomVersion?: unknown } | null = null;
+    try {
+      errorBody = (await response.json()) as { error?: unknown; roomVersion?: unknown };
+    } catch {
+      // ignore body parse errors
+    }
+
+    if (errorBody?.error === "room/join/version-mismatch") {
+      const roomVersion =
+        typeof errorBody.roomVersion === "string" && errorBody.roomVersion.trim().length > 0
+          ? errorBody.roomVersion.trim()
+          : null;
+      versionGateCache.set(roomId, {
+        status: "mismatch",
+        roomVersion,
+        checkedAt: now,
+      });
+      return { status: "mismatch", roomVersion };
+    }
+  } catch (error) {
+    logWarn("roomService", "version-check-failed", { roomId, error });
+  }
+
+  // フェイルオープン：API 取得に失敗した場合は既存挙動を維持
+  versionGateCache.set(roomId, { status: "ok", appVersion: null, checkedAt: now });
+  return { status: "ok", appVersion: null };
+}
 
 function getAvatarCache(roomId: string): AvatarCacheEntry | null {
   const entry = avatarCache.get(roomId);
@@ -61,20 +124,28 @@ function invalidateAvatarCache(roomId: string) {
   avatarCache.delete(roomId);
 }
 
-export type RoomServiceErrorCode = "ROOM_NOT_FOUND" | "ROOM_IN_PROGRESS";
+export type RoomServiceErrorCode =
+  | "ROOM_NOT_FOUND"
+  | "ROOM_IN_PROGRESS"
+  | "ROOM_VERSION_MISMATCH";
 
 const ROOM_ERROR_MESSAGES: Record<RoomServiceErrorCode, string> = {
   ROOM_NOT_FOUND: "部屋が見つかりませんでした。",
   ROOM_IN_PROGRESS: "ゲーム進行中のため席に戻れません。",
+  ROOM_VERSION_MISMATCH: "この部屋とは別のバージョンで動作しています。",
 };
 
 export class RoomServiceError extends Error {
   readonly code: RoomServiceErrorCode;
+  readonly roomVersion?: string | null;
+  readonly clientVersion?: string | null;
 
-  constructor(code: RoomServiceErrorCode) {
+  constructor(code: RoomServiceErrorCode, detail?: { roomVersion?: string | null; clientVersion?: string | null }) {
     super(ROOM_ERROR_MESSAGES[code]);
     this.name = "RoomServiceError";
     this.code = code;
+    this.roomVersion = detail?.roomVersion ?? null;
+    this.clientVersion = detail?.clientVersion ?? null;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -82,6 +153,7 @@ export class RoomServiceError extends Error {
 const ROOM_ERROR_CODES: RoomServiceErrorCode[] = [
   "ROOM_NOT_FOUND",
   "ROOM_IN_PROGRESS",
+  "ROOM_VERSION_MISMATCH",
 ];
 
 const isRoomServiceErrorCode = (
@@ -118,6 +190,7 @@ type EnsureMemberArgs = {
   roomId: string;
   uid: string;
   displayName: string | null | undefined;
+  clientVersion?: string;
 };
 
 /**
@@ -184,7 +257,18 @@ export async function ensureMember({
   roomId,
   uid,
   displayName,
+  clientVersion,
 }: EnsureMemberArgs): Promise<EnsureMemberResult> {
+  const versionToSend = clientVersion ?? APP_VERSION;
+
+  const versionGate = await ensureRoomVersionAllowed(roomId, versionToSend);
+  if (versionGate.status === "mismatch") {
+    throw new RoomServiceError("ROOM_VERSION_MISMATCH", {
+      roomVersion: versionGate.roomVersion,
+      clientVersion: versionToSend,
+    });
+  }
+
   // まず重複チェック＆クリーンアップを実行（ベストプラクティス）
   await cleanupDuplicatePlayerDocs(roomId, uid);
 
@@ -576,6 +660,7 @@ export async function joinRoomFully({
     roomId,
     uid,
     displayName: resolvedDisplayName,
+    clientVersion: APP_VERSION,
   });
   const inProgress =
     "reason" in created && created.reason === "inProgress";

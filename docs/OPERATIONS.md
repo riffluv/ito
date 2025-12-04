@@ -210,3 +210,13 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 最終更新日: 2025-11-15  
 編集者: Codex（GPT-5 ベース）
+
+---
+
+## 14. ルームごとのアプリバージョン固定（2025-12）
+- `rooms/{roomId}.appVersion` に作成時の APP_VERSION を保存し、部屋ごとに世界線を固定する。
+- 作成・参加時は `/api/rooms/version-check` を経由してサーバー版との一致を確認する。
+  - **作成**: `clientVersion !== サーバーAPP_VERSION` なら `room/create/update-required` を返し、更新を促す。
+  - **参加**: `room.appVersion` と `clientVersion` が不一致なら `room/join/version-mismatch` を返し、参加を拒否（ペイロードに `roomVersion`/`clientVersion` を含む）。
+- 旧データ互換のため `appVersion` が無い既存ルームは一旦許可する（初回参加時に新しい部屋を立て直してもらう想定）。
+- 問い合わせ対応メッセージ例: 「この部屋は古いバージョンで進行中です。最新版では参加できないため、新しい部屋を作成して合流してください。」
