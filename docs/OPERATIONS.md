@@ -27,6 +27,10 @@
 - `hooks/` / `lib/hooks/`: カスタムフック。状態管理や Firebase 連携はこちらを利用。  
 - `docs/`: 運用資料。新しい運用フローを追加したらここに追記する。  
 - `functions/`: Firebase Functions。サービス層から直接アクセスせず `lib/game/service.ts` 経由で利用。  
+- **ルーム書き込みの経路**: `rooms`/`players` への永続更新は Next.js API (`app/api/rooms/*` → `lib/services/roomApiClient`) を正規ルートとする。UI からの Firestore 直書きは禁止（Presence は RTDB のみ）。  
+- ゲーム進行系（配札・提案配列 add/move/remove・カード確定・リザルト待ち復帰）は `/api/rooms/[roomId]/deal` `/proposal` `/commit-play` `/continue` 経由に統一済み。ドラッグ中の処理はローカルのみで、確定タイミングだけ API を叩く。  
+- お題操作（カテゴリ選択/シャッフル/カスタム/リセット）・MVP 投票・UI フラグ（`ui.revealPending` / `ui.roundPreparing`）・プレイヤープロフィール/状態リセットも API ルートへ移行済み。クライアントの Firestore 直書きは全撤廃し、必要な場合のみサーバー側コマンドを追加する。  
+- 例外: `/api/rooms/{id}/leave` が失敗したときだけ実行される非常用フォールバック（`lib/firebase/rooms.ts` 内のトランザクション）が残存。通常は API のみ。  
 
 ---
 

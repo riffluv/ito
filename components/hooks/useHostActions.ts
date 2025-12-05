@@ -199,6 +199,30 @@ export function useHostActions({
             type: "warning",
             duration: 2200,
           });
+        } else if (result.reason === "not-waiting") {
+          notify({
+            id: toastIds.genericInfo(roomId, "room-not-waiting"),
+            title: "待機状態に戻るまで開始できません",
+            description:
+              typeof result.roomStatus === "string"
+                ? `現在の状態: ${result.roomStatus}`
+                : undefined,
+            type: "warning",
+            duration: 2200,
+          });
+        } else if (result.reason === "callable-error") {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-callable-error"),
+            title: "ゲーム開始に失敗しました",
+            description:
+              result.errorCode === "failed-precondition"
+                ? "少し待ってから再度お試しください"
+                : result.errorCode
+                ? `code: ${result.errorCode}`
+                : undefined,
+            type: "warning",
+            duration: 2400,
+          });
         }
       }
     } catch (error) {

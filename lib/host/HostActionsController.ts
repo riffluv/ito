@@ -12,7 +12,7 @@ import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
 type PresenceInfo = {
@@ -47,13 +47,18 @@ export type QuickStartResult =
         | "host-mismatch"
         | "needs-custom-topic"
         | "functions-unavailable"
-        | "auth-error";
+        | "auth-error"
+        | "not-waiting"
+        | "callable-error";
       topicType?: string;
       topic?: string | null;
       hostId?: string | null;
       activeCount?: number;
       onlineCount?: number;
       playerCount?: number;
+      roomStatus?: string | null;
+      errorCode?: string;
+      errorMessage?: string;
     };
 
 export type ResetRoomRequest = {
@@ -165,7 +170,9 @@ export function createHostActionsController() {
 
     if (db) {
       try {
-        const snap = await getDoc(doc(db, "rooms", roomId));
+        const ref = doc(db, "rooms", roomId);
+        // できるだけサーバー最新を読んでステータスずれを防ぐ。失敗したらキャッシュでフォールバック。
+        const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
         const data = snap.data() as RoomDoc | undefined;
         if (data?.options?.defaultTopicType) {
           effectiveType = normalizeTopicType(data.options.defaultTopicType);
@@ -177,6 +184,18 @@ export function createHostActionsController() {
           topic = data.topic;
         } else if (data?.topic === null) {
           topic = null;
+        }
+        if (typeof data?.status === "string" && data.status !== "waiting") {
+          return {
+            ok: false,
+            reason: "not-waiting",
+            roomStatus: data.status,
+            topicType: effectiveType,
+            topic,
+            activeCount,
+            onlineCount,
+            playerCount,
+          };
         }
       } catch {
         // snapshot fetch failure is non-fatal
@@ -271,7 +290,23 @@ export function createHostActionsController() {
         skipPresence,
       };
     } catch (error) {
-      traceError("ui.host.quickStart.error", error, { roomId });
+      const code = (error as { code?: string })?.code ?? null;
+      const message = (error as { message?: string })?.message ?? "";
+      traceError("ui.host.quickStart.error", error, { roomId, code });
+      // よく発生する failed-precondition などは例外にせず UI 側でハンドリングできるよう返す
+      if (code) {
+        return {
+          ok: false,
+          reason: "callable-error",
+          topicType: effectiveType,
+          topic,
+          activeCount,
+          onlineCount,
+          playerCount,
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
       throw error;
     } finally {
       await toggleRoundPreparing(roomId, false);

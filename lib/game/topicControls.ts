@@ -1,6 +1,5 @@
 "use client";
 import { notify } from "@/components/ui/notify";
-import { db } from "@/lib/firebase/client";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import {
   dealNumbers as dealNumbersRoom,
@@ -8,38 +7,17 @@ import {
 } from "@/lib/game/room";
 import { sendMessage, sendSystemMessage } from "@/lib/firebase/chat";
 import { sendNotifyEvent } from "@/lib/firebase/events";
-import { emergencyResetPlayerStates, verifyPlayerStatesCleared } from "@/lib/utils/emergencyRecovery";
-import { logWarn } from "@/lib/utils/log";
+import { withPermissionRetry } from "@/lib/firebase/permissionGuard";
 import {
-  getTopicSectionsCached,
-  getTopicsByType,
-  pickOne,
-  topicTypeLabels,
-  type TopicType,
-} from "@/lib/topics";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-
-type RoomStatus = "waiting" | "clue" | "reveal" | "finished" | string;
-
-interface RoomSnapshot {
-  status?: RoomStatus;
-  topic?: string | null;
-  topicBox?: string | null;
-}
+  apiResetTopic,
+  apiSelectTopicCategory,
+  apiSetCustomTopic,
+  apiShuffleTopic,
+} from "@/lib/services/roomApiClient";
+import { topicTypeLabels, type TopicType } from "@/lib/topics";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error ?? "");
-
-const PLAYER_RESET_BATCH_SIZE = 400;
-
-function chunkArray<T>(items: readonly T[], size: number): T[][] {
-  if (!items.length || size <= 0) return [];
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-}
 
 async function broadcastNotify(
   roomId: string,
@@ -55,71 +33,48 @@ async function broadcastNotify(
   }
 }
 
-// お題関連の制御機能
+// お題関連の制御機能（API 経由）
 export const topicControls = {
-  // カテゴリを選択してお題をランダム決定
   async selectCategory(roomId: string, type: TopicType) {
     try {
-      const sections = await getTopicSectionsCached();
-      const pool = getTopicsByType(sections, type);
-      const picked = pickOne(pool) || null;
-      await updateDoc(doc(db!, "rooms", roomId), {
-        topicBox: type,
-        topicOptions: null,
-        topic: picked,
-      });
+      await withPermissionRetry(
+        () => apiSelectTopicCategory(roomId, type),
+        { context: "topic.select", toastContext: "お題選択" }
+      );
       const label = topicTypeLabels[type as keyof typeof topicTypeLabels] ?? type;
       await broadcastNotify(
         roomId,
         "success",
         `カテゴリ「${label}」を選択しました`,
-        picked ? `お題: ${picked}` : undefined,
-        `topic:select:${type}:${picked ?? "none"}`
+        undefined,
+        `topic:select:${type}`
       );
     } catch (error) {
-      if (isFirebaseQuotaExceeded(error)) {
-        handleFirebaseQuotaError("お題選択");
-        notify({
-          title: "🚨 Firebase読み取り制限",
-          description: "現在お題を選択できません。24時間後に再度お試しください。",
-          type: "error",
-        });
-      } else {
-        notify({
-          title: "カテゴリ選択に失敗",
-          description: getErrorMessage(error),
-          type: "error",
-        });
-      }
+      notify({
+        title: "カテゴリ選択に失敗",
+        description: getErrorMessage(error),
+        type: "error",
+      });
     }
   },
 
-  // カスタムお題を設定
   async setCustomTopic(roomId: string, text: string) {
     const value = (text || "").trim();
     if (!value) throw new Error("お題を入力してください");
     try {
-      const roomRef = doc(db!, "rooms", roomId);
-      const prevSnap = await getDoc(roomRef);
-      const prevTopic = (prevSnap.data() as RoomSnapshot | undefined)?.topic;
-      const isFirstTopic = !prevTopic || `${prevTopic}`.trim().length === 0;
-
-      await updateDoc(roomRef, {
-        topic: value,
-        topicBox: "カスタム",
-        topicOptions: null,
-      });
+      await withPermissionRetry(
+        () => apiSetCustomTopic(roomId, value),
+        { context: "topic.custom", toastContext: "お題設定" }
+      );
       await broadcastNotify(
         roomId,
         "success",
-        isFirstTopic ? "お題を設定しました" : "お題を更新しました",
+        "お題を設定しました",
         `新しいお題: ${value}`,
         `topic:custom:${value}`
       );
+
       try {
-        // NOTE:
-        // - 「sender: system」はルールで host/admin 限定
-        // - 参加者がカスタムお題を設定しても確実に残るよう、必ず uid を確保して投稿
         const { getAuth, signInAnonymously } = await import("firebase/auth");
         const auth = getAuth();
         if (!auth.currentUser) {
@@ -160,109 +115,38 @@ export const topicControls = {
     }
   },
 
-  // お題をクリア（カテゴリ/お題の選び直し）
   async resetTopic(roomId: string) {
     try {
-      const { collection, getDocs, writeBatch, doc, getDoc } = await import("firebase/firestore");
-      // 進行中にはリセット禁止（誤操作防止）
-      const roomRef = doc(db!, "rooms", roomId);
-      const snap = await getDoc(roomRef);
-      if (snap.exists()) {
-        const status = (snap.data() as RoomSnapshot | undefined)?.status;
-        if (status === "clue" || status === "reveal") {
-          throw new Error("進行中はリセットできません");
-        }
-      }
-
-      // 1. roomドキュメントをリセット
-      await updateDoc(roomRef, {
-        status: "waiting", // ★ ロビー状態に戻す
-        result: null,
-        deal: null,
-        order: null,
-        round: 0,
-        topic: null,
-        topicOptions: null,
-        topicBox: null,
-        closedAt: null,
-        expiresAt: null,
-      });
-
-      // 2. すべてのplayerドキュメントのclue1をクリア（バッチ分割）
-      const playersRef = collection(db!, "rooms", roomId, "players");
-      const playersSnapshot = await getDocs(playersRef);
-      const playerDocs = playersSnapshot.docs;
-
-      const chunks = chunkArray(playerDocs, PLAYER_RESET_BATCH_SIZE);
-      for (const chunk of chunks) {
-        const batch = writeBatch(db!);
-        chunk.forEach((playerDoc) => {
-          batch.update(playerDoc.ref, {
-            clue1: "",
-            ready: false,
-          });
-        });
-        try {
-          await batch.commit();
-        } catch (commitError) {
-          logWarn("topicControls", "reset-topic-batch-commit-failed", {
-            roomId,
-            size: chunk.length,
-            error: commitError,
-          });
-          await emergencyResetPlayerStates(roomId);
-          throw commitError;
-        }
-      }
-
-      let verified = true;
-      try {
-        verified = await verifyPlayerStatesCleared(roomId);
-      } catch (verifyError) {
-        logWarn("topicControls", "reset-topic-verify-failed", verifyError);
-        verified = false;
-      }
-      if (!verified) {
-        await emergencyResetPlayerStates(roomId);
-        throw new Error("プレイヤー状態を安全に再初期化しました。もう一度お試しください。");
-      }
-
+      await withPermissionRetry(
+        () => apiResetTopic(roomId),
+        { context: "topic.reset", toastContext: "ゲームリセット" }
+      );
       await broadcastNotify(roomId, "success", "ゲームをリセットしました", undefined, "topic:reset");
     } catch (error) {
-      if (isFirebaseQuotaExceeded(error)) {
-        handleFirebaseQuotaError("ゲームリセット");
-        notify({
-          title: "🚨 Firebase読み取り制限",
-          description: "現在ゲームをリセットできません。24時間後に再度お試しください。",
-          type: "error",
-        });
-      } else {
-        notify({
-          title: "ゲームリセットに失敗",
-          description: getErrorMessage(error),
-          type: "error",
-        });
-      }
+      notify({
+        title: "ゲームリセットに失敗",
+        description: getErrorMessage(error),
+        type: "error",
+      });
     }
   },
 
-  // 現在のカテゴリでお題をシャッフル
   async shuffleTopic(roomId: string, currentCategory: TopicType | null) {
     if (!currentCategory) {
       notify({ title: "カテゴリが選択されていません", type: "warning" });
       return;
     }
     try {
-      const sections = await getTopicSectionsCached();
-      const pool = getTopicsByType(sections, currentCategory);
-      const picked = pickOne(pool) || null;
-      await updateDoc(doc(db!, "rooms", roomId), { topic: picked });
+      await withPermissionRetry(
+        () => apiShuffleTopic(roomId, currentCategory),
+        { context: "topic.shuffle", toastContext: "お題シャッフル" }
+      );
       await broadcastNotify(
         roomId,
         "success",
         "お題をシャッフルしました",
-        picked ? `新しいお題: ${picked}` : undefined,
-        `topic:shuffle:${currentCategory}:${picked ?? "none"}`
+        undefined,
+        `topic:shuffle:${currentCategory}`
       );
     } catch (error) {
       notify({
@@ -273,7 +157,6 @@ export const topicControls = {
     }
   },
 
-  // 数字を配布
   async dealNumbers(roomId: string, options?: DealNumbersOptions) {
     try {
       const assignedCount = await dealNumbersRoom(roomId, 0, options);
@@ -294,7 +177,6 @@ export const topicControls = {
   },
 };
 
-// TopicType配列をエクスポート
 export { topicTypeLabels };
 export type { TopicType };
 

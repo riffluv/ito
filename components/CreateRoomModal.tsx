@@ -2,31 +2,27 @@
 import { notify } from "@/components/ui/notify";
 import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
-import { db, firebaseEnabled } from "@/lib/firebase/client";
-import type { PlayerDoc, RoomDoc, RoomOptions } from "@/lib/types";
+import { firebaseEnabled } from "@/lib/firebase/client";
+import type { RoomOptions } from "@/lib/types";
 import { APP_VERSION } from "@/lib/constants/appVersion";
-import { createInitialRoomStats } from "@/lib/game/roomStats";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
-import { AVATAR_LIST } from "@/lib/utils";
 import { createPasswordEntry } from "@/lib/security/password";
 import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 import { Box, Dialog, Field, HStack, Input, Switch, Text, VStack } from "@chakra-ui/react";
 import IconButtonDQ from "@/components/ui/IconButtonDQ";
 import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
-import { doc, serverTimestamp, setDoc, Timestamp, DocumentReference, getDoc } from "firebase/firestore";
-import { FirebaseError } from "firebase/app";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { logError } from "@/lib/utils/log";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
-import { generateRoomId } from "@/lib/utils/roomId";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import PIXI from "@/lib/pixi/instance";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 import { ZodError } from "zod";
+import { apiCreateRoom } from "@/lib/services/roomApiClient";
 
 // 共通モーダルスタイル定数（部屋作成 → 完了モーダルのサイズ統一）
 // 「人の手」デザイン：角丸3px、影の多層、非対称パディング
@@ -153,7 +149,6 @@ export function CreateRoomModal({
     setSubmitting(true);
 
     try {
-      let resolvedAppVersion = APP_VERSION;
       try {
         const res = await fetch("/api/rooms/version-check", {
           method: "POST",
@@ -179,9 +174,6 @@ export function CreateRoomModal({
           throw new Error(body?.error || "version-check-failed");
         }
 
-        if (typeof body?.appVersion === "string" && body.appVersion.trim().length > 0) {
-          resolvedAppVersion = body.appVersion.trim();
-        }
       } catch (error) {
         logError("rooms", "create-room-version-check-failed", error);
         notify({
@@ -202,83 +194,24 @@ export function CreateRoomModal({
       if (enablePassword) {
         passwordEntry = await createPasswordEntry(password.trim());
       }
-      const expires = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const baseRoomData: RoomCreatePayload = {
-        name: applyDisplayModeToName(sanitizedRoomName, displayMode),
-        hostId: user.uid,
-        hostName: sanitizedDisplayName || "匿名",
-        creatorId: user.uid,
-        creatorName: sanitizedDisplayName || "匿名",
-        appVersion: resolvedAppVersion,
+      const apiResult = await apiCreateRoom({
+        roomName: applyDisplayModeToName(sanitizedRoomName, displayMode),
+        displayName: sanitizedDisplayName || "匿名",
+        displayMode,
         options,
-        status: "waiting",
-        createdAt: serverTimestamp(),
-        lastActiveAt: serverTimestamp(),
-        closedAt: null,
-        expiresAt: Timestamp.fromDate(expires),
-        topic: null,
-        topicOptions: null,
-        topicBox: null,
-        result: null,
-        stats: createInitialRoomStats(),
-        requiresPassword: enablePassword,
         passwordHash: passwordEntry?.hash ?? null,
         passwordSalt: passwordEntry?.salt ?? null,
         passwordVersion: passwordEntry?.version ?? null,
-      };
-
-      const createRoomDocument = async (
-        payload: RoomCreatePayload
-      ): Promise<DocumentReference> => {
-        const MAX_ATTEMPTS = 8;
-        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-          const candidateId = generateRoomId();
-          const candidateRef = doc(db!, "rooms", candidateId);
-          const existing = await getDoc(candidateRef);
-          if (existing.exists()) continue;
-          await setDoc(candidateRef, payload);
-          return candidateRef;
-        }
-        throw new Error("ルームIDを割り当てできませんでした。時間をおいて再度お試しください。");
-      };
-
-      let roomRef: DocumentReference | null = null;
-      try {
-        roomRef = await createRoomDocument(baseRoomData);
-      } catch (error) {
-        if (error instanceof FirebaseError && error.code === "permission-denied") {
-          console.warn("[rooms] create-room without creator fields (fallback)", error);
-          const fallbackPayload: RoomCreatePayload = { ...baseRoomData };
-          delete fallbackPayload.creatorId;
-          delete fallbackPayload.creatorName;
-          roomRef = await createRoomDocument(fallbackPayload);
-        } else {
-          throw error;
-        }
-      }
-      if (!roomRef) throw new Error("failed to create room");
+      });
 
       if (enablePassword && passwordEntry?.hash) {
-        storeRoomPasswordHash(roomRef.id, passwordEntry.hash);
+        storeRoomPasswordHash(apiResult.roomId, passwordEntry.hash);
       }
 
-      const randomIndex = Math.floor(Math.random() * AVATAR_LIST.length);
-      const pdoc: PlayerDoc = {
-        name: sanitizedDisplayName,
-        avatar: AVATAR_LIST[randomIndex],
-        number: null,
-        clue1: "",
-        ready: false,
-        orderIndex: 0,
-        uid: user.uid,
-        lastSeen: serverTimestamp(),
-      };
-      await setDoc(doc(db!, "rooms", roomRef.id, "players", user.uid), pdoc);
-
-      setCreatedRoomId(roomRef.id);
+      setCreatedRoomId(apiResult.roomId);
       setInviteCopied(false);
       setPassword("");
-      onCreated?.(roomRef.id);
+      onCreated?.(apiResult.roomId);
     } catch (error) {
       logError("rooms", "create-room", error);
       notify({
@@ -1042,9 +975,6 @@ type PasswordEntry = {
   salt: string;
   version: number;
 };
-
-type RoomCreatePayload = Omit<RoomDoc, "creatorId"> &
-  Partial<Pick<RoomDoc, "creatorId">>;
 
 type RequestIdleCallbackFn = (
   callback: IdleRequestCallback,

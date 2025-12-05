@@ -1,37 +1,8 @@
-import { FieldValue } from "firebase-admin/firestore";
-import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
-import { composeWaitingResetPayload } from "@/lib/server/roomActions";
-import { logDebug, logError, logWarn } from "@/lib/utils/log";
+import { logError } from "@/lib/utils/log";
 import { NextRequest, NextResponse } from "next/server";
+import { resetRoomCommand } from "@/lib/server/roomCommands";
 
 export const runtime = "nodejs";
-
-type ResetRouteTestOverrides = {
-  auth?: ReturnType<typeof getAdminAuth>;
-  db?: ReturnType<typeof getAdminDb>;
-};
-
-let testOverrides: ResetRouteTestOverrides | null = null;
-
-function resolveAdminAuth() {
-  return testOverrides?.auth ?? getAdminAuth();
-}
-
-function resolveAdminDb() {
-  return testOverrides?.db ?? getAdminDb();
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __setResetRouteOverrides:
-    | ((overrides: ResetRouteTestOverrides | null) => void)
-    | undefined;
-}
-
-globalThis.__setResetRouteOverrides = (overrides) => {
-  if (process.env.NODE_ENV !== "test") return;
-  testOverrides = overrides;
-};
 
 export async function POST(
   req: NextRequest,
@@ -64,112 +35,8 @@ export async function POST(
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
-  let requesterUid: string | null = null;
-  let isAdmin = false;
   try {
-    const decoded = await resolveAdminAuth().verifyIdToken(token);
-    requesterUid = decoded.uid ?? null;
-    isAdmin = decoded.admin === true;
-  } catch (error) {
-    logError("rooms", "reset-route verify failed", { roomId, error });
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  if (!requesterUid) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const db = resolveAdminDb();
-    const roomRef = db.collection("rooms").doc(roomId);
-    const roomSnap = await roomRef.get();
-    if (!roomSnap.exists) {
-      return NextResponse.json({ error: "room_not_found" }, { status: 404 });
-    }
-
-    const roomData = roomSnap.data() as Record<string, unknown> | undefined;
-    const hostId =
-      typeof roomData?.hostId === "string" ? (roomData.hostId as string) : null;
-    const creatorId =
-      typeof roomData?.creatorId === "string"
-        ? (roomData.creatorId as string)
-        : null;
-
-    const authorized =
-      isAdmin || requesterUid === hostId || requesterUid === creatorId;
-
-    if (!authorized) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
-    }
-
-    const resetPayload = composeWaitingResetPayload({
-      recallOpen: recallSpectators,
-      resetRound: true,
-      clearTopic: true,
-      closedAt: null,
-      expiresAt: null,
-    });
-
-    const recallOpen =
-      typeof resetPayload["ui.recallOpen"] === "boolean"
-        ? (resetPayload["ui.recallOpen"] as boolean)
-        : true;
-
-    logDebug("rooms", "reset-request", { roomId, recallOpen });
-
-    await roomRef.update(resetPayload);
-
-    // 観戦再入室リクエストが pending のまま残ると、リセット後に再送できず詰むためクリアする
-    try {
-      const sessionsRef = db.collection("spectatorSessions");
-      const pendingSnap = await sessionsRef
-        .where("roomId", "==", roomId)
-        .where("rejoinRequest.status", "==", "pending")
-        .get();
-
-      const watchingSnap = await sessionsRef
-        .where("roomId", "==", roomId)
-        .where("rejoinRequest", "==", null)
-        .where("status", "==", "watching")
-        .get();
-
-      if (!pendingSnap.empty || !watchingSnap.empty) {
-        const batch = db.batch();
-        pendingSnap.forEach((doc) => {
-          batch.update(doc.ref, {
-            status: "watching",
-            rejoinRequest: null,
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        });
-
-        // 観戦UIで固まっている端末も、リセット後に再招集できるよう pending を立てる
-        watchingSnap.forEach((doc) => {
-          batch.update(doc.ref, {
-            rejoinRequest: {
-              status: "pending",
-              source: "auto",
-              createdAt: FieldValue.serverTimestamp(),
-            },
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        });
-
-        await batch.commit();
-        logDebug("rooms", "reset-cleared-spectator-pending", {
-          roomId,
-          clearedPending: pendingSnap.size,
-          revivedWatching: watchingSnap.size,
-        });
-      }
-    } catch (cleanupError) {
-      logWarn("rooms", "reset-spectator-pending-cleanup-failed", {
-        roomId,
-        error: cleanupError,
-      });
-    }
-
-    logDebug("rooms", "reset-success", { roomId, recallOpen });
+    await resetRoomCommand({ roomId, recallSpectators, token });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("rooms", "reset-route error", { roomId, error });
