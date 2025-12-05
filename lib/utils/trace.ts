@@ -1,5 +1,3 @@
-"use client";
-
 import { recordMetricDistribution } from "@/lib/perf/metricsClient";
 
 type TraceDetail = Record<string, unknown> | undefined;

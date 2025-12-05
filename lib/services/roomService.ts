@@ -1,33 +1,14 @@
-import { db } from "@/lib/firebase/client";
 import { APP_VERSION } from "@/lib/constants/appVersion";
-import { ensureAuthSession } from "@/lib/firebase/authSession";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
+import type { RoomDoc } from "@/lib/types";
 import { logWarn } from "@/lib/utils/log";
 import { traceAction } from "@/lib/utils/trace";
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  runTransaction,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  type FirestoreError,
-  where,
-} from "firebase/firestore";
+import { apiJoinRoom, apiReady, apiUpdateRoomOptions } from "@/lib/services/roomApiClient";
 
 const AVATAR_CACHE_TTL_MS = 30_000;
 type AvatarCacheEntry = {
   used: Set<string>;
   expiresAt: number;
 };
-
-type DealState = NonNullable<RoomDoc["deal"]>;
-type OrderState = NonNullable<RoomDoc["order"]>;
 
 const avatarCache = new Map<string, AvatarCacheEntry>();
 const versionGateCache = new Map<
@@ -118,10 +99,6 @@ function registerAvatarUsage(roomId: string, avatar: string) {
   }
   entry.used.add(avatar);
   entry.expiresAt = Date.now() + AVATAR_CACHE_TTL_MS;
-}
-
-function invalidateAvatarCache(roomId: string) {
-  avatarCache.delete(roomId);
 }
 
 export type RoomServiceErrorCode =
@@ -221,22 +198,6 @@ const resolvePreferredDisplayName = (
 
 const AVATAR_STORAGE_KEY = "__stickyAvatars__"; // JSON { [roomId]: { [uid]: avatarPath } }
 
-const readStoredAvatar = (roomId: string, uid: string): string | null => {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(AVATAR_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, Record<string, string>>;
-    const roomMap = parsed?.[roomId];
-    if (roomMap && typeof roomMap[uid] === "string") {
-      return roomMap[uid];
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
-};
-
 const writeStoredAvatar = (roomId: string, uid: string, avatar: string) => {
   if (typeof window === "undefined") return;
   try {
@@ -269,204 +230,32 @@ export async function ensureMember({
     });
   }
 
-  // まず重複チェック＆クリーンアップを実行（ベストプラクティス）
-  await cleanupDuplicatePlayerDocs(roomId, uid);
+  const { value: resolvedDisplayName } = resolvePreferredDisplayName(displayName);
 
-  const { value: resolvedDisplayName, source: displayNameSource } =
-    resolvePreferredDisplayName(displayName);
-
-  const meRef = doc(db!, "rooms", roomId, "players", uid);
-  const meSnap = await getDoc(meRef);
-  if (!meSnap.exists()) {
-    const roomRef = doc(db!, "rooms", roomId);
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) {
+  try {
+    const result = await apiJoinRoom({ roomId, displayName: resolvedDisplayName });
+    if (result?.avatar) {
+      registerAvatarUsage(roomId, result.avatar);
+      writeStoredAvatar(roomId, uid, result.avatar);
+    }
+    return result?.joined ? { joined: true } : { joined: false };
+  } catch (error) {
+    const code = (error as { code?: unknown })?.code;
+    if (code === "room_not_found") {
       throw new RoomServiceError("ROOM_NOT_FOUND");
     }
-    const room = roomSnap.data() as RoomDoc &
-      Partial<{ hostId: string; status: string }>;
-    const status = room?.status;
-    const isHost =
-      typeof room?.hostId === "string" && room.hostId.trim() === uid;
-
-    // Spectator V3: recallOpen で入席可否を制御
-    // 互換性のため、undefined は "開放中" とみなす（初期waitingでの入席可）
-    const recallOpen = room?.ui?.recallOpen ?? true;
-
-    const dealPlayers: string[] = Array.isArray(room?.deal?.players)
-      ? (room.deal.players as string[]).filter(
-          (value): value is string =>
-            typeof value === "string" && value.trim().length > 0
-        )
-      : [];
-    const seatHistoryRaw = room?.deal?.seatHistory;
-    const seatHistoryHas = typeof seatHistoryRaw?.[uid] === "number";
-    const orderList: string[] = Array.isArray(room?.order?.list)
-      ? (room.order.list as string[]).filter(
-          (value): value is string =>
-            typeof value === "string" && value.trim().length > 0
-        )
-      : [];
-    const orderProposal: string[] = Array.isArray(room?.order?.proposal)
-      ? (room.order.proposal as (string | null)[]).filter(
-          (value): value is string =>
-            typeof value === "string" && value.trim().length > 0
-        )
-      : [];
-    const wasSeatedBefore =
-      dealPlayers.includes(uid) ||
-      seatHistoryHas ||
-      orderList.includes(uid) ||
-      orderProposal.includes(uid);
-
-    // ゲーム進行中は入席拒否（ホスト以外）
-    if (!isHost && status && status !== "waiting" && !wasSeatedBefore) {
-      logWarn("roomService", "ensureMember-blocked-in-progress", {
-        roomId,
-        uid,
-        status,
-      });
-      traceAction("join.blocked", { roomId, uid, status, reason: "inProgress" });
+    if (code === "room_in_progress" || code === "room_recall_closed") {
+      traceAction("join.blocked", { roomId, uid, code });
       return { joined: false, reason: "inProgress" } as const;
     }
-
-    // waiting でも recallOpen=false なら入席拒否（ホスト以外）
-    if (!isHost && status === "waiting" && !recallOpen && !wasSeatedBefore) {
-      logWarn("roomService", "ensureMember-blocked-recall-disabled", {
-        roomId,
-        uid,
-        status,
-        recallOpen,
+    if (code === "room/join/version-mismatch") {
+      throw new RoomServiceError("ROOM_VERSION_MISMATCH", {
+        roomVersion: (error as { details?: { roomVersion?: string | null } })?.details?.roomVersion ?? null,
+        clientVersion: versionToSend,
       });
-      traceAction("join.blocked", { roomId, uid, status, recallOpen });
-      return { joined: false, reason: "inProgress" } as const;
     }
-
-    // クリーンアップ後の正確なプレイヤー数を取得
-    const playersCollectionRef = collection(db!, "rooms", roomId, "players");
-    let usedAvatars: Set<string> | null = null;
-    const cached = getAvatarCache(roomId);
-    if (cached) {
-      usedAvatars = new Set(cached.used);
-      const perf =
-        typeof window !== "undefined" &&
-        typeof window.performance !== "undefined"
-          ? window.performance
-          : null;
-      perf?.mark(`avatar_cache_hit:${roomId}`);
-    } else {
-      try {
-        const snapshot = await getDocs(playersCollectionRef);
-        usedAvatars = new Set<string>();
-        snapshot.docs.forEach((playerDoc) => {
-          const player = playerDoc.data();
-          if (player?.avatar) {
-            usedAvatars!.add(String(player.avatar));
-          }
-        });
-        setAvatarCache(roomId, usedAvatars);
-        const perf =
-          typeof window !== "undefined" &&
-          typeof window.performance !== "undefined"
-            ? window.performance
-            : null;
-        perf?.mark(`avatar_cache_miss:${roomId}`);
-      } catch (error) {
-        usedAvatars = new Set<string>();
-        invalidateAvatarCache(roomId);
-        logWarn("roomService", "avatar-cache-fetch-failed", {
-          roomId,
-          error,
-        });
-      }
-    }
-    if (!usedAvatars) {
-      usedAvatars = new Set<string>();
-    }
-
-    // 使用されていないアバターをランダムに選択
-    const availableAvatars = AVATAR_LIST.filter(
-      (avatar) => !usedAvatars.has(avatar)
-    );
-    const stickyAvatar = readStoredAvatar(roomId, uid);
-    let selectedAvatar =
-      stickyAvatar && !usedAvatars.has(stickyAvatar)
-        ? stickyAvatar
-        : getAvatarByOrder(0); // フォールバック
-
-    if (availableAvatars.length > 0) {
-      // 利用可能なアバターからランダム選択
-      const randomIndex = Math.floor(Math.random() * availableAvatars.length);
-      selectedAvatar = availableAvatars[randomIndex];
-    }
-
-    const p: PlayerDoc = {
-      name: resolvedDisplayName,
-      avatar: selectedAvatar,
-      number: null,
-      clue1: "",
-      ready: false,
-      orderIndex: 0,
-      uid,
-      lastSeen: serverTimestamp(),
-      joinedAt: serverTimestamp(),
-    };
-    try {
-      await setDoc(meRef, p);
-    } catch (error) {
-      logWarn("roomService", "ensureMember-create-player-failed", {
-        roomId,
-        uid,
-        status,
-        error,
-      });
-      await recoverFromPermissionDenied(error, "ensure-member-create");
-      throw error;
-    }
-    logWarn("roomService", "ensureMember-created-player", {
-      roomId,
-      uid,
-      status,
-      displayNameSource,
-    });
-    registerAvatarUsage(roomId, selectedAvatar);
-    writeStoredAvatar(roomId, uid, selectedAvatar);
-    return { joined: true } as const;
+    throw error;
   }
-  const existing = meSnap.data() as Partial<PlayerDoc> | undefined;
-  const normalizedName =
-    typeof displayName === "string" ? displayName.trim() : resolvedDisplayName;
-  const patch: Partial<PlayerDoc> & {
-    lastSeen: ReturnType<typeof serverTimestamp>;
-  } = { lastSeen: serverTimestamp() };
-  if (!existing?.uid) {
-    patch.uid = uid;
-  }
-  if (!existing?.joinedAt) {
-    patch.joinedAt = serverTimestamp();
-  }
-  if (normalizedName && normalizedName.length > 0 && existing?.name !== normalizedName) {
-    patch.name = normalizedName;
-  }
-  try {
-    await updateDoc(meRef, patch);
-    logWarn("roomService", "ensureMember-updated-existing", {
-      roomId,
-      uid,
-      patchKeys: Object.keys(patch),
-    });
-  } catch (error) {
-    logWarn("roomService", "ensure-member-update-existing-failed", {
-      roomId,
-      uid,
-      error,
-    });
-    await recoverFromPermissionDenied(error, "ensure-member-update");
-  }
-  if (existing?.avatar) {
-    registerAvatarUsage(roomId, String(existing.avatar));
-  }
-  return { joined: false } as const;
 }
 
 // Reset player's ready flag when round changes (UI layer should call this instead of direct updateDoc)
@@ -475,11 +264,9 @@ export async function resetPlayerReadyOnRoundChange(
   uid: string,
   nextRound: number
 ): Promise<void> {
-  if (!db) return;
   try {
     traceAction("player.ready.reset", { roomId, uid, nextRound });
-    const meRef = doc(db, "rooms", roomId, "players", uid);
-    await updateDoc(meRef, { ready: false });
+    await apiReady(roomId, false);
   } catch (error) {
     traceAction("player.ready.reset.error", { roomId, uid, nextRound });
     throw error;
@@ -493,94 +280,10 @@ export async function updateRoomOptions(
     defaultTopicType?: string;
   }
 ): Promise<void> {
-  if (!db) return;
-  await updateDoc(doc(db, "rooms", roomId), {
-    ...(options.resolveMode ? { "options.resolveMode": options.resolveMode } : {}),
-    ...(options.defaultTopicType
-      ? { "options.defaultTopicType": options.defaultTopicType }
-      : {}),
-  });
-}
-
-export async function cleanupDuplicatePlayerDocs(roomId: string, uid: string) {
-  const dupQ = query(
-    collection(db!, "rooms", roomId, "players"),
-    where("uid", "==", uid)
-  );
-  const dupSnap = await getDocs(dupQ);
-  for (const d of dupSnap.docs) {
-    if (d.id !== uid) {
-      try {
-        await deleteDoc(doc(db!, "rooms", roomId, "players", d.id));
-      } catch {}
-    }
-  }
-  if (dupSnap.size > 1) {
-    invalidateAvatarCache(roomId);
-  }
-}
-
-export async function addLateJoinerToDeal(roomId: string, uid: string) {
-  const roomRef = doc(db!, "rooms", roomId);
-  await runTransaction(db!, async (tx) => {
-    const snap = await tx.get(roomRef);
-    if (!snap.exists()) return;
-    const data = snap.data() as RoomDoc;
-    const deal = data?.deal || null;
-    const playersSource: unknown = deal?.players;
-    let players: string[] = Array.isArray(playersSource)
-      ? (playersSource as string[]).filter(
-          (value): value is string => typeof value === "string" && value.length > 0
-        )
-      : [];
-
-    const seatHistorySource: unknown = deal?.seatHistory;
-    const seatHistory: Record<string, number> =
-      seatHistorySource && typeof seatHistorySource === "object"
-        ? { ...(seatHistorySource as Record<string, number>) }
-        : {};
-
-    const alreadyPresent = players.includes(uid);
-
-    if (!alreadyPresent) {
-      let targetIndex: number | null = null;
-      const recorded = seatHistory[uid];
-      if (typeof recorded === "number" && recorded >= 0) {
-        targetIndex = recorded;
-      }
-      if (targetIndex === null || targetIndex > players.length) {
-        targetIndex = players.length;
-      }
-      players = players.filter((id) => id !== uid);
-      players.splice(targetIndex, 0, uid);
-    }
-
-    const nextSeatHistory: Record<string, number> = { ...seatHistory };
-    players.forEach((id, index) => {
-      nextSeatHistory[id] = index;
-    });
-
-    const nextDeal = {
-      ...(deal ?? {}),
-      players,
-      seatHistory: nextSeatHistory,
-    } as DealState;
-
-    const patch: Partial<RoomDoc> = {
-      deal: nextDeal,
-    };
-
-    if (data?.order) {
-      const nextOrder = {
-        ...(data.order ?? {}),
-        total: players.length,
-      } as OrderState;
-      patch.order = nextOrder;
-    } else if (data?.status === "clue") {
-      patch.order = { total: players.length } as OrderState;
-    }
-
-    tx.update(roomRef, patch);
+  await apiUpdateRoomOptions({
+    roomId,
+    resolveMode: options.resolveMode,
+    defaultTopicType: options.defaultTopicType,
   });
 }
 
@@ -589,60 +292,13 @@ export async function assignNumberIfNeeded(
   uid: string,
   roomFromState?: Partial<RoomDoc> | null
 ) {
-  const roomRef = doc(db!, "rooms", roomId);
-  const [roomData, meSnap] = await Promise.all([
-    (async () => {
-      if (roomFromState?.deal) {
-        return roomFromState;
-      }
-      const snapshot = await getDoc(roomRef);
-      return snapshot.exists() ? (snapshot.data() as RoomDoc) : null;
-    })(),
-    getDoc(doc(db!, "rooms", roomId, "players", uid)),
-  ]);
-  if (!roomData || !meSnap.exists()) return;
-  const room = roomData as RoomDoc | Partial<RoomDoc>;
-  const me = meSnap.data() as PlayerDoc;
-  const deal = room?.deal || null;
-  if (!deal) return;
-  const activeDeal = deal as DealState;
-
-  const min = activeDeal.min || 1;
-  const max = activeDeal.max || 100;
-
-  if (room.status === "clue") {
-    if (!Array.isArray(activeDeal.players)) return;
-    const idx = activeDeal.players.indexOf(uid);
-    if (idx < 0) return;
-    // プレイヤー数とseedのみに依存する決定的な番号
-    const { generateDeterministicNumbers } = await import("@/lib/game/random");
-    const nums = generateDeterministicNumbers(
-      activeDeal.players.length,
-      min,
-      max,
-      activeDeal.seed
-    );
-    const myNum = nums[idx];
-    if (me.number !== myNum) {
-      const existingClue =
-        typeof me.clue1 === "string" ? (me.clue1 as string) : "";
-      const nextReady = existingClue.trim().length > 0;
-      await updateDoc(doc(db!, "rooms", roomId, "players", uid), {
-        number: myNum,
-        clue1: existingClue,
-        ready: nextReady,
-        orderIndex: 0,
-      });
-    }
-  }
+  const room = roomFromState || null;
+  const numbers = room?.order?.numbers ?? null;
+  const hasAssignedNumber =
+    numbers && typeof numbers[uid as keyof typeof numbers] === "number";
+  if (hasAssignedNumber) return;
+  // サーバー側で配布するためクライアントは何もしない（互換用の空実装）
 }
-
-export async function updateLastActive(roomId: string) {
-  await updateDoc(doc(db!, "rooms", roomId), {
-    lastActiveAt: serverTimestamp(),
-  });
-}
-
 export async function joinRoomFully({
   roomId,
   uid,
@@ -671,24 +327,6 @@ export async function joinRoomFully({
     });
     throw new RoomServiceError("ROOM_IN_PROGRESS");
   }
-
-  await addLateJoinerToDeal(roomId, uid).catch(() => void 0);
-  await assignNumberIfNeeded(roomId, uid).catch(() => void 0);
-  await updateLastActive(roomId).catch(() => void 0);
-
-  if (notifyChat && created.joined) {
-    try {
-      const { addDoc, collection, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
-      await addDoc(collection(db!, "rooms", roomId, "chat"), {
-        sender: "system",
-        text: `${resolvedDisplayName} さんが参加しました`,
-        createdAt: serverTimestamp(),
-      });
-    } catch {}
-  }
-  await cleanupDuplicatePlayerDocs(roomId, uid).catch(() => void 0);
   const { logInfo } = await import("@/lib/utils/log");
   logInfo("room-service", "joinRoomFully-complete", {
     roomId,
@@ -697,13 +335,4 @@ export async function joinRoomFully({
     notifyChat,
   });
   return created;
-}
-
-async function recoverFromPermissionDenied(error: unknown, reason: string) {
-  const code =
-    (error as FirestoreError)?.code ??
-    ((error as { code?: string })?.code ?? null);
-  if (code === "permission-denied") {
-    await ensureAuthSession(reason);
-  }
 }

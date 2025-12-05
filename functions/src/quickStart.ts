@@ -304,9 +304,18 @@ export const quickStart = functions.region("asia-northeast1").runWith({ minInsta
         });
       });
     } catch (error) {
+      const currentStatus =
+        roomData && typeof (roomData as { status?: unknown }).status === "string"
+          ? ((roomData as { status?: unknown }).status as string)
+          : null;
       traceError(
         "quickStart.function.failed",
-        { roomId, stage: "startGame" },
+        {
+          roomId,
+          stage: "startGame",
+          code: (error as { code?: string })?.code ?? "unknown",
+          currentStatus,
+        },
         error
       );
       if (error instanceof functions.https.HttpsError) {
@@ -406,7 +415,9 @@ const presencePromise = skipPresence
     stageTimer.mark("orderReady");
 
     const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const numbers = generateDeterministicNumbers(orderedPlayerIds.length, 1, 100, seed);
+    const min = 1;
+    const max = 100;
+    const numbers = generateDeterministicNumbers(orderedPlayerIds.length, min, max, seed);
     const numberMap = orderedPlayerIds.reduce<Record<string, number | null>>((acc, id, index) => {
       acc[id] = typeof numbers[index] === "number" ? numbers[index] : null;
       return acc;
@@ -416,18 +427,43 @@ const presencePromise = skipPresence
       return acc;
     }, {});
 
+    // 部屋ドキュメントに配札情報を保存（deal + order.numbers）
     await roomRef.update({
       deal: {
         seed,
-        min: 1,
-        max: 100,
+        min,
+        max,
         players: orderedPlayerIds,
         seatHistory,
+        numbers: numberMap,
       },
       "order.total": orderedPlayerIds.length,
       "order.numbers": numberMap,
       lastActiveAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // 各プレイヤー doc にも番号・座席情報を反映（新しい API ベースの配札と同じ形に揃える）
+    try {
+      const playersRef = db.collection("rooms").doc(roomId).collection("players");
+      const playersSnap = await playersRef.get();
+      if (!playersSnap.empty) {
+        const batch = db.batch();
+        playersSnap.forEach((docSnap) => {
+          const pid = docSnap.id;
+          const seatIndex = typeof seatHistory[pid] === "number" ? seatHistory[pid]! : 0;
+          batch.update(docSnap.ref, {
+            number: numberMap[pid] ?? null,
+            clue1: "",
+            ready: false,
+            orderIndex: seatIndex,
+            lastSeen: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+        await batch.commit();
+      }
+    } catch (error) {
+      functions.logger.warn("[quickStart] Failed to update player numbers", { roomId, error });
+    }
     stageTimer.mark("dealUpdate");
 
     try {

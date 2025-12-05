@@ -1,8 +1,7 @@
-import { getAdminAuth } from "@/lib/server/firebaseAdmin";
-import { leaveRoomServer } from "@/lib/server/roomActions";
-import { logError } from "@/lib/utils/log";
 import { NextRequest, NextResponse } from "next/server";
 import { leaveRoomSchema } from "@/lib/schema/roomLeave";
+import { leaveRoom } from "@/lib/server/roomCommands";
+import { logError } from "@/lib/utils/log";
 
 export const runtime = "nodejs";
 
@@ -26,20 +25,10 @@ export async function POST(
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
-  const { uid, token, displayName } = parsed.data;
+  const { token } = parsed.data;
 
   try {
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    if (decoded.uid !== uid) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 403 });
-    }
-  } catch (error) {
-    logError("rooms", "leave-route verify failed", error);
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-
-  try {
-    await leaveRoomServer(roomId, uid, displayName);
+    await leaveRoom({ roomId, token });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("rooms", "leave-route error", error);
