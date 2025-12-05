@@ -15,6 +15,11 @@ const shortCommit = commitSha ? commitSha.slice(0, 7) : "local";
 const timestamp = new Date().toISOString().replace(/[-:TZ]/g, "").slice(0, 14);
 const fallbackVersion = `${timestamp}-${shortCommit}`;
 
+// next export（静的エクスポート）は API ルートを破壊するため禁止
+if (process.env.NEXT_PHASE === "phase-export") {
+  throw new Error("next export is not supported for this project (API routes required).");
+}
+
 if (
   !process.env.NEXT_PUBLIC_APP_VERSION ||
   !process.env.NEXT_PUBLIC_APP_VERSION.trim()
@@ -90,6 +95,8 @@ const nextConfig = {
   // 開発環境でのカード描画・アニメーション問題を回避するため無効化
   // Strict Modeの2重レンダリングがPixi.js/GSAPアニメーションと競合
   reactStrictMode: false,
+  // API ルートを多用するため static export は非対応
+  output: undefined,
   async headers() {
     return [
       {
