@@ -6,6 +6,9 @@ import { createRoom } from "@/lib/server/roomCommands";
 import { traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
 
+// 明示的に動的ルートとして扱い、静的エクスポートを防ぐ
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export const runtime = "nodejs";
 
 const schema = z.object({
