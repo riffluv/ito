@@ -20,6 +20,12 @@ if (process.env.NEXT_PHASE === "phase-export") {
   throw new Error("next export is not supported for this project (API routes required).");
 }
 
+// Vercel/Next が output: 'export' を強制する状態も明示的に拒否する
+// （static export になると /api/* が 405/500 を返しゲームが起動しない）
+if (process.env.NEXT_OUTPUT === "export") {
+  throw new Error("Next.js output 'export' is not supported because API routes must stay dynamic.");
+}
+
 if (
   !process.env.NEXT_PUBLIC_APP_VERSION ||
   !process.env.NEXT_PUBLIC_APP_VERSION.trim()

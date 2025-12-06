@@ -17,3 +17,6 @@ functions/lib/
 tsconfig.tsbuildinfo
 public/workers/pixi-background-worker.js
 自己紹介メモ（序の紋章用).md
+
+.vercel
+.env*.local
