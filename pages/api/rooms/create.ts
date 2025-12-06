@@ -1,15 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
 import { z } from "zod";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { versionsEqual, normalizeVersion } from "@/lib/server/roomVersionGate";
 import { createRoom } from "@/lib/server/roomCommands";
 import { traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
-
-// 明示的に動的ルートとして扱い、静的エクスポートを防ぐ
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -23,26 +18,39 @@ const schema = z.object({
   clientVersion: z.string().optional().nullable(),
 });
 
-export async function POST(req: NextRequest) {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+type ErrorBody = { error: string; message?: string; roomVersion?: string | null; clientVersion?: string | null };
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "method_not_allowed" });
+  }
+
+  let body: unknown = req.body;
+
+  // Next.js usually parses JSON automatically, but harden against misconfiguration.
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return res.status(400).json({ error: "invalid_body" } satisfies ErrorBody);
+    }
   }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+    return res.status(400).json({ error: "invalid_body" } satisfies ErrorBody);
   }
 
   const clientVersion = normalizeVersion(parsed.data.clientVersion) ?? null;
   const serverVersion = normalizeVersion(APP_VERSION);
   if (clientVersion && serverVersion && !versionsEqual(clientVersion, serverVersion)) {
-    return NextResponse.json(
-      { error: "room/create/version-mismatch", roomVersion: serverVersion, clientVersion },
-      { status: 409 }
-    );
+    const payload: ErrorBody = {
+      error: "room/create/version-mismatch",
+      roomVersion: serverVersion,
+      clientVersion,
+    };
+    return res.status(409).json(payload);
   }
 
   try {
@@ -56,14 +64,20 @@ export async function POST(req: NextRequest) {
       passwordSalt: parsed.data.passwordSalt ?? null,
       passwordVersion: parsed.data.passwordVersion ?? null,
     });
-    return NextResponse.json({ ok: true, roomId: result.roomId, appVersion: result.appVersion });
+    return res.status(200).json({
+      ok: true,
+      roomId: result.roomId,
+      appVersion: result.appVersion,
+    });
   } catch (error) {
     traceError("room.create.api", error);
     const code = (error as { code?: string }).code;
     const status = code === "unauthorized" ? 401 : 500;
-    return NextResponse.json(
-      { error: code ?? "internal_error", message: (error as Error | undefined)?.message },
-      { status }
-    );
+    const payload: ErrorBody = {
+      error: code ?? "internal_error",
+      message: (error as Error | undefined)?.message,
+    };
+    return res.status(status).json(payload);
   }
 }
+

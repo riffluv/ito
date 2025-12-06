@@ -50,6 +50,34 @@
 3. 本番反映後、Safe Update と Presence を必ず動作確認（手順は後述）。  
 4. デプロイ結果・確認項目を Slack / Notion / docs に記録。  
 
+### 4.1 Vercel Build/Output 設定（API 破壊防止）
+- Build Command は `npm run build`（Next.js プリセット）に固定する。`next build && next export` や `output: export` 相当の設定を入れない。  
+- Output Directory は空欄のままにし、`out` を指定しない。Static Site 判定になると `/api/*` が 405/500 になりゲームが起動しなくなる。  
+- Framework プリセットは「Next.js」を選択する（Static Site / Other にしない）。  
+- Production Overrides（黄色い帯が出るセクション）が有効だと Project Settings を上書きして Static Site になる場合がある。Overrides はすべて OFF にし、Build Command / Output Directory が Project と一致しているか確認する。  
+- デプロイ詳細画面で Build Logs を開き、「Static Export」「output: export」「.vercel/output/static」などが出ていないか確認する。出ている場合は設定を直して再デプロイ。  
+- `/api/rooms/create` への `curl -i` で `x-matched-path: /500` かつ `__NEXT_DATA__.nextExport=true` が返る場合は、静的エクスポートが配信されているサイン。ビルド設定を修正して再デプロイする。  
+- 追加ガード: `scripts/verify-api-routes.js` を `postbuild` で実行し、`.next/server/app/api/rooms/create/route.js` などが無ければビルドを失敗させる。Vercel ビルドが静的化しているときはここで止まる。  
+
+### 4.2 部屋作成が本番だけ 405/500 になるときのチェックリスト
+1. **症状確認**  
+   - `curl -i https://numberlink.vercel.app/api/rooms/create` → `x-matched-path: /500` と HTML が返る。`__NEXT_DATA__.nextExport:true` が埋まっていると静的エクスポート配信。  
+   - `curl -i -X POST https://numberlink.vercel.app/api/rooms/create -d '{}' -H 'Content-Type: application/json'` → 405/500 で同じく `/500` にマッチしている。  
+2. **Vercel Project 設定を確認**（Settings → Build & Development Settings）  
+   - Framework Preset = Next.js  
+   - Build Command = `npm run build`（Overrides があれば OFF にする）  
+   - Output Directory = 空欄（`out` が入っていたら削除）  
+   - Production Overrides が残っていないか。黄色帯が出ていたらクリックし、Output/Build の上書きを消す。  
+3. **ドメインの紐づけ確認**（Settings → Domains）  
+   - `numberlink.vercel.app` が現在のプロジェクトの Production Deployment を指しているか。別プロジェクトの古い static 出力に紐付いていないか確認。  
+4. **Production Deployment のビルドログを確認**  
+   - Deployment 詳細で「Using Next.js Runtime」になっているか。`Static File Export` や `.vercel/output/static` になっていれば再デプロイ。  
+   - Redeploy する際は「Run Build」を有効にし、prebuilt output は使わない。  
+5. **再デプロイ後の確認**  
+   - `curl -i https://numberlink.vercel.app/api/rooms/create` → 404 または 405 が JSON/空レスポンスで返る（HTML 500 ではない）。  
+   - `curl -i -X POST ... -d '{}'` → `400 {"error":"invalid_body"}` など API ハンドラのレスポンスが返る。  
+   - UI で「部屋作成 → 入室 → ゲーム開始 → リセット → 新規部屋作成」が通ることを確認。  
+
 ---
 
 ## 5. 監視・テレメトリ

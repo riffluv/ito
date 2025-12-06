@@ -56,7 +56,7 @@ export async function apiCreateRoom(payload: {
   passwordVersion?: number | null;
 }): Promise<{ roomId: string; appVersion: string }> {
   const token = await getIdTokenOrThrow("create-room");
-  return postJson("/api/rooms/create", {
+  return postJson("/api/room/create", {
     ...payload,
     token,
     clientVersion: APP_VERSION,
