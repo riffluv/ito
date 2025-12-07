@@ -1,10 +1,12 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { versionsEqual, normalizeVersion } from "@/lib/server/roomVersionGate";
 import { createRoom } from "@/lib/server/roomCommands";
 import { traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
+
+export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -18,28 +20,24 @@ const schema = z.object({
   clientVersion: z.string().optional().nullable(),
 });
 
-type ErrorBody = { error: string; message?: string; roomVersion?: string | null; clientVersion?: string | null };
+type ErrorBody = {
+  error: string;
+  message?: string;
+  roomVersion?: string | null;
+  clientVersion?: string | null;
+};
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "method_not_allowed" });
-  }
-
-  let body: unknown = req.body;
-
-  // Next.js usually parses JSON automatically, but harden against misconfiguration.
-  if (typeof body === "string") {
-    try {
-      body = JSON.parse(body);
-    } catch {
-      return res.status(400).json({ error: "invalid_body" } satisfies ErrorBody);
-    }
+export async function POST(req: NextRequest) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_body" } satisfies ErrorBody, { status: 400 });
   }
 
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "invalid_body" } satisfies ErrorBody);
+    return NextResponse.json({ error: "invalid_body" } satisfies ErrorBody, { status: 400 });
   }
 
   const clientVersion = normalizeVersion(parsed.data.clientVersion) ?? null;
@@ -50,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       roomVersion: serverVersion,
       clientVersion,
     };
-    return res.status(409).json(payload);
+    return NextResponse.json(payload, { status: 409 });
   }
 
   try {
@@ -64,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       passwordSalt: parsed.data.passwordSalt ?? null,
       passwordVersion: parsed.data.passwordVersion ?? null,
     });
-    return res.status(200).json({
+    return NextResponse.json({
       ok: true,
       roomId: result.roomId,
       appVersion: result.appVersion,
@@ -77,7 +75,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: code ?? "internal_error",
       message: (error as Error | undefined)?.message,
     };
-    return res.status(status).json(payload);
+    return NextResponse.json(payload, { status });
   }
 }
-

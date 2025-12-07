@@ -146,7 +146,13 @@
       "Bash(else echo \".env.localファイルが見つかりません\")",
       "Bash(fi)",
       "Bash(wc:*)",
-      "Bash(git -C /home/hr-hm/Project/jomonsho log --oneline)"
+      "Bash(git -C /home/hr-hm/Project/jomonsho log --oneline)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(ss:*)",
+      "Bash(netstat:*)",
+      "Bash(kill:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [],
     "ask": []
