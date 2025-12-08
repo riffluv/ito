@@ -315,6 +315,9 @@ export function useHostActions({
         );
 
         let attempts = 0;
+        // restart intent（次のゲーム）の場合は最初から allowFromFinished: true で呼び出す
+        // これにより reset の Firestore 伝播を待たずに reveal/finished → clue に直接遷移できる
+        const isRestartFlow = !!isRestartIntent;
         let result = await hostActions.quickStartWithTopic({
           roomId,
           roomStatus,
@@ -325,14 +328,19 @@ export function useHostActions({
             playerCount: basePlayerCount,
           },
           currentTopic,
+          allowFromFinished: isRestartFlow,
         });
 
-        // 409 invalid_status → reason: not-waiting を明示的に処理し、必要なら1回だけ強制リセット＋再試行する。
-        while (!result.ok && result.reason === "not-waiting" && attempts === 0) {
+        // 409 invalid_status → reason: not-waiting を明示的に処理。
+        // allowFromFinished=true でリトライすることで、Firestore 伝播のレース条件を回避。
+        const MAX_RETRY_ATTEMPTS = 2;
+        while (!result.ok && result.reason === "not-waiting" && attempts < MAX_RETRY_ATTEMPTS) {
           attempts += 1;
+          const currentStatus = result.roomStatus ?? roomStatus ?? "unknown";
           traceAction("ui.host.quickStart.notWaiting", {
             roomId,
-            status: result.roomStatus ?? roomStatus ?? "unknown",
+            status: currentStatus,
+            attempt: String(attempts),
           });
           notify({
             id: toastIds.genericInfo(roomId, "quickstart-not-waiting"),
@@ -343,7 +351,7 @@ export function useHostActions({
           });
 
           // 進行中ステータスが残っている場合のみ待機リセットを実行
-          if (!result.roomStatus || result.roomStatus === "finished" || result.roomStatus === "reveal") {
+          if (!currentStatus || currentStatus === "finished" || currentStatus === "reveal") {
             try {
               await hostActions.resetRoomToWaitingWithPrune({
                 roomId,
@@ -357,8 +365,11 @@ export function useHostActions({
             }
           }
 
-          // 少し待ってから再度 quickStart 実行
-          await new Promise((resolve) => setTimeout(resolve, 160));
+          // Firestore の伝播を待つ（リトライ回数に応じて待ち時間を増加）
+          const waitMs = 200 + attempts * 150;
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+
+          // リトライ時は allowFromFinished=true で reveal/finished からも開始可能にする
           result = await hostActions.quickStartWithTopic({
             roomId,
             roomStatus,
@@ -369,6 +380,7 @@ export function useHostActions({
               playerCount: basePlayerCount,
             },
             currentTopic,
+            allowFromFinished: true,
           });
         }
 

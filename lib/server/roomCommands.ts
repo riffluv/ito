@@ -337,10 +337,11 @@ export async function submitClue(params: SubmitClueParams) {
   traceAction("clue.submit.server", { roomId: params.roomId, uid });
 }
 
-export async function startGameCommand(params: { roomId: string } & WithAuth) {
+export async function startGameCommand(params: { roomId: string; allowFromFinished?: boolean } & WithAuth) {
   const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
+  const allowFromFinished = params.allowFromFinished ?? false;
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
@@ -348,7 +349,15 @@ export async function startGameCommand(params: { roomId: string } & WithAuth) {
       throw codedError("room_not_found", "room_not_found");
     }
     const room = snap.data() as RoomDoc;
-    if (room.status !== "waiting") {
+
+    // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
+    // これにより「次のゲーム」ボタン押下時のレース条件を解消
+    const validStatuses: RoomDoc["status"][] = ["waiting"];
+    if (allowFromFinished) {
+      validStatuses.push("reveal", "finished");
+    }
+
+    if (!validStatuses.includes(room.status)) {
       throw codedError("invalid_status", "invalid_status");
     }
     if (room.hostId && room.hostId !== uid) {
@@ -374,7 +383,7 @@ export async function startGameCommand(params: { roomId: string } & WithAuth) {
   });
   await batch.commit();
 
-  traceAction("host.start.server", { roomId: params.roomId, uid });
+  traceAction("host.start.server", { roomId: params.roomId, uid, allowFromFinished });
 }
 
 export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean } & WithAuth) {
