@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
-  clue: z.string().min(1),
+  clue: z.string(),
   clientVersion: z.string().optional().nullable(),
 });
 

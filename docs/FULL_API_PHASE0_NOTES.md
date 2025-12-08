@@ -1,6 +1,8 @@
 # Phase 0 inventory (full API refactor)
 
-調査日時: 2025-12-05
+調査日時: 2025-12-05  
+※ 以下の「直接 Firestore 書き込み」一覧は **当時のスナップショット** です。  
+　2025-12-07 現在、rooms / players への書き込みは部屋作成を含めて Next.js API 経由に統一済みです（下記メモ参照）。
 
 ## 直接 Firestore 書き込み（クライアント SDK）
 - `components/CreateRoomModal.tsx`: 部屋作成時の `setDoc`（rooms/<roomId>、players サブコレクション）。
@@ -35,3 +37,20 @@
 - クライアント版チェックは `lib/services/roomService.ts` 内 `ensureRoomVersionAllowed`（`/api/rooms/version-check` をフェッチ）でも実施済み。
 
 メモ: Presence (RTDB) の設計・サーバー主導ポリシーは AGENTS.md を遵守済み。次フェーズではこれら直接書き込み箇所をサーバーコマンド層＋ API へ段階的に移設する。
+
+## 2025-12-07 追加メモ（create-room の API 化 / jsdom 依存削除）
+
+- 部屋作成も API 経由に統一済み。
+  - クライアント: `components/CreateRoomModal.tsx` → `lib/services/roomApiClient.ts` の `apiCreateRoom`。
+  - エンドポイント: `POST /api/room/create`（Pages API）→ サーバー側 `lib/server/roomCommands.ts` の `createRoom` を実行。
+  - UI から Firestore へ `rooms` / `players` を直接 `setDoc` するコードは削除済み。
+- サーバー側サニタイズで発生していた Vercel 本番クラッシュの原因:
+  - 旧実装: `lib/utils/sanitize.ts` で `isomorphic-dompurify` を利用しており、内部依存の `jsdom` が Vercel の Node.js 22 環境で `Error [ERR_REQUIRE_ESM]: require() of ES Module .../jsdom/...` を発生させていた。
+  - これにより `/api/rooms/create` などの API ルートが本番のみ 500（静的 500 HTML）に落ちていた。
+- 現在の対策:
+  - `lib/utils/sanitize.ts` を **純粋な文字列処理ベース** に差し替え、`jsdom` / `isomorphic-dompurify` 依存を完全撤廃。
+    - HTML タグ除去, 基本的な HTML エンティティのデコード, 制御文字除去のみを行う `sanitizePlainText` として再実装。
+  - これにより、ローカル / 本番ともに create-room を含む全 API が安定動作することを確認済み。
+- 今後の注意:
+  - サーバー側コード（`lib/server/*`, `app/api/*`, `pages/api/*`）から **`jsdom` や isomorphic-dompurify を再導入しないこと**。
+  - もしサニタイズを強化したい場合は、現行の `sanitizePlainText` を拡張するか、ブラウザ専用の DOM ベースサニタイズはクライアント限定で使う。
