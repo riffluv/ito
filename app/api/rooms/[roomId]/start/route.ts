@@ -9,6 +9,8 @@ export const runtime = "nodejs";
 const schema = z.object({
   token: z.string().min(1),
   clientVersion: z.string().optional().nullable(),
+  // 「次のゲーム」ボタンなど reveal/finished 状態からの開始を許可するフラグ
+  allowFromFinished: z.boolean().optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -42,7 +44,11 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   }
 
   try {
-    await startGameCommand({ roomId, ...parsed.data });
+    await startGameCommand({
+      roomId,
+      token: parsed.data.token,
+      allowFromFinished: parsed.data.allowFromFinished ?? false,
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     traceError("room.start.api", error, { roomId });

@@ -92,9 +92,13 @@ export async function apiSubmitOrder(roomId: string, list: string[]): Promise<vo
   await postJson(`/api/rooms/${roomId}/submit-order`, { token, list, clientVersion: APP_VERSION });
 }
 
-export async function apiStartGame(roomId: string): Promise<void> {
+export async function apiStartGame(roomId: string, opts?: { allowFromFinished?: boolean }): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
-  await postJson(`/api/rooms/${roomId}/start`, { token, clientVersion: APP_VERSION });
+  await postJson(`/api/rooms/${roomId}/start`, {
+    token,
+    clientVersion: APP_VERSION,
+    allowFromFinished: opts?.allowFromFinished ?? false,
+  });
 }
 
 export async function apiResetRoom(roomId: string, recallSpectators: boolean): Promise<void> {

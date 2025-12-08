@@ -33,6 +33,8 @@ export type QuickStartRequest = {
   presenceInfo?: PresenceInfo;
   currentTopic?: string | null;
   customTopic?: string | null;
+  /** reveal/finished 状態からの開始を許可（次のゲーム用） */
+  allowFromFinished?: boolean;
 };
 
 export type QuickStartResult =
@@ -190,7 +192,13 @@ export function createHostActionsController() {
         } else if (data?.topic === null) {
           topic = null;
         }
-        if (typeof data?.status === "string" && data.status !== "waiting") {
+        // allowFromFinished が true の場合は reveal/finished からの開始も許可
+        const allowFromFinished = req.allowFromFinished ?? false;
+        const validStatuses: string[] = ["waiting"];
+        if (allowFromFinished) {
+          validStatuses.push("reveal", "finished");
+        }
+        if (typeof data?.status === "string" && !validStatuses.includes(data.status)) {
           return {
             ok: false,
             reason: "not-waiting",
@@ -236,13 +244,15 @@ export function createHostActionsController() {
     await toggleRoundPreparing(roomId, true);
     let success = false;
     try {
+      const allowFromFinished = req.allowFromFinished ?? false;
       traceAction("ui.host.quickStart.api", {
         roomId,
         type: effectiveType,
         skipPresence: skipPresence ? "1" : "0",
+        allowFromFinished: allowFromFinished ? "1" : "0",
       });
 
-      await apiStartGame(roomId);
+      await apiStartGame(roomId, { allowFromFinished });
 
       if (effectiveType === "カスタム") {
         const text = customTopic ?? topic ?? "";
@@ -404,6 +414,9 @@ export function createHostActionsController() {
   const restartRound = async (
     req: RestartRoundRequest
   ): Promise<QuickStartResult> => {
+    // 「次のゲーム」フローでは reset を実行しつつ、
+    // allowFromFinished=true で直接 reveal/finished → clue に遷移可能にする
+    // これにより Firestore 伝播のレース条件を回避
     await resetRoomToWaitingWithPrune({
       roomId: req.roomId,
       roundIds: req.roundIds,
@@ -411,7 +424,10 @@ export function createHostActionsController() {
       includeOnline: false,
       recallSpectators: false,
     });
-    return quickStartWithTopic(req);
+    return quickStartWithTopic({
+      ...req,
+      allowFromFinished: true,
+    });
   };
 
   const evaluateSortedOrder = async (
