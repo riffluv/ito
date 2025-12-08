@@ -442,6 +442,10 @@ export function GameResultOverlay({
 
   const playbackKeyRef = useRef<string | null>(null);
 
+  // サウンド再生のタイミングはGSAP Timeline の onStart で統一する
+  // useEffect での呼び出しはホスト/非ホストでタイミングが異なるため削除
+  // - 勝利時: Timeline l.1006 の onStart で再生
+  // - 失敗時: Timeline l.646 の onStart で再生
   useEffect(() => {
     const timestamp = resolveRevealTimestamp();
     const key = `${mode}:${failed ? "fail" : "success"}:${timestamp ?? "none"}`;
@@ -452,26 +456,7 @@ export function GameResultOverlay({
 
     playbackKeyRef.current = key;
 
-    if (revealedAt === null || typeof revealedAt === "undefined") {
-      return;
-    }
-
-    const now = Date.now();
-    const isFreshReveal = timestamp === null || now - timestamp <= 6000;
-    if (!isFreshReveal) {
-      return;
-    }
-
-    if (failed && mode === "overlay") {
-      // overlay の失敗はアニメーション中（Phase 1.5）で1回だけ鳴らす。ここでは再生しない。
-      return;
-    }
-
-    void playResultSound({
-      outcome: failed ? "failure" : "victory",
-      reason: `overlay:${mode}`,
-      skipIfPending: true,
-    });
+    // playbackKeyRef のみ更新（再生処理は Timeline の onStart に統一）
   }, [
     failed,
     mode,
