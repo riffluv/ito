@@ -345,14 +345,14 @@ export async function startGameCommand(params: { roomId: string } & WithAuth) {
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
     if (!snap.exists) {
-      throw new Error("room_not_found");
+      throw codedError("room_not_found", "room_not_found");
     }
     const room = snap.data() as RoomDoc;
     if (room.status !== "waiting") {
-      throw new Error("invalid_status");
+      throw codedError("invalid_status", "invalid_status");
     }
     if (room.hostId && room.hostId !== uid) {
-      throw new Error("forbidden");
+      throw codedError("forbidden", "forbidden", "host_only");
     }
     const payload: Partial<RoomDoc> = {
       status: "clue",
