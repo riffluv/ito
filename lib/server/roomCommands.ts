@@ -14,6 +14,7 @@ import {
   prepareProposalInsert,
   selectDealTargetPlayers,
   buildPlayOutcomePayload,
+  buildRevealOutcomePayload,
 } from "@/lib/game/domain";
 import { composeWaitingResetPayload } from "@/lib/server/roomActions";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
@@ -462,17 +463,24 @@ export async function submitOrder(params: SubmitOrderParams) {
     const normalizedList = normalizeProposalCompact(params.list, validation.expected).filter(
       (v): v is string => typeof v === "string"
     );
-    const payload: Partial<RoomDoc> = {
+    const revealOutcome = buildRevealOutcomePayload({
+      list: normalizedList,
+      numbers: (room.order?.numbers ?? {}) as Record<string, number | null | undefined>,
+      expectedTotal: validation.expected,
+      previousStats: room.stats,
+    });
+    const serverNow = FieldValue.serverTimestamp();
+    tx.update(roomRef, {
       order: {
         ...(room.order ?? {}),
-        list: normalizedList,
-        decidedAt: FieldValue.serverTimestamp(),
+        ...revealOutcome.order,
+        decidedAt: serverNow,
       },
       status: "reveal",
-      result: { success: true, revealedAt: FieldValue.serverTimestamp() },
-      lastActiveAt: FieldValue.serverTimestamp(),
-    };
-    tx.update(roomRef, payload);
+      result: { success: revealOutcome.success, revealedAt: serverNow },
+      stats: revealOutcome.stats,
+      lastActiveAt: serverNow,
+    });
   });
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
