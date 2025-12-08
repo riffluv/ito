@@ -252,3 +252,26 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
   - **参加**: `room.appVersion` と `clientVersion` が不一致なら `room/join/version-mismatch` を返し、参加を拒否（ペイロードに `roomVersion`/`clientVersion` を含む）。
 - 旧データ互換のため `appVersion` が無い既存ルームは一旦許可する（初回参加時に新しい部屋を立て直してもらう想定）。
 - 問い合わせ対応メッセージ例: 「この部屋は古いバージョンで進行中です。最新版では参加できないため、新しい部屋を作成して合流してください。」
+
+---
+
+## 15. API1本化 完了メモ（2025-12-07）
+
+### 15.1 状態のまとめ
+- rooms / players への永続書き込みは、**部屋作成を含めてすべて Next.js API 経由** に統一済み。
+  - 部屋作成: `components/CreateRoomModal.tsx` → `lib/services/roomApiClient.ts` の `apiCreateRoom` → `POST /api/room/create` → `lib/server/roomCommands.createRoom`.
+  - 進行系: `/api/rooms/[roomId]/join|ready|deal|submit-clue|submit-order|commit-play|continue|finalize|reset|topic|mvp|players/*|reveal-pending|round-preparing|prune-proposal` など。
+  - 例外は `lib/firebase/rooms.leaveRoom` などに残っている「API 失敗時のみ実行されるフォールバック」のみ（通常フローでは通らない）。
+- UI / hooks から Firestore に直接 `setDoc` / `updateDoc` / `runTransaction` するコードは撤廃済み（Presence/RTDB 系を除く）。
+
+### 15.2 jsdom / isomorphic-dompurify 由来の本番クラッシュ（再発防止メモ）
+- 2025-12-05〜07 にかけて、Vercel 本番環境で `/api/rooms/create` など一部 API が **静的 500 HTML**（`x-matched-path: /500`, `nextExport: true`）を返す事象が発生した。
+  - ログには `Error [ERR_REQUIRE_ESM]: require() of ES Module .../jsdom/...` が出ていた。
+  - 原因: `lib/utils/sanitize.ts` で `isomorphic-dompurify`（内部で `jsdom` 使用）をサーバー側でも読み込んでいたことによる、Node.js 22 の ESM/CommonJS 互換性エラー。
+- 対策:
+  - `lib/utils/sanitize.ts` を **純粋な文字列処理ベースの `sanitizePlainText`** に差し替え、`jsdom` / `isomorphic-dompurify` 依存を完全に削除。
+  - これにより、create-room を含む全 API がローカル / 本番ともに安定動作することを確認済み。
+- 運用上の注意:
+  - サーバー側コード（`lib/server/*`, `app/api/*`, `pages/api/*`）に `jsdom` / `isomorphic-dompurify` を再導入しない。
+  - サニタイズを強化したい場合は、現行の `sanitizePlainText` を拡張するか、ブラウザ専用の DOM ベースサニタイズはクライアント限定で利用する。
+  - 本番 API が再び「HTML 500 を返す」「`x-matched-path: /500` になる」場合は、まず node_modules 由来の ESM エラー（`ERR_REQUIRE_ESM`）が出ていないかログを確認する。
