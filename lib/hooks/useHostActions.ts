@@ -314,7 +314,8 @@ export function useHostActions({
           2800
         );
 
-        const result = await hostActions.quickStartWithTopic({
+        let attempts = 0;
+        let result = await hostActions.quickStartWithTopic({
           roomId,
           roomStatus,
           defaultTopicType: effectiveDefaultTopicType,
@@ -325,6 +326,51 @@ export function useHostActions({
           },
           currentTopic,
         });
+
+        // 409 invalid_status → reason: not-waiting を明示的に処理し、必要なら1回だけ強制リセット＋再試行する。
+        while (!result.ok && result.reason === "not-waiting" && attempts === 0) {
+          attempts += 1;
+          traceAction("ui.host.quickStart.notWaiting", {
+            roomId,
+            status: result.roomStatus ?? roomStatus ?? "unknown",
+          });
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-not-waiting"),
+            title: "前のラウンドを待機状態に戻しています…",
+            description: "少し待って再開します。",
+            type: "info",
+            duration: 1800,
+          });
+
+          // 進行中ステータスが残っている場合のみ待機リセットを実行
+          if (!result.roomStatus || result.roomStatus === "finished" || result.roomStatus === "reveal") {
+            try {
+              await hostActions.resetRoomToWaitingWithPrune({
+                roomId,
+                roundIds,
+                onlineUids,
+                includeOnline: false,
+                recallSpectators: false,
+              });
+            } catch (error) {
+              traceError("ui.host.quickStart.notWaitingReset", error, { roomId });
+            }
+          }
+
+          // 少し待ってから再度 quickStart 実行
+          await new Promise((resolve) => setTimeout(resolve, 160));
+          result = await hostActions.quickStartWithTopic({
+            roomId,
+            roomStatus,
+            defaultTopicType: effectiveDefaultTopicType,
+            presenceInfo: {
+              presenceReady,
+              onlineUids,
+              playerCount: basePlayerCount,
+            },
+            currentTopic,
+          });
+        }
 
         if (!result.ok) {
           if (result.reason === "presence-not-ready") {
@@ -351,6 +397,14 @@ export function useHostActions({
             setCustomOpen(true);
           } else if (result.reason === "functions-unavailable") {
             throw new Error("firebase-functions-unavailable");
+          } else if (result.reason === "not-waiting") {
+            notify({
+              id: toastIds.genericInfo(roomId, "quickstart-not-waiting-failed"),
+              title: "ゲームを開始できませんでした",
+              description: "前のラウンドが終了処理中の可能性があります。数秒後にもう一度お試しください。",
+              type: "warning",
+              duration: 2600,
+            });
           }
           abortAction("quickStart");
           return false;
@@ -453,6 +507,7 @@ export function useHostActions({
       finalizeAction,
       hostActions,
       roomStatus,
+      roundIds,
       onStageEvent,
     ]
   );
