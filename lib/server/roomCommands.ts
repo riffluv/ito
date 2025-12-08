@@ -231,7 +231,7 @@ export async function createRoom(params: CreateRoomParams): Promise<{ roomId: st
   }
 
   if (!roomId) {
-    throw new Error("room_id_allocation_failed");
+    throw codedError("room_id_allocation_failed", "room_id_allocation_failed");
   }
 
   safeTraceAction("room.create.server", { roomId, uid });
@@ -383,13 +383,13 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
   const roomRef = db.collection("rooms").doc(params.roomId);
   const snap = await roomRef.get();
   if (!snap.exists) {
-    throw new Error("room_not_found");
+    throw codedError("room_not_found", "room_not_found");
   }
   const room = snap.data() as RoomDoc | undefined;
   const authorized =
     uid === room?.hostId || uid === room?.creatorId || (await getAdminAuth().verifyIdToken(params.token)).admin === true;
   if (!authorized) {
-    throw new Error("forbidden");
+    throw codedError("forbidden", "forbidden", "host_only");
   }
 
   const resetPayload = composeWaitingResetPayload({
@@ -452,9 +452,9 @@ export async function submitOrder(params: SubmitOrderParams) {
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
-    if (!snap.exists) throw new Error("room_not_found");
+    if (!snap.exists) throw codedError("room_not_found", "room_not_found");
     const room = snap.data() as RoomDoc;
-    if (room.hostId && room.hostId !== uid) throw new Error("forbidden");
+    if (room.hostId && room.hostId !== uid) throw codedError("forbidden", "forbidden", "host_only");
     const order = room.order ?? { total: params.list.length };
     const validation = validateSubmitList(params.list, room.deal?.players ?? null, order.total ?? params.list.length);
     if (!validation.ok) {

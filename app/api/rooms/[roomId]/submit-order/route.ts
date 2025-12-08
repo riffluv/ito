@@ -53,6 +53,8 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
         ? 401
         : code === "forbidden"
           ? 403
+          : code === "room_not_found"
+            ? 404
           : code === "invalid_payload"
             ? 400
             : 500;
