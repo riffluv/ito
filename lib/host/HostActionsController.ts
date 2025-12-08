@@ -1,5 +1,4 @@
 import { db } from "@/lib/firebase/client";
-import { functions } from "@/lib/firebase/functions";
 import {
   beginRevealPending,
   resetRoomWithPrune,
@@ -11,9 +10,15 @@ import { postRoundReset } from "@/lib/utils/broadcast";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
+import {
+  apiDealNumbers,
+  apiSetCustomTopic,
+  apiSelectTopicCategory,
+  apiStartGame,
+  type ApiError,
+} from "@/lib/services/roomApiClient";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, getDocFromServer } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
 
 type PresenceInfo = {
   presenceReady?: boolean;
@@ -231,49 +236,32 @@ export function createHostActionsController() {
     await toggleRoundPreparing(roomId, true);
     let success = false;
     try {
-      const callable = functions
-        ? httpsCallable<
-            { roomId: string; options?: Record<string, unknown> },
-            {
-              assignedCount?: number;
-              topicType?: string;
-              topic?: string | null;
-              durationMs?: number;
-            }
-          >(functions, "quickStart")
-        : null;
-      if (!callable) {
-        return {
-          ok: false,
-          reason: "functions-unavailable",
-          topicType: effectiveType,
-          topic,
-          activeCount,
-        };
-      }
-
-      traceAction("ui.host.quickStart", {
+      traceAction("ui.host.quickStart.api", {
         roomId,
         type: effectiveType,
         skipPresence: skipPresence ? "1" : "0",
       });
 
-      const response = await callable({
-        roomId,
-        options: {
-          defaultTopicType: effectiveType,
-          skipPresence,
-          customTopic: effectiveType === "カスタム" ? customTopic ?? topic : undefined,
-        },
-      });
+      await apiStartGame(roomId);
 
-      const payload = response?.data ?? {};
-      traceAction("ui.host.quickStart.result", {
-        roomId,
-        assigned: String(payload.assignedCount ?? -1),
-        topicType: payload.topicType ?? effectiveType,
-        topic: payload.topic ?? "",
-      });
+      if (effectiveType === "カスタム") {
+        const text = customTopic ?? topic ?? "";
+        if (!text.trim()) {
+          return {
+            ok: false,
+            reason: "needs-custom-topic",
+            topicType: effectiveType,
+            topic,
+            activeCount,
+          };
+        }
+        await apiSetCustomTopic(roomId, text.trim());
+        topic = text.trim();
+      } else {
+        await apiSelectTopicCategory(roomId, effectiveType);
+      }
+
+      const dealResult = await apiDealNumbers(roomId, { skipPresence });
 
       try {
         postRoundReset(roomId);
@@ -282,22 +270,22 @@ export function createHostActionsController() {
       success = true;
       return {
         ok: true,
-        topicType: payload.topicType ?? effectiveType,
-        topic: payload.topic ?? topic ?? null,
-        assignedCount: payload.assignedCount,
-        durationMs: payload.durationMs,
+        topicType: effectiveType,
+        topic: topic ?? null,
+        assignedCount: dealResult?.count,
+        durationMs: undefined,
         activeCount,
         skipPresence,
       };
     } catch (error) {
-      const code = (error as { code?: string })?.code ?? null;
+      const code = (error as ApiError)?.code ?? null;
       const message = (error as { message?: string })?.message ?? "";
       traceError("ui.host.quickStart.error", error, { roomId, code });
-      // よく発生する failed-precondition などは例外にせず UI 側でハンドリングできるよう返す
-      if (code) {
+      if (code === "invalid_status") {
         return {
           ok: false,
-          reason: "callable-error",
+          reason: "not-waiting",
+          roomStatus: req.roomStatus ?? null,
           topicType: effectiveType,
           topic,
           activeCount,
@@ -307,7 +295,31 @@ export function createHostActionsController() {
           errorMessage: message,
         };
       }
-      throw error;
+      if (code === "forbidden") {
+        return {
+          ok: false,
+          reason: "host-mismatch",
+          hostId,
+          topicType: effectiveType,
+          topic,
+          activeCount,
+          onlineCount,
+          playerCount,
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
+      return {
+        ok: false,
+        reason: "callable-error",
+        topicType: effectiveType,
+        topic,
+        activeCount,
+        onlineCount,
+        playerCount,
+        errorCode: code ?? undefined,
+        errorMessage: message,
+      };
     } finally {
       await toggleRoundPreparing(roomId, false);
       if (success) {
