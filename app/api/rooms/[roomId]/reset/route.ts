@@ -40,6 +40,15 @@ export async function POST(
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("rooms", "reset-route error", { roomId, error });
-    return NextResponse.json({ error: "reset_failed" }, { status: 500 });
+    const code = (error as { code?: string }).code;
+    const status =
+      code === "unauthorized"
+        ? 401
+        : code === "room_not_found"
+          ? 404
+          : code === "forbidden"
+            ? 403
+            : 500;
+    return NextResponse.json({ error: code ?? "reset_failed" }, { status });
   }
 }
