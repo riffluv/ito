@@ -502,9 +502,6 @@ export async function mutateProposal(params: {
   targetIndex?: number | null;
 }): Promise<"ok" | "noop" | "missing-deal"> {
   const uid = await verifyToken(params.token);
-  if (uid !== params.playerId) {
-    throw codedError("forbidden", "forbidden", "player_mismatch");
-  }
 
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
@@ -526,6 +523,13 @@ export async function mutateProposal(params: {
     if (roundPlayers.length === 0) return "missing-deal" as const;
     if (!roundPlayers.includes(params.playerId)) return "missing-deal" as const;
     const maxCount = roundPlayers.length;
+
+    // 誰でも並び替えできる仕様。ただし現在のラウンド参加者 or ホスト/作成者に限定して悪用を防ぐ
+    const actorIsParticipant = roundPlayers.includes(uid);
+    const actorIsHost = !room.hostId || room.hostId === uid || room.creatorId === uid;
+    if (!actorIsParticipant && !actorIsHost) {
+      throw codedError("forbidden", "forbidden", "actor_not_participant");
+    }
 
     const proposalSnap = await tx.get(proposalRef);
     const proposalData = proposalSnap.exists ? (proposalSnap.data() as { proposal?: unknown; seed?: unknown }) : null;
