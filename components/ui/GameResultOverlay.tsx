@@ -814,9 +814,15 @@ export function GameResultOverlay({
       // ====================================================
       if (pixiRaysReady) {
         // Pixi 版（デフォルト）
+        // 放射線爆発と同時にファンファーレを再生（最もインパクトのあるタイミング）
         tl.call(
           () => {
             pixiRaysController?.playExplosion();
+            void playResultSound({
+              outcome: "victory",
+              reason: "overlay:pixi-rays",
+              skipIfPending: true,
+            });
           },
           undefined,
           0.05
@@ -884,6 +890,18 @@ export function GameResultOverlay({
         });
       } else {
         // Pixi 初期化待ち中は放射線なしで継続
+        // ただしファンファーレは同じタイミングで鳴らす
+        tl.call(
+          () => {
+            void playResultSound({
+              outcome: "victory",
+              reason: "overlay:no-rays-fallback",
+              skipIfPending: true,
+            });
+          },
+          undefined,
+          0.05
+        );
       }
 
       // ====================================================
@@ -970,6 +988,7 @@ export function GameResultOverlay({
         })
 
         // Phase 3: テキスト躍動（枠とほぼ同時に登場！）
+        // ※ファンファーレは Phase 0.5 の放射線爆発時に再生済み
         .fromTo(
           text,
           {
@@ -987,13 +1006,6 @@ export function GameResultOverlay({
             filter: "blur(0px) brightness(1)",
             duration: 0.37, // 0.45 → 0.35 → 0.37 に微調整！
             ease: "back.out(2.5)",
-            onStart: () => {
-              void playResultSound({
-                outcome: "victory",
-                reason: "overlay:success-text",
-                skipIfPending: true,
-              });
-            },
           },
           0.5 // "-=0.4" → 0.5 に変更（枠到着とほぼ同時）
         )
