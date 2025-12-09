@@ -263,6 +263,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
   - 進行系: `/api/rooms/[roomId]/join|ready|deal|submit-clue|submit-order|commit-play|continue|finalize|reset|topic|mvp|players/*|reveal-pending|round-preparing|prune-proposal` など。
   - 例外は `lib/firebase/rooms.leaveRoom` などに残っている「API 失敗時のみ実行されるフォールバック」のみ（通常フローでは通らない）。
 - UI / hooks から Firestore に直接 `setDoc` / `updateDoc` / `runTransaction` するコードは撤廃済み（Presence/RTDB 系を除く）。
+- **追加例外（2025-12-09）**: `components/hooks/useRevealAnimation.ts` の `runRealtimeEvaluation` 内で `room.result` を先行保存する処理が残存。これはリビール演出中の UX 最適化のための例外として許容。冪等な `runTransaction` + 既存 result チェックで安全性を担保しており、最終確定は `finalizeReveal` API が行う。
 
 ### 15.2 jsdom / isomorphic-dompurify 由来の本番クラッシュ（再発防止メモ）
 - 2025-12-05〜07 にかけて、Vercel 本番環境で `/api/rooms/create` など一部 API が **静的 500 HTML**（`x-matched-path: /500`, `nextExport: true`）を返す事象が発生した。
@@ -275,3 +276,23 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
   - サーバー側コード（`lib/server/*`, `app/api/*`, `pages/api/*`）に `jsdom` / `isomorphic-dompurify` を再導入しない。
   - サニタイズを強化したい場合は、現行の `sanitizePlainText` を拡張するか、ブラウザ専用の DOM ベースサニタイズはクライアント限定で利用する。
   - 本番 API が再び「HTML 500 を返す」「`x-matched-path: /500` になる」場合は、まず node_modules 由来の ESM エラー（`ERR_REQUIRE_ESM`）が出ていないかログを確認する。
+
+### 15.3 潜在バグリスクと注意点（2025-12-09 レビュー）
+
+#### 入室/退室/ホスト権限
+- **正常動作確認済み**: 入室 (`apiJoinRoom`)、退室 (`apiLeaveRoom`)、ホスト権限移譲 (`claim-host`, `transfer-host`) は全て API 経由。
+- **フォールバック**: `lib/firebase/rooms.ts` の `applyClientSideLeaveFallback` は API 失敗時のみ実行される非常用処理。通常フローでは通らない。
+- **注意**: ゲーム進行中（`clue` / `reveal` / `finished`）でのホスト退室時、自動的にホスト権限が移譲されない場合がある。その場合は残りのプレイヤーが `claim-host` を呼ぶ必要あり。
+
+#### 観戦モード
+- **正常動作確認済み**: XState ベースの `spectatorSessionMachine` + API ルート (`/api/spectator/*`) で処理。
+- **潜在リスク**: 観戦者がいる状態で部屋がリセット (`/api/rooms/[roomId]/reset`) されると、観戦セッションの状態と部屋の状態にずれが生じる可能性がある。
+  - 現状: `ui.recallOpen` が `false` にリセットされるため、観戦者は自動的に呼び戻しを要求できなくなる。
+  - 対策: リセット後にホストが「席に戻す」を開ければ問題なし。自動処理が必要な場合は将来的に `reset` API 内で `recallOpen: true` を設定するか検討。
+- **ゲーム進行中の直入り**: 強制観戦ゲート (`spectator.gate`) でブロックされるため、途中参加者がゲームを壊すことはない。
+
+#### Service Worker / Safe Update
+- **正常動作確認済み**: XState ベースの状態機械 (`updateChannel.ts`) が堅牢に実装。
+- **潜在リスク**: 旧 SW が残ったままデプロイが行われた場合、`version-check` で弾かれて入室できない可能性がある。
+  - 対策: `room.appVersion` が未設定の古いルームは一旦許可する設計になっている。新しいルームを作り直してもらう運用で対処。
+- **ゲーム中の自動更新抑制**: `holdInGameAutoApply()` / `releaseInGameAutoApply()` が適切に呼ばれているか、`window.__ITO_METRICS__.safeUpdate` で確認可能。

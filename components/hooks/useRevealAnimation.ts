@@ -394,6 +394,11 @@ export function useRevealAnimation({
           }
 
           // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
+          // NOTE(API1本化例外): この直接書き込みは API1本化ポリシーの例外として許容されている。
+          // 理由: リビールアニメーション完了直後に result を先行保存することで、
+          //       finalizeReveal API の呼び出し前にユーザー体験を向上させる最適化。
+          // 安全性: runTransaction + 既存 result チェックにより冪等性を担保。
+          //         最終的な確定は finalizeReveal API が行う。
           if (result.success && nextIndex === orderListLengthRef.current) {
             scheduleRevealPersistenceTask(() => {
               void (async () => {
