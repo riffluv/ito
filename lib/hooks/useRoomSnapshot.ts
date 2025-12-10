@@ -462,6 +462,21 @@ export function useRoomSnapshot(
             return;
           }
 
+          if (code === "ROOM_VERSION_CHECK_FAILED") {
+            // バージョン確認 API 自体が失敗したケース（ネットワークエラー等）
+            // フェイルクローズのため入室できないが、自動リトライは行わずユーザーに判断を委ねる
+            notify({
+              title: "バージョン確認に失敗しました",
+              description: "ページを更新してから、もう一度入室をお試しください。",
+              type: "error",
+            });
+            joinCompletedRef.current = true;
+            joinLimitNotifiedRef.current = true;
+            clearRetryTimer();
+            setJoinStatus("idle");
+            return;
+          }
+
           joinCompletedRef.current = false;
           const nextAttempt = attemptBeforeCall + 1;
           joinAttemptRef.current = nextAttempt;

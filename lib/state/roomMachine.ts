@@ -20,10 +20,8 @@ import {
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { handleGameError } from "@/lib/utils/errorHandling";
-import {
-  holdInGameAutoApply,
-  releaseInGameAutoApply,
-} from "@/lib/serviceWorker/updateChannel";
+// NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理するため、
+// roomMachine からのフェーズ別制御は削除。部屋にいる間は waiting 含め常に hold される。
 
 type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
 type SanitizedPlayer = PlayerDoc & { id: string };
@@ -353,7 +351,7 @@ export function createRoomMachine(input: RoomMachineInput) {
           initial: resolveStatus(sanitizedRoom),
           states: {
             waiting: {
-              entry: "releaseInGameAutoApplyAction",
+              // NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理
               on: {
                 START: {
                   guard: "canStart",
@@ -390,7 +388,6 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             clue: {
-              entry: "holdInGameAutoApplyAction",
               on: {
                 DEAL_READY: {
                   guard: "canDeal",
@@ -428,7 +425,6 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             reveal: {
-              entry: "holdInGameAutoApplyAction",
               on: {
                 REVEAL_DONE: {
                   target: "#roomMachine.phase.finished",
@@ -461,7 +457,6 @@ export function createRoomMachine(input: RoomMachineInput) {
               },
             },
             finished: {
-              entry: "holdInGameAutoApplyAction",
               on: {
                 RESET: {
                   target: "#roomMachine.phase.waiting",
@@ -511,19 +506,13 @@ export function createRoomMachine(input: RoomMachineInput) {
     },
     {
       actions: {
+        // NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理するため、
+        // フェーズ別制御は no-op にした。部屋にいる間は waiting 含め常に hold される。
         holdInGameAutoApplyAction: () => {
-          try {
-            holdInGameAutoApply();
-          } catch {
-            /* noop */
-          }
+          /* no-op: Safe Update control moved to useRoomMachineController */
         },
         releaseInGameAutoApplyAction: () => {
-          try {
-            releaseInGameAutoApply();
-          } catch {
-            /* noop */
-          }
+          /* no-op: Safe Update control moved to useRoomMachineController */
         },
         assignSnapshot: assign(({ context, event }) => {
           if (event.type !== "SYNC") {
@@ -536,19 +525,8 @@ export function createRoomMachine(input: RoomMachineInput) {
             : undefined;
           const nextPresenceReady = event.presenceReady ?? context.presenceReady;
           recordRoomMetrics(nextRoom, nextPlayers, nextOnline, nextPresenceReady);
-          const prevStatus = resolveStatus(context.room);
-          const nextStatus = resolveStatus(nextRoom);
-          if (prevStatus !== nextStatus) {
-            try {
-              if (nextStatus === "waiting") {
-                releaseInGameAutoApply();
-              } else {
-                holdInGameAutoApply();
-              }
-            } catch {
-              /* best-effort */
-            }
-          }
+          // NOTE: フェーズ別の hold/release 呼び出しは削除。
+          // Safe Update は useRoomMachineController でページ単位で管理される。
           return {
             ...context,
             room: nextRoom,
@@ -623,11 +601,7 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markClue: assign(({ context }) => {
           if (!context.room) return context;
-          try {
-            holdInGameAutoApply();
-          } catch {
-            /* noop */
-          }
+          // NOTE: Safe Update は useRoomMachineController でページ単位管理
           return {
             ...context,
             room: { ...context.room, status: "clue" as const },
@@ -635,11 +609,6 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markReveal: assign(({ context }) => {
           if (!context.room) return context;
-          try {
-            holdInGameAutoApply();
-          } catch {
-            /* noop */
-          }
           return {
             ...context,
             room: { ...context.room, status: "reveal" as const },
@@ -647,11 +616,6 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markFinished: assign(({ context }) => {
           if (!context.room) return context;
-          try {
-            holdInGameAutoApply();
-          } catch {
-            /* noop */
-          }
           return {
             ...context,
             room: { ...context.room, status: "finished" as const },
@@ -659,11 +623,6 @@ export function createRoomMachine(input: RoomMachineInput) {
         }),
         markWaiting: assign(({ context }) => {
           if (!context.room) return context;
-          try {
-            releaseInGameAutoApply();
-          } catch {
-            /* noop */
-          }
           return {
             ...context,
             room: { ...context.room, status: "waiting" as const },

@@ -77,5 +77,8 @@ export async function checkRoomVersionGuard(
     };
   }
 
+  // TODO: legacy room without appVersion; consider blocking join after migration period.
+  // 移行期間中の古いルームは appVersion が未設定の場合があり、現状は許可している。
+  // 十分な移行期間が経過したら、appVersion がないルームへの join もブロックすることを検討。
   return { ok: true, roomVersion: roomVersion ?? null };
 }
