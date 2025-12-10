@@ -147,3 +147,97 @@ npx playwright test tests/spectatorFlow.spec.ts
 - 本ドキュメントなどに最新仕様が記載され、ハンドオフ情報として参照可能になっている。
 
 > この計画を次期エージェントへ引き継ぎ、実装着手前に API 設計と state machine 図を更新すること。
+
+---
+
+## 8. バージョン固定と Safe Update 連携（2025-12）
+
+### 8-1. 入室前ガード（Pre-join guard）
+
+部屋作成・入室前に、クライアントとサーバー/ルームのバージョンが一致していないと入れない仕組み。
+
+#### 新規部屋作成
+
+1. `CreateRoomModal.tsx` で `POST /api/rooms/version-check` を呼び出し（`roomId` なし）
+2. `clientVersion !== サーバー APP_VERSION` の場合は `409 + error: "room/create/update-required"`
+3. UI は「このバージョンでは新しい部屋を作成できません。ページを更新して最新バージョンでお試しください。」を表示し中断
+
+#### 既存部屋への入室
+
+1. `lib/services/roomService.ts` の `ensureMember` → `ensureRoomVersionAllowed` でクライアント側チェック
+2. `POST /api/rooms/[roomId]/join` → `checkRoomVersionGuard` でサーバー側チェック
+3. `room.appVersion !== clientVersion` の場合は `409 + error: "room/join/version-mismatch"`
+4. **フェイルクローズ**: version-check API が失敗した場合は `RoomServiceError("ROOM_VERSION_CHECK_FAILED")` を投げ、入室を拒否
+
+#### エラーコード
+
+| コード | 意味 |
+|--------|------|
+| `ROOM_VERSION_MISMATCH` | ルームのバージョンとクライアントが不一致 |
+| `ROOM_VERSION_CHECK_FAILED` | バージョン確認 API 自体が失敗（ネットワークエラー等） |
+
+#### Legacy Room（appVersion 未設定の古いルーム）
+
+- 移行期間中の古いルームは `appVersion` が未設定のため、現状は許可している
+- 将来的にはブロックする予定（TODO コメントを `roomVersionGate.ts` / `version-check/route.ts` に追加済み）
+
+### 8-2. 部屋単位のバージョン固定（Room-level version pinning）
+
+- 部屋作成時に `rooms/{roomId}.appVersion` に `APP_VERSION` を保存
+- 同じ部屋に居続ける限り、全員が同じバージョンで固定される
+- 部屋から出るまでは Safe Update の自動適用を抑止
+
+### 8-3. Safe Update との連携
+
+#### 部屋にいる間の自動更新抑制（ページ単位制御）
+
+`useRoomMachineController.ts` でページ単位で制御:
+
+- **マウント時**: `holdInGameAutoApply()` を呼び、部屋にいる間は自動更新を抑止
+- **アンマウント時**: `releaseInGameAutoApply()` を呼び、hold を解放
+
+**重要**: 以前はフェーズ別（waiting で解放、clue/reveal/finished で hold）に制御していたが、
+「同じ部屋にいる間は waiting 含め常に旧バージョン固定」という仕様に変更。
+`roomMachine.ts` のフェーズ別 hold/release は no-op に置き換え済み。
+
+```typescript
+// useRoomMachineController.ts
+useEffect(() => {
+  // RoomPage に入った瞬間に hold
+  try {
+    holdInGameAutoApply();
+  } catch { /* noop */ }
+
+  // ... actor 作成 ...
+
+  return () => {
+    // ... actor 停止 ...
+    // RoomPage を離れた瞬間に release
+    try {
+      releaseInGameAutoApply();
+    } catch { /* noop */ }
+  };
+}, [roomId, uid, subscribeSpectatorRejoin]);
+```
+
+#### 挙動まとめ
+
+| シナリオ | Safe Update 挙動 |
+|----------|------------------|
+| 部屋にいる間（waiting 含む全フェーズ） | バナー表示のみ、自動適用は抑止 |
+| 部屋を退出（RoomPage アンマウント） | in-game hold 解放、自動更新可能 |
+| バナーから「今すぐ適用」を押下 | 明示的に hold を解除して即座に更新 |
+
+#### バナーからの手動適用
+
+`SafeUpdateBanner.tsx` では「今すぐ適用」ボタン押下時に `releaseInGameAutoApply()` を呼んでから
+`applyUpdate()` を実行する。これにより、ユーザーが明示的に更新を選んだ場合のみ適用が進む。
+
+### 8-4. 確認項目
+
+- [ ] バージョン一致時: 部屋作成・入室ができる
+- [ ] バージョン不一致時: 部屋作成は `room/create/update-required` でブロック、入室は `room/join/version-mismatch` でブロック
+- [ ] version-check API 失敗時: フェイルクローズで入室拒否
+- [ ] 部屋にいる間（waiting 含む）: Safe Update 自動適用が抑止されている
+- [ ] 部屋退出後: 自動更新が正常に動作する
+- [ ] バナーから「今すぐ適用」: 部屋にいても即座に更新される

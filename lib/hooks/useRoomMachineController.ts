@@ -12,6 +12,10 @@ import {
 } from "@/lib/state/roomMachine";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { GameService } from "@/lib/game/service";
+import {
+  holdInGameAutoApply,
+  releaseInGameAutoApply,
+} from "@/lib/serviceWorker/updateChannel";
 
 export type SpectatorState = {
   spectatorStatus: SpectatorStatus;
@@ -162,6 +166,14 @@ export function useRoomMachineController({
   );
 
   useEffect(() => {
+    // RoomPage（この controller）に入ったタイミングで Safe Update の in-game hold を有効化
+    // 部屋にいる間は waiting 含め常に自動更新を抑止し、退出時のみ解放する
+    try {
+      holdInGameAutoApply();
+    } catch {
+      // noop - safe update module may not be available in all environments
+    }
+
     const actor = createActor(
       createRoomMachine({
         roomId,
@@ -198,6 +210,13 @@ export function useRoomMachineController({
       actor.stop();
       if (machineRef.current === actor) {
         machineRef.current = null;
+      }
+      // 部屋を退出したときに Safe Update の in-game hold を解放する
+      // これにより、ロビー/トップ画面に戻った後で自動更新が適用される
+      try {
+        releaseInGameAutoApply();
+      } catch {
+        // noop - safe update module may not be available in all environments
       }
     };
     // Deliberately only recreate actor when identity changes; state sync is handled separately.

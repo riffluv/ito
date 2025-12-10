@@ -70,6 +70,8 @@ export async function POST(req: NextRequest) {
     const storedVersion = normalizeVersion(data?.appVersion);
 
     // 移行期間中の古いルームはバージョン未設定の場合がある。その場合は許可する。
+    // TODO: legacy room without appVersion; consider blocking join after migration period.
+    // 十分な移行期間が経過したら、appVersion がないルームへの join もブロックすることを検討。
     if (storedVersion && !versionsEqual(storedVersion, clientVersion)) {
       logDebug("room.versionMismatch", "join-mismatch", {
         role: "join",

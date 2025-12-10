@@ -18,10 +18,15 @@ const versionGateCache = new Map<
 >();
 const VERSION_CHECK_TTL_MS = 60_000;
 
+type VersionAllowedResult =
+  | { status: "ok"; appVersion: string | null }
+  | { status: "mismatch"; roomVersion: string | null }
+  | { status: "check_failed"; detail: string };
+
 async function ensureRoomVersionAllowed(
   roomId: string,
   clientVersion: string
-): Promise<{ status: "ok"; appVersion: string | null } | { status: "mismatch"; roomVersion: string | null }>
+): Promise<VersionAllowedResult>
 {
   const now = Date.now();
   const cached = versionGateCache.get(roomId);
@@ -65,13 +70,15 @@ async function ensureRoomVersionAllowed(
       });
       return { status: "mismatch", roomVersion };
     }
+
+    // サーバーからのエラー応答（バージョン不一致以外）
+    logWarn("roomService", "version-check-server-error", { roomId, status: response.status, errorBody });
+    return { status: "check_failed", detail: `server_error_${response.status}` };
   } catch (error) {
     logWarn("roomService", "version-check-failed", { roomId, error });
+    // フェイルクローズ：API 取得に失敗した場合は安全のため入室を拒否
+    return { status: "check_failed", detail: "network_error" };
   }
-
-  // フェイルオープン：API 取得に失敗した場合は既存挙動を維持
-  versionGateCache.set(roomId, { status: "ok", appVersion: null, checkedAt: now });
-  return { status: "ok", appVersion: null };
 }
 
 function getAvatarCache(roomId: string): AvatarCacheEntry | null {
@@ -104,12 +111,14 @@ function registerAvatarUsage(roomId: string, avatar: string) {
 export type RoomServiceErrorCode =
   | "ROOM_NOT_FOUND"
   | "ROOM_IN_PROGRESS"
-  | "ROOM_VERSION_MISMATCH";
+  | "ROOM_VERSION_MISMATCH"
+  | "ROOM_VERSION_CHECK_FAILED";
 
 const ROOM_ERROR_MESSAGES: Record<RoomServiceErrorCode, string> = {
   ROOM_NOT_FOUND: "部屋が見つかりませんでした。",
   ROOM_IN_PROGRESS: "ゲーム進行中のため席に戻れません。",
   ROOM_VERSION_MISMATCH: "この部屋とは別のバージョンで動作しています。",
+  ROOM_VERSION_CHECK_FAILED: "バージョン確認に失敗しました。ページを更新してからやり直してください。",
 };
 
 export class RoomServiceError extends Error {
@@ -131,6 +140,7 @@ const ROOM_ERROR_CODES: RoomServiceErrorCode[] = [
   "ROOM_NOT_FOUND",
   "ROOM_IN_PROGRESS",
   "ROOM_VERSION_MISMATCH",
+  "ROOM_VERSION_CHECK_FAILED",
 ];
 
 const isRoomServiceErrorCode = (
@@ -228,6 +238,10 @@ export async function ensureMember({
       roomVersion: versionGate.roomVersion,
       clientVersion: versionToSend,
     });
+  }
+  if (versionGate.status === "check_failed") {
+    // フェイルクローズ: バージョン確認ができないため安全のため入室を拒否
+    throw new RoomServiceError("ROOM_VERSION_CHECK_FAILED");
   }
 
   const { value: resolvedDisplayName } = resolvePreferredDisplayName(displayName);
