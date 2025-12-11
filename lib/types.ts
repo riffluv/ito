@@ -93,7 +93,13 @@ export type RoomDoc = {
   // リクエスト冪等化用（サーバー側のみ利用）。存在しなくても良い。
   startRequestId?: string | null;
   resetRequestId?: string | null;
+  /** 次のゲーム（nextRound）用の冪等化キー */
+  nextRequestId?: string | null;
+  /** 直近の配札リクエストID（dealNumbers/autoDeal用） */
+  dealRequestId?: string | null;
   lastCommandAt?: Timestamp | FieldValue | null;
+  /** 状態バージョン（ステータス/配札変更ごとに単調増加） */
+  statusVersion?: number | null;
   // --- Version Align (PWA update) ---
   updatePhase?: 'required' | 'done' | undefined;
   requiredSwVersion?: string | undefined;

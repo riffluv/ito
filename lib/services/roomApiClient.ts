@@ -102,6 +102,7 @@ export async function apiStartGame(
     autoDeal?: boolean;
     topicType?: string | null;
     customTopic?: string | null;
+    presenceUids?: string[] | null;
   }
 ): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
@@ -115,6 +116,7 @@ export async function apiStartGame(
     autoDeal: opts?.autoDeal ?? false,
     topicType: opts?.topicType ?? undefined,
     customTopic: opts?.customTopic ?? undefined,
+    presenceUids: opts?.presenceUids ?? undefined,
   });
 }
 
@@ -140,6 +142,7 @@ export type NextRoundOptions = {
   customTopic?: string | null;
   requestId: string;
   sessionId?: string | null;
+  presenceUids?: string[] | null;
 };
 
 export type NextRoundResult = {
@@ -159,12 +162,13 @@ export async function apiNextRound(roomId: string, opts: NextRoundOptions): Prom
     customTopic: opts?.customTopic ?? undefined,
     requestId: opts.requestId,
     sessionId: opts.sessionId ?? undefined,
+    presenceUids: opts.presenceUids ?? undefined,
   });
 }
 
 export async function apiDealNumbers(
   roomId: string,
-  opts: { skipPresence?: boolean; requestId: string; sessionId?: string | null }
+  opts: { skipPresence?: boolean; requestId: string; sessionId?: string | null; presenceUids?: string[] | null }
 ): Promise<{ count: number }> {
   const token = await getIdTokenOrThrow("deal-numbers");
   return postJson(`/api/rooms/${roomId}/deal`, {
@@ -173,6 +177,7 @@ export async function apiDealNumbers(
     skipPresence: opts?.skipPresence ?? false,
     requestId: opts.requestId,
     sessionId: opts.sessionId ?? undefined,
+    presenceUids: opts.presenceUids ?? undefined,
   });
 }
 

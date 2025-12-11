@@ -265,7 +265,11 @@ test("RESET は任意状態から waiting へ戻し resetRoomWithPrune を呼ぶ
 
   expectPhase(actor, "waiting");
   expect(calls).toEqual([
-    { roomId: "room-reset", keepIds: ["keep-1"], options: { notifyChat: true } },
+    {
+      roomId: "room-reset",
+      keepIds: ["keep-1"],
+      options: { notifyChat: true, requestId: expect.any(String) },
+    },
   ]);
   actor.stop();
 });
