@@ -117,7 +117,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
 export async function resetRoomWithPrune(
   roomId: string,
   keepIds: ResetRoomKeepIds,
-  opts?: ResetRoomOptions
+  opts?: ResetRoomOptions & { requestId?: string }
 ) {
   traceAction("room.reset", {
     roomId,
@@ -129,7 +129,7 @@ export async function resetRoomWithPrune(
   });
   try {
     return await withPermissionRetry(
-      () => apiResetRoom(roomId, opts?.recallSpectators ?? true),
+      () => apiResetRoom(roomId, opts?.recallSpectators ?? true, opts?.requestId),
       { context: "room.reset", toastContext: "ゲームのリセット" }
     );
   } catch (error) {

@@ -92,19 +92,27 @@ export async function apiSubmitOrder(roomId: string, list: string[]): Promise<vo
   await postJson(`/api/rooms/${roomId}/submit-order`, { token, list, clientVersion: APP_VERSION });
 }
 
-export async function apiStartGame(roomId: string, opts?: { allowFromFinished?: boolean; allowFromClue?: boolean }): Promise<void> {
+export async function apiStartGame(
+  roomId: string,
+  opts?: { allowFromFinished?: boolean; allowFromClue?: boolean; requestId?: string }
+): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
   await postJson(`/api/rooms/${roomId}/start`, {
     token,
     clientVersion: APP_VERSION,
     allowFromFinished: opts?.allowFromFinished ?? false,
     allowFromClue: opts?.allowFromClue ?? false,
+    requestId: opts?.requestId,
   });
 }
 
-export async function apiResetRoom(roomId: string, recallSpectators: boolean): Promise<void> {
+export async function apiResetRoom(
+  roomId: string,
+  recallSpectators: boolean,
+  requestId?: string
+): Promise<void> {
   const token = await getIdTokenOrThrow("reset-room");
-  await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators });
+  await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators, requestId });
 }
 
 // ============================================================================

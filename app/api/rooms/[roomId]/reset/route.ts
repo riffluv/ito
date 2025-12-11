@@ -30,13 +30,17 @@ export async function POST(
     typeof body?.recallSpectators === "boolean"
       ? (body.recallSpectators as boolean)
       : true;
+  const requestId =
+    typeof body?.requestId === "string" && (body.requestId as string).length > 0
+      ? (body.requestId as string)
+      : undefined;
 
   if (!token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
   try {
-    await resetRoomCommand({ roomId, recallSpectators, token });
+    await resetRoomCommand({ roomId, recallSpectators, token, requestId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("rooms", "reset-route error", { roomId, error });

@@ -96,6 +96,19 @@ export function sanitizeRoom(input: unknown): RoomDoc {
       const v = roomInput?.requiredSwVersion;
       return typeof v === 'string' && v ? v : undefined;
     })(),
+    // 冪等化用フィールド（存在しなくても良い）
+    startRequestId:
+      typeof roomInput?.startRequestId === "string"
+        ? roomInput.startRequestId
+        : roomInput?.startRequestId === null
+          ? null
+          : undefined,
+    resetRequestId:
+      typeof roomInput?.resetRequestId === "string"
+        ? roomInput.resetRequestId
+        : roomInput?.resetRequestId === null
+          ? null
+          : undefined,
     ...((): Partial<Pick<RoomDoc, "ui">> => {
       const raw = roomInput?.ui;
       if (!raw || typeof raw !== "object") {

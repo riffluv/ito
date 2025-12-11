@@ -21,6 +21,11 @@ import {
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, getDocFromServer } from "firebase/firestore";
 
+const generateRequestId = () =>
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
 type PresenceInfo = {
   presenceReady?: boolean;
   onlineUids?: (string | null | undefined)[] | null;
@@ -162,6 +167,7 @@ export function createHostActionsController() {
     req: QuickStartRequest
   ): Promise<QuickStartResult> => {
     const { roomId, presenceInfo, currentTopic, customTopic } = req;
+    const startRequestId = generateRequestId();
     const { activeCount, onlineCount, playerCount } = safeActiveCounts(
       presenceInfo
     );
@@ -288,7 +294,11 @@ export function createHostActionsController() {
         allowFromClue: allowFromClue ? "1" : "0",
       });
 
-      await apiStartGame(roomId, { allowFromFinished, allowFromClue });
+      await apiStartGame(roomId, {
+        allowFromFinished,
+        allowFromClue,
+        requestId: startRequestId,
+      });
 
       if (effectiveType === "カスタム") {
         const text = customTopic ?? topic ?? "";
@@ -381,6 +391,7 @@ export function createHostActionsController() {
   const resetRoomToWaitingWithPrune = async (
     req: ResetRoomRequest
   ): Promise<ResetRoomResult> => {
+    const resetRequestId = generateRequestId();
     const keepSet = new Set<string>();
     if (Array.isArray(req.roundIds)) {
       req.roundIds.forEach((id) => {
@@ -438,6 +449,7 @@ export function createHostActionsController() {
     await resetRoomWithPrune(req.roomId, keep, {
       notifyChat: true,
       recallSpectators: req.recallSpectators ?? true,
+      requestId: resetRequestId,
     });
 
     try {
