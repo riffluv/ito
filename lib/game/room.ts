@@ -25,10 +25,33 @@ async function broadcastNotify(
 
 export type DealNumbersOptions = {
   skipPresence?: boolean;
+  requestId?: string;
+  sessionId?: string | null;
 };
 
-export async function startGame(roomId: string) {
-  await apiStartGame(roomId);
+export type StartGameOptions = {
+  allowFromFinished?: boolean;
+  allowFromClue?: boolean;
+  autoDeal?: boolean;
+  topicType?: string | null;
+  customTopic?: string | null;
+  sessionId?: string | null;
+};
+
+export async function startGame(roomId: string, requestId: string, sessionIdOrOpts?: string | null | StartGameOptions) {
+  const opts =
+    typeof sessionIdOrOpts === "string" || sessionIdOrOpts === null || sessionIdOrOpts === undefined
+      ? { sessionId: sessionIdOrOpts }
+      : sessionIdOrOpts ?? {};
+  await apiStartGame(roomId, {
+    requestId,
+    sessionId: opts.sessionId,
+    allowFromFinished: opts.allowFromFinished,
+    allowFromClue: opts.allowFromClue,
+    autoDeal: opts.autoDeal,
+    topicType: opts.topicType,
+    customTopic: opts.customTopic,
+  });
   try {
     await broadcastNotify(
       roomId,
@@ -49,7 +72,14 @@ export async function dealNumbers(
   options?: DealNumbersOptions
 ): Promise<number> {
   const skipPresence = options?.skipPresence === true;
-  const result = await apiDealNumbers(roomId, { skipPresence });
+  const requestId =
+    (options as { requestId?: string } | undefined)?.requestId ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const result = await apiDealNumbers(roomId, {
+    skipPresence,
+    requestId,
+    sessionId: (options as { sessionId?: string | null } | undefined)?.sessionId ?? undefined,
+  });
   return result.count;
 }
 

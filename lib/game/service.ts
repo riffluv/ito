@@ -27,11 +27,32 @@ import {
 export type ResetRoomKeepIds = string[] | null | undefined;
 export type ResetRoomOptions = { notifyChat?: boolean; recallSpectators?: boolean };
 
-export async function startGame(roomId: string) {
+export type StartGameOptions = {
+  allowFromFinished?: boolean;
+  allowFromClue?: boolean;
+  autoDeal?: boolean;
+  topicType?: string | null;
+  customTopic?: string | null;
+  sessionId?: string | null;
+};
+
+export async function startGame(roomId: string, requestId: string, sessionIdOrOpts?: string | null | StartGameOptions) {
+  const opts = typeof sessionIdOrOpts === "string" || sessionIdOrOpts === null || sessionIdOrOpts === undefined
+    ? { sessionId: sessionIdOrOpts }
+    : sessionIdOrOpts ?? {};
   traceAction("host.start", { roomId });
   try {
     return await withPermissionRetry(
-      () => apiStartGame(roomId),
+      () =>
+        apiStartGame(roomId, {
+          requestId,
+          sessionId: opts.sessionId ?? undefined,
+          allowFromFinished: opts.allowFromFinished,
+          allowFromClue: opts.allowFromClue,
+          autoDeal: opts.autoDeal,
+          topicType: opts.topicType,
+          customTopic: opts.customTopic,
+        }),
       { context: "host.start", toastContext: "ゲーム開始" }
     );
   } catch (error) {
@@ -46,9 +67,16 @@ export async function dealNumbers(
 ) {
   traceAction("numbers.deal", { roomId });
   try {
+    const requestId =
+      (options as { requestId?: string } | undefined)?.requestId ??
+      `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     return await withPermissionRetry(
       async () => {
-        const result = await apiDealNumbers(roomId, { skipPresence: options?.skipPresence });
+        const result = await apiDealNumbers(roomId, {
+          skipPresence: options?.skipPresence,
+          requestId,
+          sessionId: (options as { sessionId?: string | null } | undefined)?.sessionId ?? undefined,
+        });
         return result.count;
       },
       { context: "numbers.deal", toastContext: "カード配布" }
@@ -117,7 +145,7 @@ export async function submitSortedOrder(roomId: string, list: string[]) {
 export async function resetRoomWithPrune(
   roomId: string,
   keepIds: ResetRoomKeepIds,
-  opts?: ResetRoomOptions & { requestId?: string }
+  opts: ResetRoomOptions & { requestId: string; sessionId?: string | null }
 ) {
   traceAction("room.reset", {
     roomId,
@@ -129,7 +157,7 @@ export async function resetRoomWithPrune(
   });
   try {
     return await withPermissionRetry(
-      () => apiResetRoom(roomId, opts?.recallSpectators ?? true, opts?.requestId),
+      () => apiResetRoom(roomId, opts?.recallSpectators ?? true, opts?.requestId, opts?.sessionId),
       { context: "room.reset", toastContext: "ゲームのリセット" }
     );
   } catch (error) {

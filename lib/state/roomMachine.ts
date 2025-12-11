@@ -353,14 +353,14 @@ export function createRoomMachine(input: RoomMachineInput) {
             waiting: {
               // NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理
               on: {
-                START: {
-                  guard: "canStart",
-                  target: "#roomMachine.phase.clue",
-                  actions: ["markClue", "callStartGame"],
-                },
-                RESET: {
-                  actions: "callReset",
-                },
+        START: {
+          guard: "canStart",
+          target: "#roomMachine.phase.clue",
+          actions: ["markClue", "callStartGame"],
+        },
+        RESET: {
+          actions: "callReset",
+        },
                 SYNC: [
                   {
                     guard: "syncToWaiting",
@@ -389,10 +389,10 @@ export function createRoomMachine(input: RoomMachineInput) {
             },
             clue: {
               on: {
-                DEAL_READY: {
-                  guard: "canDeal",
-                  actions: "callDealNumbers",
-                },
+        DEAL_READY: {
+          guard: "canDeal",
+          actions: "callDealNumbers",
+        },
                 SUBMIT_ORDER: {
                   guard: "canSubmitOrder",
                   target: "#roomMachine.phase.reveal",
@@ -629,12 +629,14 @@ export function createRoomMachine(input: RoomMachineInput) {
           };
         }),
         callStartGame: ({ context }) => {
-          void deps.startGame(context.roomId).catch((error) => {
+          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          void deps.startGame(context.roomId, requestId).catch((error) => {
             reportActionError("startGame", error);
           });
         },
         callDealNumbers: ({ context }) => {
-          void deps.dealNumbers(context.roomId).catch((error) => {
+          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          void deps.dealNumbers(context.roomId, { requestId }).catch((error) => {
             reportActionError("dealNumbers", error);
           });
         },
@@ -652,8 +654,10 @@ export function createRoomMachine(input: RoomMachineInput) {
         },
         callReset: ({ context, event }) => {
           if (event.type !== "RESET") return;
+          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const optionsWithId = { ...(event.options ?? {}), requestId } as ResetRoomOptions & { requestId: string };
           void deps
-            .resetRoomWithPrune(context.roomId, event.keepIds, event.options)
+            .resetRoomWithPrune(context.roomId, event.keepIds, optionsWithId)
             .catch((error) => {
               reportActionError("resetRoomWithPrune", error);
             });

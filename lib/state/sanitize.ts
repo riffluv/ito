@@ -109,6 +109,12 @@ export function sanitizeRoom(input: unknown): RoomDoc {
         : roomInput?.resetRequestId === null
           ? null
           : undefined,
+    lastCommandAt:
+      roomInput?.lastCommandAt && typeof roomInput.lastCommandAt === "object"
+        ? roomInput.lastCommandAt
+        : roomInput?.lastCommandAt === null
+          ? null
+          : undefined,
     ...((): Partial<Pick<RoomDoc, "ui">> => {
       const raw = roomInput?.ui;
       if (!raw || typeof raw !== "object") {

@@ -159,7 +159,10 @@ export const topicControls = {
 
   async dealNumbers(roomId: string, options?: DealNumbersOptions) {
     try {
-      const assignedCount = await dealNumbersRoom(roomId, 0, options);
+      const assignedCount = await dealNumbersRoom(roomId, 0, {
+        ...options,
+        requestId: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      });
       await broadcastNotify(
         roomId,
         "success",
@@ -168,11 +171,21 @@ export const topicControls = {
         `numbers:deal:${assignedCount}`
       );
     } catch (error) {
-      notify({
-        title: "数字の配布に失敗",
-        description: getErrorMessage(error),
-        type: "error",
-      });
+      const code = (error as { code?: string })?.code;
+      if (code === "rate_limited") {
+        notify({
+          title: "順番待ちしています…",
+          description: "短時間に複数の配布要求が重なりました。",
+          type: "info",
+          duration: 1800,
+        });
+      } else {
+        notify({
+          title: "数字の配布に失敗",
+          description: getErrorMessage(error),
+          type: "error",
+        });
+      }
     }
   },
 };

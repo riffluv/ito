@@ -8,12 +8,16 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
+  sessionId: z.string().min(8).max(128).optional().nullable(),
   clientVersion: z.string().optional().nullable(),
   // 「次のゲーム」ボタンなど reveal/finished 状態からの開始を許可するフラグ
   allowFromFinished: z.boolean().optional().nullable(),
   // リトライ時のレース条件対策: clue 状態からも開始可能にするフラグ
   allowFromClue: z.boolean().optional().nullable(),
-  requestId: z.string().min(4).max(64).optional().nullable(),
+  requestId: z.string().min(8).max(64),
+  autoDeal: z.boolean().optional().nullable(),
+  topicType: z.string().max(64).optional().nullable(),
+  customTopic: z.string().max(240).optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -50,16 +54,28 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
     await startGameCommand({
       roomId,
       token: parsed.data.token,
+      sessionId: parsed.data.sessionId ?? undefined,
       allowFromFinished: parsed.data.allowFromFinished ?? false,
       allowFromClue: parsed.data.allowFromClue ?? false,
-      requestId: parsed.data.requestId ?? undefined,
+      requestId: parsed.data.requestId,
+      autoDeal: parsed.data.autoDeal ?? false,
+      topicType: parsed.data.topicType ?? undefined,
+      customTopic: parsed.data.customTopic ?? undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
     traceError("room.start.api", error, { roomId });
     const code = (error as { code?: string }).code;
     const status =
-      code === "unauthorized" ? 401 : code === "forbidden" ? 403 : code === "invalid_status" ? 409 : 500;
+      code === "unauthorized"
+        ? 401
+        : code === "forbidden"
+          ? 403
+          : code === "rate_limited"
+            ? 429
+            : code === "invalid_status"
+              ? 409
+              : 500;
     return NextResponse.json({ error: code ?? "internal_error" }, { status });
   }
 }

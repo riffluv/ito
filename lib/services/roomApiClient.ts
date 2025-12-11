@@ -94,7 +94,15 @@ export async function apiSubmitOrder(roomId: string, list: string[]): Promise<vo
 
 export async function apiStartGame(
   roomId: string,
-  opts?: { allowFromFinished?: boolean; allowFromClue?: boolean; requestId?: string }
+  opts: {
+    allowFromFinished?: boolean;
+    allowFromClue?: boolean;
+    requestId: string;
+    sessionId?: string | null;
+    autoDeal?: boolean;
+    topicType?: string | null;
+    customTopic?: string | null;
+  }
 ): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
   await postJson(`/api/rooms/${roomId}/start`, {
@@ -103,16 +111,21 @@ export async function apiStartGame(
     allowFromFinished: opts?.allowFromFinished ?? false,
     allowFromClue: opts?.allowFromClue ?? false,
     requestId: opts?.requestId,
+    sessionId: opts?.sessionId ?? undefined,
+    autoDeal: opts?.autoDeal ?? false,
+    topicType: opts?.topicType ?? undefined,
+    customTopic: opts?.customTopic ?? undefined,
   });
 }
 
 export async function apiResetRoom(
   roomId: string,
   recallSpectators: boolean,
-  requestId?: string
+  requestId: string,
+  sessionId?: string | null
 ): Promise<void> {
   const token = await getIdTokenOrThrow("reset-room");
-  await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators, requestId });
+  await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators, requestId, sessionId: sessionId ?? undefined });
 }
 
 // ============================================================================
@@ -125,6 +138,8 @@ export async function apiResetRoom(
 export type NextRoundOptions = {
   topicType?: string | null;
   customTopic?: string | null;
+  requestId: string;
+  sessionId?: string | null;
 };
 
 export type NextRoundResult = {
@@ -135,22 +150,29 @@ export type NextRoundResult = {
   topicType: string | null;
 };
 
-export async function apiNextRound(roomId: string, opts?: NextRoundOptions): Promise<NextRoundResult> {
+export async function apiNextRound(roomId: string, opts: NextRoundOptions): Promise<NextRoundResult> {
   const token = await getIdTokenOrThrow("next-round");
   return postJson(`/api/rooms/${roomId}/next-round`, {
     token,
     clientVersion: APP_VERSION,
     topicType: opts?.topicType ?? undefined,
     customTopic: opts?.customTopic ?? undefined,
+    requestId: opts.requestId,
+    sessionId: opts.sessionId ?? undefined,
   });
 }
 
-export async function apiDealNumbers(roomId: string, opts?: { skipPresence?: boolean }): Promise<{ count: number }> {
+export async function apiDealNumbers(
+  roomId: string,
+  opts: { skipPresence?: boolean; requestId: string; sessionId?: string | null }
+): Promise<{ count: number }> {
   const token = await getIdTokenOrThrow("deal-numbers");
   return postJson(`/api/rooms/${roomId}/deal`, {
     token,
     clientVersion: APP_VERSION,
     skipPresence: opts?.skipPresence ?? false,
+    requestId: opts.requestId,
+    sessionId: opts.sessionId ?? undefined,
   });
 }
 

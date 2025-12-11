@@ -16,7 +16,9 @@ import {
   buildPlayOutcomePayload,
   buildRevealOutcomePayload,
 } from "@/lib/game/domain";
+import { acquireRoomLock, releaseRoomLock } from "@/lib/server/roomQueue";
 import { composeWaitingResetPayload } from "@/lib/server/roomActions";
+import { logRoomCommandAudit } from "@/lib/server/roomAudit";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
@@ -31,6 +33,7 @@ import {
   type TopicSections,
   type TopicType,
 } from "@/lib/topics";
+import { verifyHostSession } from "@/lib/server/hostToken";
 
 type WithAuth = { token: string };
 type CodedError = Error & { code?: string; reason?: string };
@@ -115,6 +118,27 @@ async function verifyToken(token: string): Promise<string> {
     console.error("[verifyToken] failed", (error as Error)?.message);
     throw codedError("unauthorized", "unauthorized", (error as Error | undefined)?.message);
   }
+}
+
+async function verifyHostIdentity(
+  room: RoomDoc | undefined,
+  token: string,
+  roomId: string,
+  sessionId?: string | null
+): Promise<string> {
+  if (sessionId) {
+    const session = await verifyHostSession(sessionId, roomId);
+    if (session?.uid) {
+      return session.uid;
+    }
+  }
+  const uid = await verifyToken(token);
+  const hostId = room?.hostId;
+  const creatorId = room?.creatorId;
+  if (hostId && hostId !== uid && creatorId !== uid) {
+    throw codedError("forbidden", "forbidden", "host_only");
+  }
+  return uid;
 }
 
 async function chooseAvatar(roomId: string): Promise<string> {
@@ -301,9 +325,11 @@ export async function joinRoom(params: JoinRoomParams) {
 }
 
 export async function leaveRoom(params: LeaveRoomParams) {
-  const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
+  const roomSnapForAuth = await roomRef.get();
+  const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
+  const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId);
   await roomRef.collection("players").doc(uid).delete();
   traceAction("room.leave.server", { roomId: params.roomId, uid });
 }
@@ -341,15 +367,117 @@ export async function startGameCommand(params: {
   roomId: string;
   allowFromFinished?: boolean;
   allowFromClue?: boolean;
-  requestId?: string;
+  requestId: string;
+  sessionId?: string;
+  autoDeal?: boolean;
+  topicType?: string | null;
+  customTopic?: string | null;
 } & WithAuth) {
-  const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
+  const roomSnapForAuth = await roomRef.get();
+  const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
+  const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId, params.sessionId);
   const allowFromFinished = params.allowFromFinished ?? false;
   const allowFromClue = params.allowFromClue ?? false;
   const requestId = params.requestId;
   let alreadyStarted = false;
+  const rateLimitMs = 700;
+  let prevStatus: RoomDoc["status"] | null = null;
+  const doAutoDeal = params.autoDeal === true;
+
+  // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ）
+  let preparedDeal:
+    | {
+        dealPayload: ReturnType<typeof buildDealPayload>;
+        orderedPlayers: { id: string; uid?: string }[];
+        topic: string | null;
+        topicBox: TopicType | "カスタム" | null;
+      }
+    | null = null;
+
+  if (doAutoDeal) {
+    const playersSnap = await roomRef.collection("players").get();
+    const now = Date.now();
+    const candidates = playersSnap.docs.map((d) => {
+      const data = d.data() as PlayerDoc | undefined;
+      const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+      const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+      return {
+        id: d.id,
+        uid: typeof data?.uid === "string" ? data.uid : undefined,
+        lastSeen,
+      } as const;
+    });
+    const target = selectDealTargetPlayers(candidates, null, now);
+    let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+    const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+    const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+    if (suspectedMismatch) {
+      const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+      if (fallbackOrdered.length > ordered.length) {
+        ordered = fallbackOrdered;
+      }
+    }
+    if (ordered.length === 0) {
+      throw codedError("no_players", "no_players", "no_eligible_players");
+    }
+
+    // topic 決定（nextRound と同等のロジックを流用）
+    const sections = await loadTopicSectionsFromFs();
+    const requestedTopicType = params.topicType ?? roomForAuth?.options?.defaultTopicType ?? "通常版";
+    const normalizedTopicType =
+      typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
+        ? (requestedTopicType as TopicType)
+        : ("通常版" as TopicType);
+
+    let topic: string | null = null;
+    let topicBox: TopicType | "カスタム" | null =
+      (roomForAuth?.topicBox as TopicType | "カスタム" | null | undefined) ?? normalizedTopicType;
+
+    if (topicBox === "カスタム") {
+      const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
+      if (customText && customText.trim().length > 0) {
+        topic = customText;
+        topicBox = "カスタム";
+      } else if (roomForAuth?.topic && String(roomForAuth.topicBox) === "カスタム") {
+        topic = roomForAuth.topic;
+        topicBox = "カスタム";
+      } else {
+        const pool = sections.normal;
+        topic = pickOne(pool) || null;
+        topicBox = "通常版";
+      }
+    } else {
+      const pool =
+        normalizedTopicType === "通常版"
+          ? sections.normal
+          : normalizedTopicType === "レインボー版"
+            ? sections.rainbow
+            : sections.classic;
+      topic = pickOne(pool) || null;
+    }
+
+    const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const min = 1;
+    const max = 100;
+    const playerIds = ordered.map((p) => p.id);
+    const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+    const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+    preparedDeal = {
+      dealPayload,
+      orderedPlayers: ordered,
+      topic,
+      topicBox,
+    };
+  }
+
+  const lockHolder = `start:${requestId}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    throw codedError("rate_limited", "rate_limited");
+  }
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
@@ -357,11 +485,27 @@ export async function startGameCommand(params: {
       throw codedError("room_not_found", "room_not_found");
     }
     const room = snap.data() as RoomDoc;
+    prevStatus = room.status ?? null;
 
     // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
-    if (requestId && room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
+    if (room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
       alreadyStarted = true;
       return;
+    }
+
+    // Rate limit (per room): 拒否してクライアントにリトライさせる
+    const lastMs = toMillis(room.lastCommandAt);
+    const nowMs = Date.now();
+    const existingNumbers =
+      room && typeof room.deal === "object" && room.deal
+        ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
+        : undefined;
+    const isFreshWaiting =
+      (room.status === "waiting" || room.status === "reveal" || room.status === "finished") &&
+      (!existingNumbers || Object.keys(existingNumbers).length === 0);
+    const canBypassRateLimit = isFreshWaiting;
+    if (!canBypassRateLimit && lastMs !== null && nowMs - lastMs < rateLimitMs) {
+      throw codedError("rate_limited", "rate_limited");
     }
 
     // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
@@ -384,44 +528,125 @@ export async function startGameCommand(params: {
     const payload: Partial<RoomDoc> = {
       status: "clue",
       result: null,
-      deal: null,
-      order: null,
+      deal: doAutoDeal && preparedDeal ? preparedDeal.dealPayload : null,
+      order: doAutoDeal && preparedDeal
+        ? {
+            list: [],
+            lastNumber: null,
+            failed: false,
+            failedAt: null,
+            total: preparedDeal.orderedPlayers.length,
+            numbers: preparedDeal.dealPayload.numbers,
+          }
+        : null,
       mvpVotes: {},
       lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
       ui: { ...(room.ui ?? {}), recallOpen: false },
-      startRequestId: requestId ?? null,
+      startRequestId: requestId,
+      lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
     };
+
+    if (doAutoDeal && preparedDeal) {
+      payload.topic = preparedDeal.topic;
+      payload.topicBox = preparedDeal.topicBox as RoomDoc["topicBox"] | null;
+      payload.topicOptions = null;
+      payload.deal = preparedDeal.dealPayload;
+    }
+
     tx.update(roomRef, payload);
   });
 
   if (alreadyStarted) {
     traceAction("host.start.server.idempotent", { roomId: params.roomId, uid, requestId });
+    void logRoomCommandAudit({
+      roomId: params.roomId,
+      uid,
+      requestId,
+      command: "start",
+      prevStatus,
+      nextStatus: "clue",
+      note: "idempotent",
+    });
+    await releaseRoomLock(params.roomId, lockHolder);
     return;
   }
 
-  // reset players in a batch
+  // reset players in a batch (autoDeal 時は配札も同時に反映)
   const playersSnap = await db.collection("rooms").doc(params.roomId).collection("players").get();
   const batch = db.batch();
   playersSnap.forEach((doc) => {
-    batch.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+    const pid = doc.id;
+    if (doAutoDeal && preparedDeal) {
+      const seatIndex =
+        typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
+          ? preparedDeal.dealPayload.seatHistory[pid]!
+          : 0;
+      batch.update(doc.ref, {
+        number: preparedDeal.dealPayload.numbers[pid] ?? null,
+        clue1: "",
+        ready: false,
+        orderIndex: seatIndex,
+        lastSeen: FieldValue.serverTimestamp(),
+      } satisfies Partial<PlayerDoc>);
+    } else {
+      batch.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+    }
   });
   await batch.commit();
 
-  traceAction("host.start.server", { roomId: params.roomId, uid, allowFromFinished, allowFromClue });
+  traceAction("host.start.server", {
+    roomId: params.roomId,
+    uid,
+    requestId,
+    allowFromFinished,
+    allowFromClue,
+    prevStatus,
+    nextStatus: "clue",
+    autoDeal: doAutoDeal ? "1" : "0",
+  });
+  void logRoomCommandAudit({
+    roomId: params.roomId,
+    uid,
+    requestId,
+    command: "start",
+    prevStatus,
+    nextStatus: "clue",
+    note: doAutoDeal ? "autoDeal" : undefined,
+  });
+
+  await releaseRoomLock(params.roomId, lockHolder);
 }
 
-export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId?: string } & WithAuth) {
-  const uid = await verifyToken(params.token);
+export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId: string | null; sessionId?: string } & WithAuth) {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
+  const roomSnapForAuth = await roomRef.get();
+  const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
+  const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId, params.sessionId ?? undefined);
+  const lockHolder = `reset:${params.requestId ?? "none"}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    throw codedError("rate_limited", "rate_limited");
+  }
   const snap = await roomRef.get();
   if (!snap.exists) {
     throw codedError("room_not_found", "room_not_found");
   }
   const room = snap.data() as RoomDoc | undefined;
+  const prevStatus = room?.status ?? null;
   // Idempotent: 同じ requestId で既に waiting なら成功扱い
   if (params.requestId && room?.resetRequestId === params.requestId && room?.status === "waiting") {
     traceAction("room.reset.server.idempotent", { roomId: params.roomId, uid, requestId: params.requestId });
+    void logRoomCommandAudit({
+      roomId: params.roomId,
+      uid,
+      requestId: params.requestId,
+      command: "reset",
+      prevStatus,
+      nextStatus: "waiting",
+      note: "idempotent",
+    });
+    await releaseRoomLock(params.roomId, lockHolder);
     return;
   }
   const authorized =
@@ -440,10 +665,27 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
   if (params.requestId) {
     resetPayload.resetRequestId = params.requestId;
   }
+  resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
   await roomRef.update(resetPayload);
 
+  await releaseRoomLock(params.roomId, lockHolder);
+
   // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
-  traceAction("room.reset.server", { roomId: params.roomId, uid });
+  traceAction("room.reset.server", {
+    roomId: params.roomId,
+    uid,
+    requestId: params.requestId ?? null,
+    prevStatus: room?.status ?? null,
+    nextStatus: "waiting",
+  });
+  void logRoomCommandAudit({
+    roomId: params.roomId,
+    uid,
+    requestId: params.requestId,
+    command: "reset",
+    prevStatus,
+    nextStatus: "waiting",
+  });
 
   // Spectator pending cleanup を非同期で実行（ユーザーの体感速度を優先）
   // API レスポンスはここで返し、cleanup はバックグラウンドで継続
@@ -513,9 +755,15 @@ export async function submitOrder(params: SubmitOrderParams) {
     const normalizedList = normalizeProposalCompact(params.list, validation.expected).filter(
       (v): v is string => typeof v === "string"
     );
+    const numbersSource =
+      room.order && (room.order as { numbers?: Record<string, unknown> | undefined }).numbers &&
+      Object.keys((room.order as { numbers?: Record<string, unknown> }).numbers ?? {}).length > 0
+        ? (room.order as { numbers?: Record<string, number | null | undefined> }).numbers
+        : (room.deal as { numbers?: Record<string, number | null | undefined> } | undefined)?.numbers ?? {};
+
     const revealOutcome = buildRevealOutcomePayload({
       list: normalizedList,
-      numbers: (room.order?.numbers ?? {}) as Record<string, number | null | undefined>,
+      numbers: numbersSource as Record<string, number | null | undefined>,
       expectedTotal: validation.expected,
       previousStats: room.stats,
     });
@@ -718,15 +966,35 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
   });
 }
 
-export async function dealNumbersCommand(params: { token: string; roomId: string; skipPresence?: boolean }): Promise<number> {
-  const uid = await verifyToken(params.token);
+export async function dealNumbersCommand(params: { token: string; roomId: string; skipPresence?: boolean; requestId: string; sessionId?: string }): Promise<number> {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const roomSnap = await roomRef.get();
   if (!roomSnap.exists) throw codedError("room_not_found", "room_not_found");
   const room = roomSnap.data() as RoomDoc | undefined;
+  const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
   if (room?.hostId && room.hostId !== uid) {
     throw codedError("forbidden", "forbidden", "host_only");
+  }
+
+  const rateLimitMs = 700;
+  const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
+  // allow the very first deal right after start without waiting,
+  // so quickStart/start -> deal のシーケンスが 700ms 未満でも失敗しない
+  const existingNumbers =
+    room && typeof room.deal === "object" && room.deal
+      ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
+      : undefined;
+  const isFirstDeal = !existingNumbers || Object.keys(existingNumbers).length === 0;
+  const canBypassRateLimit =
+    isFirstDeal && (room?.status === "clue" || room?.status === "waiting");
+  if (!canBypassRateLimit && lastMs !== null && Date.now() - lastMs < rateLimitMs) {
+    throw codedError("rate_limited", "rate_limited");
+  }
+  const lockHolder = `deal:${params.requestId}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    throw codedError("rate_limited", "rate_limited");
   }
 
   const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -766,6 +1034,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     "order.total": ordered.length,
     "order.numbers": dealPayload.numbers,
     lastActiveAt: FieldValue.serverTimestamp(),
+    lastCommandAt: FieldValue.serverTimestamp(),
   });
 
   try {
@@ -802,10 +1071,24 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     traceError("proposal.reset", error, { roomId: params.roomId });
   }
 
+  await releaseRoomLock(params.roomId, lockHolder);
+
   traceAction("deal.end", {
     roomId: params.roomId,
     count: ordered.length,
     eligibleCount,
+    requestId: params.requestId,
+    prevStatus: room?.status ?? null,
+    nextStatus: room?.status ?? null,
+  });
+  void logRoomCommandAudit({
+    roomId: params.roomId,
+    uid,
+    requestId: params.requestId,
+    command: "deal",
+    prevStatus: room?.status ?? null,
+    nextStatus: room?.status ?? null,
+    note: `count:${ordered.length}`,
   });
 
   return ordered.length;
@@ -1188,6 +1471,8 @@ export type NextRoundParams = WithAuth & {
   roomId: string;
   topicType?: string | null;      // 省略時は room.options.defaultTopicType
   customTopic?: string | null;    // カスタムお題（topicType が "カスタム" の場合）
+  requestId: string;
+  sessionId?: string;
 };
 
 export type NextRoundResult = {
@@ -1199,9 +1484,14 @@ export type NextRoundResult = {
 };
 
 export async function nextRoundCommand(params: NextRoundParams): Promise<NextRoundResult> {
-  const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
+  const rateLimitMs = 700;
+  const lockHolder = `next:${params.requestId}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    throw codedError("rate_limited", "rate_limited");
+  }
 
   // 1. room 取得 & 権限チェック
   const roomSnap = await roomRef.get();
@@ -1209,6 +1499,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     throw codedError("room_not_found", "room_not_found");
   }
   const room = roomSnap.data() as RoomDoc | undefined;
+  const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
 
   // ホストまたは作成者のみ実行可能
   const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
@@ -1223,6 +1514,12 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   const allowedStatuses: RoomDoc["status"][] = ["reveal", "finished", "waiting", "clue"];
   if (room?.status && !allowedStatuses.includes(room.status)) {
     throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
+  }
+
+  // レートリミット（ルーム単位）
+  const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
+  if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
+    throw codedError("rate_limited", "rate_limited");
   }
 
   // 3. プレイヤー一覧を取得
@@ -1324,11 +1621,32 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     result: null,
     mvpVotes: {},
     lastActiveAt: FieldValue.serverTimestamp(),
+    startRequestId: params.requestId,
+    lastCommandAt: FieldValue.serverTimestamp(),
     "ui.roundPreparing": false,
     "ui.recallOpen": false,
     "ui.revealPending": false,
   };
   await roomRef.update(roomUpdate);
+  traceAction("room.nextRound.server", {
+    roomId: params.roomId,
+    uid,
+    requestId: params.requestId,
+    prevStatus: room?.status ?? null,
+    nextStatus: "clue",
+    playerCount: ordered.length,
+    topicType: topicBox ?? null,
+  });
+  void logRoomCommandAudit({
+    roomId: params.roomId,
+    uid,
+    requestId: params.requestId,
+    command: "next",
+    prevStatus: room?.status ?? null,
+    nextStatus: "clue",
+    note: `playerCount:${ordered.length}`,
+  });
+  await releaseRoomLock(params.roomId, lockHolder);
 
   // 9. players を更新（number, clue1, ready, orderIndex をリセット）
   try {

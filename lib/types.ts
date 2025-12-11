@@ -93,6 +93,7 @@ export type RoomDoc = {
   // リクエスト冪等化用（サーバー側のみ利用）。存在しなくても良い。
   startRequestId?: string | null;
   resetRequestId?: string | null;
+  lastCommandAt?: Timestamp | FieldValue | null;
   // --- Version Align (PWA update) ---
   updatePhase?: 'required' | 'done' | undefined;
   requiredSwVersion?: string | undefined;
