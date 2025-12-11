@@ -92,18 +92,49 @@ export async function apiSubmitOrder(roomId: string, list: string[]): Promise<vo
   await postJson(`/api/rooms/${roomId}/submit-order`, { token, list, clientVersion: APP_VERSION });
 }
 
-export async function apiStartGame(roomId: string, opts?: { allowFromFinished?: boolean }): Promise<void> {
+export async function apiStartGame(roomId: string, opts?: { allowFromFinished?: boolean; allowFromClue?: boolean }): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
   await postJson(`/api/rooms/${roomId}/start`, {
     token,
     clientVersion: APP_VERSION,
     allowFromFinished: opts?.allowFromFinished ?? false,
+    allowFromClue: opts?.allowFromClue ?? false,
   });
 }
 
 export async function apiResetRoom(roomId: string, recallSpectators: boolean): Promise<void> {
   const token = await getIdTokenOrThrow("reset-room");
   await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators });
+}
+
+// ============================================================================
+// apiNextRound: 「次のゲーム」専用 API
+// ============================================================================
+// reset + start + topic選択 + deal をアトミックに実行する。
+// 従来の restartGame → resetGame + quickStart の複雑な経路を置き換える。
+// ============================================================================
+
+export type NextRoundOptions = {
+  topicType?: string | null;
+  customTopic?: string | null;
+};
+
+export type NextRoundResult = {
+  ok: true;
+  round: number;
+  playerCount: number;
+  topic: string | null;
+  topicType: string | null;
+};
+
+export async function apiNextRound(roomId: string, opts?: NextRoundOptions): Promise<NextRoundResult> {
+  const token = await getIdTokenOrThrow("next-round");
+  return postJson(`/api/rooms/${roomId}/next-round`, {
+    token,
+    clientVersion: APP_VERSION,
+    topicType: opts?.topicType ?? undefined,
+    customTopic: opts?.customTopic ?? undefined,
+  });
 }
 
 export async function apiDealNumbers(roomId: string, opts?: { skipPresence?: boolean }): Promise<{ count: number }> {

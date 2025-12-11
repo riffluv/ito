@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
-import { startGameCommand } from "@/lib/server/roomCommands";
+import { nextRoundCommand } from "@/lib/server/roomCommands";
 import { traceError } from "@/lib/utils/trace";
 
 export const runtime = "nodejs";
@@ -9,10 +9,10 @@ export const runtime = "nodejs";
 const schema = z.object({
   token: z.string().min(1),
   clientVersion: z.string().optional().nullable(),
-  // 「次のゲーム」ボタンなど reveal/finished 状態からの開始を許可するフラグ
-  allowFromFinished: z.boolean().optional().nullable(),
-  // リトライ時のレース条件対策: clue 状態からも開始可能にするフラグ
-  allowFromClue: z.boolean().optional().nullable(),
+  // お題タイプ（省略時は room.options.defaultTopicType）
+  topicType: z.string().optional().nullable(),
+  // カスタムお題（topicType が "カスタム" の場合）
+  customTopic: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -46,18 +46,27 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   }
 
   try {
-    await startGameCommand({
+    const result = await nextRoundCommand({
       roomId,
       token: parsed.data.token,
-      allowFromFinished: parsed.data.allowFromFinished ?? false,
-      allowFromClue: parsed.data.allowFromClue ?? false,
+      topicType: parsed.data.topicType ?? undefined,
+      customTopic: parsed.data.customTopic ?? undefined,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json(result);
   } catch (error) {
-    traceError("room.start.api", error, { roomId });
+    traceError("room.nextRound.api", error, { roomId });
     const code = (error as { code?: string }).code;
+    const reason = (error as { reason?: string }).reason;
     const status =
-      code === "unauthorized" ? 401 : code === "forbidden" ? 403 : code === "invalid_status" ? 409 : 500;
-    return NextResponse.json({ error: code ?? "internal_error" }, { status });
+      code === "unauthorized"
+        ? 401
+        : code === "forbidden"
+          ? 403
+          : code === "invalid_status"
+            ? 409
+            : code === "no_players"
+              ? 400
+              : 500;
+    return NextResponse.json({ error: code ?? "internal_error", reason }, { status });
   }
 }
