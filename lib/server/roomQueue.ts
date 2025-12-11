@@ -21,7 +21,7 @@ const QUEUE_COLLECTION = "roomCommandLocks";
  * in our current Firebase architecture.
  */
 
-export async function acquireRoomLock(roomId: string, holder: string, ttlMs = 5000) {
+export async function acquireRoomLock(roomId: string, holder: string, ttlMs = 8000) {
   const db = getAdminDb();
   const ref = db.collection(QUEUE_COLLECTION).doc(roomId);
   const now = Date.now();

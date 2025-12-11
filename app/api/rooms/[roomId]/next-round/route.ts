@@ -15,6 +15,7 @@ const schema = z.object({
   // カスタムお題（topicType が "カスタム" の場合）
   customTopic: z.string().optional().nullable(),
   requestId: z.string().min(8).max(64),
+  presenceUids: z.array(z.string().min(1)).max(16).optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
       topicType: parsed.data.topicType ?? undefined,
       customTopic: parsed.data.customTopic ?? undefined,
       requestId: parsed.data.requestId,
+      presenceUids: parsed.data.presenceUids ?? undefined,
     });
     return NextResponse.json(result);
   } catch (error) {

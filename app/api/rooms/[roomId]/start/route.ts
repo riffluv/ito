@@ -18,6 +18,7 @@ const schema = z.object({
   autoDeal: z.boolean().optional().nullable(),
   topicType: z.string().max(64).optional().nullable(),
   customTopic: z.string().max(240).optional().nullable(),
+  presenceUids: z.array(z.string().min(1)).max(16).optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
       autoDeal: parsed.data.autoDeal ?? false,
       topicType: parsed.data.topicType ?? undefined,
       customTopic: parsed.data.customTopic ?? undefined,
+      presenceUids: parsed.data.presenceUids ?? undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

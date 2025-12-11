@@ -20,6 +20,15 @@ export type DealCandidate = {
 const ACTIVE_WINDOW_MS = 30_000;
 
 const isActive = (lastSeen: DealCandidate["lastSeen"], now: number) => {
+  // Firestore Timestamp 対応 (duck-typing)
+  if (lastSeen && typeof (lastSeen as { toMillis?: () => number }).toMillis === "function") {
+    try {
+      const ms = (lastSeen as { toMillis: () => number }).toMillis();
+      return now - ms <= ACTIVE_WINDOW_MS;
+    } catch {
+      // fall through
+    }
+  }
   if (lastSeen instanceof Date) return now - lastSeen.getTime() <= ACTIVE_WINDOW_MS;
   if (typeof lastSeen === "number" && Number.isFinite(lastSeen)) {
     return now - lastSeen <= ACTIVE_WINDOW_MS;

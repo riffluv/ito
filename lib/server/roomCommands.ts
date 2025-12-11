@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { promises as fs } from "fs";
 import path from "path";
-import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
+import { getAdminAuth, getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import { generateRoomId } from "@/lib/utils/roomId";
@@ -93,6 +93,30 @@ const safeTraceAction = (name: string, detail?: Record<string, unknown>) => {
     traceAction(name, detail);
   } catch {
     // swallow tracing failures on the server to avoid impacting API responses
+  }
+};
+
+const fetchPresenceUids = async (roomId: string): Promise<string[] | null> => {
+  const rtdb = getAdminRtdb();
+  if (!rtdb) return null;
+  try {
+    const snap = await rtdb.ref(`presence/${roomId}`).get();
+    const val = (snap.val() as Record<string, Record<string, { online?: boolean; ts?: number }>> | null) ?? {};
+    const now = Date.now();
+    const ACTIVE_WINDOW_MS = 30_000;
+    const online: string[] = [];
+    for (const [uid, conns] of Object.entries(val)) {
+      const hasActive = Object.values(conns ?? {}).some((c) => {
+        if (c?.online === false) return false;
+        const ts = typeof c?.ts === "number" ? c.ts : 0;
+        if (!ts) return true;
+        return now - ts <= ACTIVE_WINDOW_MS;
+      });
+      if (hasActive) online.push(uid);
+    }
+    return online;
+  } catch {
+    return null;
   }
 };
 
@@ -229,6 +253,7 @@ export async function createRoom(params: CreateRoomParams): Promise<{ roomId: st
     mvpVotes: {},
     round: 0,
     ui: { recallOpen: true },
+    statusVersion: 0,
   } as unknown as RoomDoc & { createdAt: Timestamp; lastActiveAt: Timestamp };
 
   const MAX_ATTEMPTS = 8;
@@ -372,6 +397,7 @@ export async function startGameCommand(params: {
   autoDeal?: boolean;
   topicType?: string | null;
   customTopic?: string | null;
+  presenceUids?: string[] | null;
 } & WithAuth) {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
@@ -386,7 +412,13 @@ export async function startGameCommand(params: {
   let prevStatus: RoomDoc["status"] | null = null;
   const doAutoDeal = params.autoDeal === true;
 
-  // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ）
+  const lockHolder = `start:${requestId}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    throw codedError("rate_limited", "rate_limited");
+  }
+
+  // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
   let preparedDeal:
     | {
         dealPayload: ReturnType<typeof buildDealPayload>;
@@ -399,6 +431,7 @@ export async function startGameCommand(params: {
   if (doAutoDeal) {
     const playersSnap = await roomRef.collection("players").get();
     const now = Date.now();
+    const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
     const candidates = playersSnap.docs.map((d) => {
       const data = d.data() as PlayerDoc | undefined;
       const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
@@ -409,7 +442,7 @@ export async function startGameCommand(params: {
         lastSeen,
       } as const;
     });
-    const target = selectDealTargetPlayers(candidates, null, now);
+    const target = selectDealTargetPlayers(candidates, presenceUids, now);
     let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
     const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
     const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
@@ -420,6 +453,7 @@ export async function startGameCommand(params: {
       }
     }
     if (ordered.length === 0) {
+      await releaseRoomLock(params.roomId, lockHolder);
       throw codedError("no_players", "no_players", "no_eligible_players");
     }
 
@@ -471,12 +505,6 @@ export async function startGameCommand(params: {
       topic,
       topicBox,
     };
-  }
-
-  const lockHolder = `start:${requestId}`;
-  const locked = await acquireRoomLock(params.roomId, lockHolder);
-  if (!locked) {
-    throw codedError("rate_limited", "rate_limited");
   }
 
   await db.runTransaction(async (tx) => {
@@ -543,7 +571,9 @@ export async function startGameCommand(params: {
       lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
       ui: { ...(room.ui ?? {}), recallOpen: false },
       startRequestId: requestId,
+      dealRequestId: doAutoDeal && preparedDeal ? requestId : room.dealRequestId ?? null,
       lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
+      statusVersion: FieldValue.increment(1) as unknown as number,
     };
 
     if (doAutoDeal && preparedDeal) {
@@ -666,6 +696,7 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
     resetPayload.resetRequestId = params.requestId;
   }
   resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
+  resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
   await roomRef.update(resetPayload);
 
   await releaseRoomLock(params.roomId, lockHolder);
@@ -746,6 +777,9 @@ export async function submitOrder(params: SubmitOrderParams) {
     const snap = await tx.get(roomRef);
     if (!snap.exists) throw codedError("room_not_found", "room_not_found");
     const room = snap.data() as RoomDoc;
+    if (room.status !== "clue") {
+      throw codedError("invalid_status", "invalid_status");
+    }
     if (room.hostId && room.hostId !== uid) throw codedError("forbidden", "forbidden", "host_only");
     const order = room.order ?? { total: params.list.length };
     const validation = validateSubmitList(params.list, room.deal?.players ?? null, order.total ?? params.list.length);
@@ -778,6 +812,7 @@ export async function submitOrder(params: SubmitOrderParams) {
       result: { success: revealOutcome.success, revealedAt: serverNow },
       stats: revealOutcome.stats,
       lastActiveAt: serverNow,
+      statusVersion: FieldValue.increment(1) as unknown as number,
     });
   });
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
@@ -882,6 +917,7 @@ export async function mutateProposal(params: {
     tx.update(roomRef, {
       "order.proposal": normalized,
       lastActiveAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
     });
     return "ok" as const;
   });
@@ -958,15 +994,20 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
         result: { success: playResult.payload.success, revealedAt: FieldValue.serverTimestamp() },
         stats: playResult.payload.stats,
         lastActiveAt: FieldValue.serverTimestamp(),
+        statusVersion: FieldValue.increment(1) as unknown as number,
       });
       return;
     }
 
-    tx.update(roomRef, { order: playResult.next, lastActiveAt: FieldValue.serverTimestamp() });
+    tx.update(roomRef, {
+      order: playResult.next,
+      lastActiveAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
+    });
   });
 }
 
-export async function dealNumbersCommand(params: { token: string; roomId: string; skipPresence?: boolean; requestId: string; sessionId?: string }): Promise<number> {
+export async function dealNumbersCommand(params: { token: string; roomId: string; skipPresence?: boolean; requestId: string; sessionId?: string; presenceUids?: string[] | null }): Promise<number> {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const roomSnap = await roomRef.get();
@@ -975,6 +1016,12 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
   const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
   if (room?.hostId && room.hostId !== uid) {
     throw codedError("forbidden", "forbidden", "host_only");
+  }
+
+  // 状態チェック: clue または waiting（初回配札のみに限定）
+  const currentStatus = room?.status ?? "waiting";
+  if (currentStatus !== "clue" && currentStatus !== "waiting") {
+    throw codedError("invalid_status", "invalid_status");
   }
 
   const rateLimitMs = 700;
@@ -986,8 +1033,18 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
       ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
       : undefined;
   const isFirstDeal = !existingNumbers || Object.keys(existingNumbers).length === 0;
+  if (!isFirstDeal && (!room?.dealRequestId || room.dealRequestId !== params.requestId)) {
+    throw codedError("invalid_status", "invalid_status", "deal_already_assigned");
+  }
   const canBypassRateLimit =
     isFirstDeal && (room?.status === "clue" || room?.status === "waiting");
+  // Idempotent: 直前と同じ requestId で既に配札済みなら成功扱い
+  const existingDealCount =
+    room?.deal?.players && Array.isArray(room.deal.players) ? room.deal.players.length : null;
+  if (room?.dealRequestId && room.dealRequestId === params.requestId && existingDealCount !== null) {
+    return existingDealCount;
+  }
+
   if (!canBypassRateLimit && lastMs !== null && Date.now() - lastMs < rateLimitMs) {
     throw codedError("rate_limited", "rate_limited");
   }
@@ -1003,6 +1060,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
 
   const playersSnap = await roomRef.collection("players").get();
   const now = Date.now();
+  const presenceUids = params.presenceUids ?? (params.skipPresence ? null : await fetchPresenceUids(params.roomId));
   const candidates = playersSnap.docs.map((d) => {
     const data = d.data() as PlayerDoc | undefined;
     const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
@@ -1014,7 +1072,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     } as const;
   });
 
-  const target = selectDealTargetPlayers(candidates, null, now);
+  const target = selectDealTargetPlayers(candidates, presenceUids, now);
   let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
   const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
   const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
@@ -1033,8 +1091,12 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     deal: dealPayload,
     "order.total": ordered.length,
     "order.numbers": dealPayload.numbers,
+    "order.list": [],
+    "order.proposal": [],
+    dealRequestId: params.requestId,
     lastActiveAt: FieldValue.serverTimestamp(),
     lastCommandAt: FieldValue.serverTimestamp(),
+    statusVersion: FieldValue.increment(1) as unknown as number,
   });
 
   try {
@@ -1115,6 +1177,7 @@ export async function continueAfterFailCommand(params: { token: string; roomId: 
     deal: null,
     mvpVotes: {},
     lastActiveAt: FieldValue.serverTimestamp(),
+    statusVersion: FieldValue.increment(1) as unknown as number,
   });
 
   try {
@@ -1196,6 +1259,7 @@ export async function finalizeRevealCommand(params: { token: string; roomId: str
     tx.update(roomRef, {
       status: "finished",
       lastActiveAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
     });
   });
 
@@ -1228,6 +1292,7 @@ export async function pruneProposalCommand(params: { token: string; roomId: stri
     tx.update(roomRef, {
       "order.proposal": filtered,
       lastActiveAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
     });
     tx.set(
       proposalRef,
@@ -1473,6 +1538,7 @@ export type NextRoundParams = WithAuth & {
   customTopic?: string | null;    // カスタムお題（topicType が "カスタム" の場合）
   requestId: string;
   sessionId?: string;
+  presenceUids?: string[] | null;
 };
 
 export type NextRoundResult = {
@@ -1516,6 +1582,19 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
   }
 
+  // Idempotent: 直前と同じ requestId ですでに遷移済みならそのまま返す
+  if (room?.nextRequestId && room.nextRequestId === params.requestId && room.status === "clue") {
+    const playerCount = Array.isArray(room?.deal?.players) ? room.deal!.players!.length : 0;
+    await releaseRoomLock(params.roomId, lockHolder);
+    return {
+      ok: true,
+      round: typeof room?.round === "number" ? room.round : 0,
+      playerCount,
+      topic: room?.topic ?? null,
+      topicType: (room?.topicBox as string | null | undefined) ?? null,
+    };
+  }
+
   // レートリミット（ルーム単位）
   const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
   if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
@@ -1525,6 +1604,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   // 3. プレイヤー一覧を取得
   const playersSnap = await roomRef.collection("players").get();
   const now = Date.now();
+  const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
   const candidates = playersSnap.docs.map((d) => {
     const data = d.data() as PlayerDoc | undefined;
     const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
@@ -1537,7 +1617,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   });
 
   // 4. 配布対象プレイヤーを選定
-  const target = selectDealTargetPlayers(candidates, null, now);
+  const target = selectDealTargetPlayers(candidates, presenceUids, now);
   let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
 
   // フォールバック: eligibleCount > 1 なのに ordered が 1 以下の場合
@@ -1622,7 +1702,10 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     mvpVotes: {},
     lastActiveAt: FieldValue.serverTimestamp(),
     startRequestId: params.requestId,
+    nextRequestId: params.requestId,
+    dealRequestId: params.requestId,
     lastCommandAt: FieldValue.serverTimestamp(),
+    statusVersion: FieldValue.increment(1) as unknown as number,
     "ui.roundPreparing": false,
     "ui.recallOpen": false,
     "ui.revealPending": false,

@@ -82,6 +82,14 @@ export function composeWaitingResetPayload(
   } else {
     payload["ui.recallOpen"] = true;
   }
+  // UI状態の後片付け（準備中・リビール待ち残留防止）
+  payload["ui.roundPreparing"] = false;
+  payload["ui.revealPending"] = false;
+  payload["ui.revealBeginAt"] = FieldValue.delete();
+  payload.startRequestId = null;
+  payload.resetRequestId = options?.resetRound ? null : payload.resetRequestId ?? null;
+  payload.nextRequestId = null;
+  payload.dealRequestId = null;
 
   return payload;
 }

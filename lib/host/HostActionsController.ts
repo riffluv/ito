@@ -115,6 +115,7 @@ export type NextRoundRequest = {
   roomId: string;
   topicType?: string | null;
   customTopic?: string | null;
+  presenceInfo?: PresenceInfo;
 };
 
 export type NextRoundApiResult =
@@ -209,6 +210,7 @@ export function createHostActionsController(session?: HostSessionProvider) {
       }
     }
     const presenceReady = presenceInfo?.presenceReady ?? false;
+    // 2人以下のデバッグ/少人数は presence 待ちを緩和、それ以外は必須
     const skipPresence = activeCount <= 2;
     const shouldEnforcePresence = !skipPresence;
 
@@ -302,7 +304,8 @@ export function createHostActionsController(session?: HostSessionProvider) {
     try {
       // 一本化後のレースを極力減らすため、デフォルトで寛容に進行中ステータスも許可する。
       const allowFromFinished = req.allowFromFinished ?? true;
-      const allowFromClue = req.allowFromClue ?? true;
+      // デフォルトでは clue 中の再開始を許可しない（リトライ時のみ true）
+      const allowFromClue = req.allowFromClue ?? false;
       traceAction("ui.host.quickStart.api", {
         roomId,
         type: effectiveType,
@@ -319,6 +322,12 @@ export function createHostActionsController(session?: HostSessionProvider) {
         autoDeal: true,
         topicType: effectiveType,
         customTopic: customTopic ?? topic ?? undefined,
+        presenceUids:
+          Array.isArray(presenceInfo?.onlineUids) && presenceInfo.onlineUids.length > 0
+            ? presenceInfo.onlineUids.filter(
+                (id): id is string => typeof id === "string" && id.trim().length > 0
+              )
+            : undefined,
       });
 
       try {
@@ -545,11 +554,16 @@ export function createHostActionsController(session?: HostSessionProvider) {
     });
 
     try {
+      const presenceUids =
+        Array.isArray(req.presenceInfo?.onlineUids) && req.presenceInfo.onlineUids.length > 0
+          ? req.presenceInfo.onlineUids.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+          : undefined;
       const result = await apiNextRound(roomId, {
         topicType,
         customTopic,
         requestId,
         sessionId,
+        presenceUids,
       });
 
       // broadcast でラウンドリセットを通知

@@ -103,6 +103,7 @@ export function useHostActions({
   const actionLatencyRef = useRef<Record<string, number>>({});
   const presenceWarningShownRef = useRef(false);
   const resetUiTimerRef = useRef<number | null>(null);
+  const lastActionAtRef = useRef<Record<string, number>>({});
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -211,6 +212,20 @@ export function useHostActions({
     setResetUiPending(false);
   }, []);
 
+  const ACTION_COOLDOWN_MS = 420;
+  const canProceed = useCallback(
+    (key: string) => {
+      const now = Date.now();
+      const last = lastActionAtRef.current[key] ?? 0;
+      if (now - last < ACTION_COOLDOWN_MS) {
+        return false;
+      }
+      lastActionAtRef.current[key] = now;
+      return true;
+    },
+    []
+  );
+
   const beginResetUiHold = useCallback((durationMs = 2800) => {
     if (typeof window === "undefined") return;
     setResetUiPending(true);
@@ -250,6 +265,7 @@ export function useHostActions({
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
+      if (!canProceed("quickStart")) return false;
       if (!isHost) {
         traceAction("ui.host.quickStart.blocked", {
           roomId,
@@ -614,6 +630,7 @@ export function useHostActions({
       roomStatus,
       roundIds,
       onStageEvent,
+      canProceed,
     ]
   );
 
@@ -626,6 +643,11 @@ export function useHostActions({
         options?.recallSpectators ?? true;
       markActionStart("reset");
       setIsResetting(true);
+      if (!canProceed("reset")) {
+        finalizeAction("reset", "error");
+        setIsResetting(false);
+        return;
+      }
       beginResetUiHold(3400);
       onStageEvent?.("reset:start");
       if (shouldPlaySound) {
@@ -714,6 +736,7 @@ export function useHostActions({
       onStageEvent,
       beginResetUiHold,
       clearResetUiHold,
+      canProceed,
     ]
   );
 
@@ -760,6 +783,10 @@ export function useHostActions({
       typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
     onStageEvent?.("round:prepare");
+    if (!canProceed("nextGame")) {
+      setIsRestarting(false);
+      return;
+    }
 
     try {
       traceAction("ui.host.nextGame", { roomId, method: "nextRound-api" });
@@ -865,6 +892,7 @@ export function useHostActions({
     currentTopic,
     clearAutoStartLock,
     onStageEvent,
+    canProceed,
   ]);
 
   const REVEAL_DELAY_MS = 500;

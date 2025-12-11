@@ -99,6 +99,7 @@ export function useRoomSnapshot(
   const joinAttemptRef = useRef(0);
   const joinLimitNotifiedRef = useRef(false);
   const ensureMemberHeartbeatRef = useRef<EnsureMemberHeartbeat | null>(null);
+  const statusVersionRef = useRef<number>(0);
 
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED;
@@ -212,6 +213,7 @@ export function useRoomSnapshot(
       enqueueCommit(() => {
         setRoom(null);
         setRoomLoaded(true);
+        statusVersionRef.current = 0;
         prefetchedAppliedRef.current = false;
       }, startedAt);
       return () => {};
@@ -322,6 +324,7 @@ export function useRoomSnapshot(
               enqueueCommit(() => {
                 prevRoomSnapshot = { id: null, data: null };
                 setRoom(null);
+                statusVersionRef.current = 0;
                 setRoomLoaded(true);
                 storePrefetchedRoom(roomId, null);
                 prefetchedAppliedRef.current = false;
@@ -340,8 +343,22 @@ export function useRoomSnapshot(
               return;
             }
 
+            const incomingVersion =
+              typeof sanitized.statusVersion === "number"
+                ? sanitized.statusVersion
+                : 0;
+            const currentVersion =
+              typeof statusVersionRef.current === "number"
+                ? statusVersionRef.current
+                : 0;
+            if (incomingVersion < currentVersion) {
+              // 古いスナップショットは破棄
+              return;
+            }
+
             enqueueCommit(() => {
               prevRoomSnapshot = { id: snap.id, data: sanitized };
+              statusVersionRef.current = incomingVersion;
               setRoom({ id: snap.id, ...sanitized });
               setRoomLoaded(true);
               storePrefetchedRoom(

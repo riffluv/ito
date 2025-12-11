@@ -12,6 +12,7 @@ const schema = z.object({
   clientVersion: z.string().optional().nullable(),
   skipPresence: z.boolean().optional(),
   requestId: z.string().min(8).max(64),
+  presenceUids: z.array(z.string().min(1)).max(16).optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
       sessionId: parsed.data.sessionId ?? undefined,
       skipPresence: parsed.data.skipPresence,
       requestId: parsed.data.requestId,
+      presenceUids: parsed.data.presenceUids ?? undefined,
     });
     return NextResponse.json({ ok: true, count });
   } catch (error) {
