@@ -190,7 +190,9 @@ export function useHostActions({
     presenceWarningShownRef.current = false;
   }, [roomId]);
 
-  const syncRoundPreparing = useCallback(
+  // NOTE: setRoundPreparingFlag は現在 next-round 専用フロー内でのみ使用しているため、
+  // ここでの直接呼び出しは一旦無効化している（将来のUI連携用に残しておく）。
+  const _syncRoundPreparing = useCallback(
     async (value: boolean) => {
       await hostActions.setRoundPreparingFlag(roomId, value);
     },
@@ -351,6 +353,7 @@ export function useHostActions({
           });
 
           // 進行中ステータスが残っている場合のみ待機リセットを実行
+          let resetSucceeded = false;
           if (!currentStatus || currentStatus === "finished" || currentStatus === "reveal") {
             try {
               await hostActions.resetRoomToWaitingWithPrune({
@@ -360,16 +363,28 @@ export function useHostActions({
                 includeOnline: false,
                 recallSpectators: false,
               });
+              resetSucceeded = true;
             } catch (error) {
               traceError("ui.host.quickStart.notWaitingReset", error, { roomId });
+              // リセット失敗をユーザーに通知（握りつぶさない）
+              console.warn("[quickStart] reset failed during retry", error);
+              notify({
+                id: toastIds.genericInfo(roomId, "quickstart-reset-failed"),
+                title: "リセット処理に問題が発生しました",
+                description: "もう一度お試しください。改善しない場合はページを再読み込みしてください。",
+                type: "warning",
+                duration: 3000,
+              });
             }
           }
 
           // Firestore の伝播を待つ（リトライ回数に応じて待ち時間を増加）
-          const waitMs = 200 + attempts * 150;
+          // リセット失敗時は待ち時間を長めに取る
+          const baseWaitMs = resetSucceeded ? 400 : 800;
+          const waitMs = baseWaitMs + attempts * 300;
           await new Promise((resolve) => setTimeout(resolve, waitMs));
 
-          // リトライ時は allowFromFinished=true で reveal/finished からも開始可能にする
+          // リトライ時は allowFromFinished=true + allowFromClue=true でレース条件に対応
           result = await hostActions.quickStartWithTopic({
             roomId,
             roomStatus,
@@ -381,10 +396,26 @@ export function useHostActions({
             },
             currentTopic,
             allowFromFinished: true,
+            allowFromClue: true,
           });
         }
 
         if (!result.ok) {
+          // 失敗理由を明示的にログ出力（デバッグ用）
+          traceAction("ui.host.quickStart.failed", {
+            roomId,
+            reason: result.reason,
+            roomStatus: result.roomStatus ?? undefined,
+            errorCode: result.errorCode ?? undefined,
+            attempts: String(attempts),
+          });
+          console.warn("[quickStart] failed:", result.reason, {
+            roomId,
+            roomStatus: result.roomStatus,
+            errorCode: result.errorCode,
+            errorMessage: result.errorMessage,
+          });
+
           if (result.reason === "presence-not-ready") {
             ensurePresenceReady();
           } else if (result.reason === "host-mismatch") {
@@ -635,6 +666,12 @@ export function useHostActions({
     [resetGame, quickStart, roomId]
   );
 
+  // ============================================================================
+  // handleNextGame: 新しい nextRound API を使用
+  // ============================================================================
+  // 従来の restartGame (= resetGame + quickStart) を置き換え。
+  // 単一の API 呼び出しで reset + start + topic選択 + deal をアトミックに実行。
+  // ============================================================================
   const handleNextGame = useCallback(async () => {
     if (!isHost) return;
     if (autoStartLocked || quickStartPending) return;
@@ -644,47 +681,87 @@ export function useHostActions({
       typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
     onStageEvent?.("round:prepare");
-    let markedRoundPreparing = false;
+
     try {
-      const roundPreparingStart =
-        typeof performance !== "undefined" ? performance.now() : null;
-      await syncRoundPreparing(true);
-      markedRoundPreparing = true;
-      if (roundPreparingStart !== null) {
-        setMetric(
-          "hostAction",
-          "nextGame.roundPreparingSetMs",
-          Math.round(performance.now() - roundPreparingStart)
-        );
-      }
-      traceAction("ui.host.nextGame", { roomId });
+      traceAction("ui.host.nextGame", { roomId, method: "nextRound-api" });
       beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
       playOrderConfirm();
-      const ok = await restartGame({ playSound: false });
-      if (!ok) {
+
+      // 新しい nextRound API を呼び出し（アトミックに全てを実行）
+      const result = await hostActions.nextRound({
+        roomId,
+        topicType: defaultTopicType,
+        customTopic: currentTopic,
+      });
+
+      if (!result.ok) {
+        // 失敗時のログとトースト
+        traceAction("ui.host.nextGame.failed", {
+          roomId,
+          reason: result.reason,
+          errorCode: result.errorCode,
+        });
+        console.warn("[nextGame] nextRound API failed:", result.reason, result.errorMessage);
+
+        if (result.reason === "forbidden") {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-forbidden"),
+            title: "ホスト権限がありません",
+            description: "権限が移動した可能性があります。",
+            type: "warning",
+            duration: 2600,
+          });
+        } else if (result.reason === "no_players") {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-no-players"),
+            title: "プレイヤーがいません",
+            description: "最低1人が入室してから開始してください。",
+            type: "warning",
+            duration: 2600,
+          });
+        } else {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-failed"),
+            title: "次のゲームを開始できませんでした",
+            description: "もう一度お試しください。",
+            type: "warning",
+            duration: 2600,
+          });
+        }
         clearAutoStartLock();
+        return;
       }
+
+      // 成功時のトースト
+      notify({
+        id: toastIds.gameStart(roomId),
+        title: "お題とカードを配布しました！",
+        type: "success",
+        duration: 2000,
+      });
+
+      onStageEvent?.("round:start");
+      onStageEvent?.("round:end");
     } catch (error) {
       clearAutoStartLock();
       traceError("ui.host.nextGame", error, { roomId });
       console.error("❌ nextGameButton: 失敗", error);
+      notify({
+        id: toastIds.genericInfo(roomId, "nextgame-error"),
+        title: "エラーが発生しました",
+        description: "しばらく待ってからもう一度お試しください。",
+        type: "error",
+        duration: 3000,
+      });
+      onStageEvent?.("round:abort");
     } finally {
       setIsRestarting(false);
-      if (markedRoundPreparing) {
-        await syncRoundPreparing(false);
-      }
       if (startedAt !== null) {
         setMetric(
           "hostAction",
           "nextGame.totalMs",
           Math.round(performance.now() - startedAt)
         );
-      }
-      if (markedRoundPreparing) {
-        onStageEvent?.("round:start");
-        onStageEvent?.("round:end");
-      } else {
-        onStageEvent?.("round:abort");
       }
     }
   }, [
@@ -695,10 +772,11 @@ export function useHostActions({
     isRevealAnimating,
     beginAutoStartLock,
     playOrderConfirm,
-    restartGame,
-    clearAutoStartLock,
+    hostActions,
     roomId,
-    syncRoundPreparing,
+    defaultTopicType,
+    currentTopic,
+    clearAutoStartLock,
     onStageEvent,
   ]);
 

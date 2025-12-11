@@ -37,6 +37,8 @@ export type AppButtonProps = Omit<ButtonProps, "variant" | "colorScheme"> & {
   href?: string;
   target?: string;
   rel?: string;
+  /** ボタン共通のクリック音（ui_click）を無効化したい場合に true にする */
+  muteClickSound?: boolean;
 };
 
 export const useButtonAnimation = () => {
@@ -225,20 +227,24 @@ export function AppButton({
   onPointerUp,
   onKeyDown,
   onKeyUp,
+  muteClickSound,
   ...rest
 }: AppButtonProps) {
   const visual = (visualProp ?? variantProp ?? "solid") as ButtonVisual;
   const activePalette = (colorPalette ?? palette) as ButtonPalette;
   const animation = useButtonAnimation();
   const playPress = useSoundEffect("ui_click");
+  const shouldPlayClick = !muteClickSound;
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       animation.handleMouseDown(event);
-      playPress();
+      if (shouldPlayClick) {
+        playPress();
+      }
       onMouseDown?.(event);
     },
-    [animation, onMouseDown, playPress]
+    [animation, onMouseDown, playPress, shouldPlayClick]
   );
 
   const handleMouseUp = useCallback(
@@ -267,12 +273,12 @@ export function AppButton({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
-      if (event.pointerType !== "mouse") {
+      if (event.pointerType !== "mouse" && shouldPlayClick) {
         playPress();
       }
       onPointerDown?.(event);
     },
-    [onPointerDown, playPress]
+    [onPointerDown, playPress, shouldPlayClick]
   );
 
   const handlePointerUp = useCallback(
@@ -284,12 +290,12 @@ export function AppButton({
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (event.key === " " || event.key === "Enter") {
+      if (shouldPlayClick && (event.key === " " || event.key === "Enter")) {
         playPress();
       }
       onKeyDown?.(event);
     },
-    [onKeyDown, playPress]
+    [onKeyDown, playPress, shouldPlayClick]
   );
 
   const handleKeyUp = useCallback(

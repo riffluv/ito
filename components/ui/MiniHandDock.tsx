@@ -389,62 +389,21 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const {
-    text,
-    setText,
-    clueEditable,
-    canDecide,
-    hasText,
-    displayHasText,
-    ready,
-    handleDecide,
-    handleClear,
-    handleInputKeyDown,
-  } = useClueInput({
-    roomId,
-    roomStatus,
-    player: me ?? null,
-    inputRef,
-    onFeedback: setInlineFeedback,
-  });
-
-  const {
-    actualResolveMode,
-    isSortMode,
-    placed,
-    canClickProposalButton,
-    actionLabel,
-    allSubmitted,
-    shouldShowSubmitHint,
-    resetSubmitHint,
-    handleSubmit,
-  } = useCardSubmission({
-    roomId,
-    roomStatus,
-    resolveMode,
-    player: me ?? null,
-    proposal,
-    eligibleIds,
-    cluesReady,
-    clueEditable,
-    inputRef,
-    onFeedback: setInlineFeedback,
-    isRevealAnimating,
-    updateOptimisticProposal: updateOptimisticProposalOverride,
-  });
-
-  const { showSpinner, spinnerText, emit: emitStageEvent, reset: resetStage } =
-    useRoundTimeline();
-
-  React.useEffect(() => {
-    resetStage();
-  }, [resetStage, roomId]);
-
-
-  const {
     autoStartLocked,
     beginLock: beginAutoStartLock,
     clearLock: clearAutoStartLock,
   } = useHostAutoStartLock(roomId, roomStatus);
+
+  const {
+    showSpinner,
+    spinnerText,
+    emit: emitStageEvent,
+    reset: resetStage,
+  } = useRoundTimeline();
+
+  React.useEffect(() => {
+    resetStage();
+  }, [resetStage, roomId]);
 
   const {
     quickStart,
@@ -468,7 +427,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     autoStartLocked,
     beginAutoStartLock,
     clearAutoStartLock,
-    actualResolveMode,
+    // MiniHandDock は現状 sort-submit 専用
+    actualResolveMode: "sort-submit",
     defaultTopicType: computedDefaultTopicType,
     roundIds,
     onlineUids,
@@ -482,7 +442,51 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   });
 
   const effectiveDefaultTopicType = hostDefaultTopicType;
+  const effectiveRoomStatus =
+    isResetting && roomStatus === "clue" ? "waiting" : roomStatus;
 
+  const {
+    text,
+    setText,
+    clueEditable,
+    canDecide,
+    hasText,
+    displayHasText,
+    ready,
+    handleDecide,
+    handleClear,
+    handleInputKeyDown,
+  } = useClueInput({
+    roomId,
+    roomStatus: effectiveRoomStatus,
+    player: me ?? null,
+    inputRef,
+    onFeedback: setInlineFeedback,
+  });
+
+  const {
+    isSortMode,
+    placed,
+    canClickProposalButton,
+    actionLabel,
+    allSubmitted,
+    shouldShowSubmitHint,
+    resetSubmitHint,
+    handleSubmit,
+  } = useCardSubmission({
+    roomId,
+    roomStatus: effectiveRoomStatus,
+    resolveMode,
+    player: me ?? null,
+    proposal,
+    eligibleIds,
+    cluesReady,
+    clueEditable,
+    inputRef,
+    onFeedback: setInlineFeedback,
+    isRevealAnimating,
+    updateOptimisticProposal: updateOptimisticProposalOverride,
+  });
   React.useEffect(() => {
     if (typeof window === "undefined") {
       return noopCleanup;
@@ -769,7 +773,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               {...SEINO_BUTTON_STYLES}
               size="lg"
               visual="solid"
+              muteClickSound
               onClick={handleNextGame}
+              disabled={isRestarting || quickStartPending || autoStartLocked}
               css={{
                 animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
               }}

@@ -15,6 +15,7 @@ import {
   apiSetCustomTopic,
   apiSelectTopicCategory,
   apiStartGame,
+  apiNextRound,
   type ApiError,
 } from "@/lib/services/roomApiClient";
 import { getAuth } from "firebase/auth";
@@ -35,6 +36,8 @@ export type QuickStartRequest = {
   customTopic?: string | null;
   /** reveal/finished 状態からの開始を許可（次のゲーム用） */
   allowFromFinished?: boolean;
+  /** clue 状態からの開始を許可（リトライ時のレース条件対策） */
+  allowFromClue?: boolean;
 };
 
 export type QuickStartResult =
@@ -95,6 +98,31 @@ export type SubmitCustomTopicRequest = QuickStartRequest & {
   customTopic: string;
   shouldAutoStart: boolean;
 };
+
+// ============================================================================
+// NextRound: 「次のゲーム」専用 API 用の型定義
+// ============================================================================
+
+export type NextRoundRequest = {
+  roomId: string;
+  topicType?: string | null;
+  customTopic?: string | null;
+};
+
+export type NextRoundApiResult =
+  | {
+      ok: true;
+      round: number;
+      playerCount: number;
+      topic: string | null;
+      topicType: string | null;
+    }
+  | {
+      ok: false;
+      reason: "forbidden" | "invalid_status" | "no_players" | "api-error";
+      errorCode?: string;
+      errorMessage?: string;
+    };
 
 const FALLBACK_TOPIC_TYPE = "通常版";
 
@@ -193,10 +221,15 @@ export function createHostActionsController() {
           topic = null;
         }
         // allowFromFinished が true の場合は reveal/finished からの開始も許可
+        // allowFromClue が true の場合は clue からの開始も許可（リトライ時のレース条件対策）
         const allowFromFinished = req.allowFromFinished ?? false;
+        const allowFromClue = req.allowFromClue ?? false;
         const validStatuses: string[] = ["waiting"];
         if (allowFromFinished) {
           validStatuses.push("reveal", "finished");
+        }
+        if (allowFromClue) {
+          validStatuses.push("clue");
         }
         if (typeof data?.status === "string" && !validStatuses.includes(data.status)) {
           return {
@@ -245,14 +278,16 @@ export function createHostActionsController() {
     let success = false;
     try {
       const allowFromFinished = req.allowFromFinished ?? false;
+      const allowFromClue = req.allowFromClue ?? false;
       traceAction("ui.host.quickStart.api", {
         roomId,
         type: effectiveType,
         skipPresence: skipPresence ? "1" : "0",
         allowFromFinished: allowFromFinished ? "1" : "0",
+        allowFromClue: allowFromClue ? "1" : "0",
       });
 
-      await apiStartGame(roomId, { allowFromFinished });
+      await apiStartGame(roomId, { allowFromFinished, allowFromClue });
 
       if (effectiveType === "カスタム") {
         const text = customTopic ?? topic ?? "";
@@ -460,6 +495,79 @@ export function createHostActionsController() {
     });
   };
 
+  // ============================================================================
+  // nextRound: 「次のゲーム」専用 API を呼び出す
+  // ============================================================================
+  // reset + start + topic選択 + deal をアトミックに実行する。
+  // 従来の restartRound (= reset + quickStartWithTopic) を置き換える。
+  // ============================================================================
+  const nextRound = async (req: NextRoundRequest): Promise<NextRoundApiResult> => {
+    const { roomId, topicType, customTopic } = req;
+
+    traceAction("ui.host.nextRound.api", {
+      roomId,
+      topicType: topicType ?? "default",
+      hasCustomTopic: customTopic ? "1" : "0",
+    });
+
+    try {
+      const result = await apiNextRound(roomId, {
+        topicType,
+        customTopic,
+      });
+
+      // broadcast でラウンドリセットを通知
+      try {
+        postRoundReset(roomId);
+      } catch {
+        // broadcast failure is non-fatal
+      }
+
+      return {
+        ok: true,
+        round: result.round,
+        playerCount: result.playerCount,
+        topic: result.topic,
+        topicType: result.topicType,
+      };
+    } catch (error) {
+      const code = (error as ApiError)?.code ?? null;
+      const message = (error as { message?: string })?.message ?? "";
+      traceError("ui.host.nextRound.error", error, { roomId, code });
+
+      if (code === "forbidden") {
+        return {
+          ok: false,
+          reason: "forbidden",
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
+      if (code === "invalid_status") {
+        return {
+          ok: false,
+          reason: "invalid_status",
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
+      if (code === "no_players") {
+        return {
+          ok: false,
+          reason: "no_players",
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
+      return {
+        ok: false,
+        reason: "api-error",
+        errorCode: code ?? undefined,
+        errorMessage: message,
+      };
+    }
+  };
+
   return {
     quickStartWithTopic,
     resetRoomToWaitingWithPrune,
@@ -467,6 +575,7 @@ export function createHostActionsController() {
     evaluateSortedOrder,
     submitCustomTopicAndStartIfNeeded,
     setRoundPreparingFlag: toggleRoundPreparing,
+    nextRound,
   };
 }
 

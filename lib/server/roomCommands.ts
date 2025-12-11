@@ -337,11 +337,12 @@ export async function submitClue(params: SubmitClueParams) {
   traceAction("clue.submit.server", { roomId: params.roomId, uid });
 }
 
-export async function startGameCommand(params: { roomId: string; allowFromFinished?: boolean } & WithAuth) {
+export async function startGameCommand(params: { roomId: string; allowFromFinished?: boolean; allowFromClue?: boolean } & WithAuth) {
   const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const allowFromFinished = params.allowFromFinished ?? false;
+  const allowFromClue = params.allowFromClue ?? false;
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
@@ -352,9 +353,13 @@ export async function startGameCommand(params: { roomId: string; allowFromFinish
 
     // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
     // これにより「次のゲーム」ボタン押下時のレース条件を解消
+    // allowFromClue が true の場合、clue 状態からも開始可能（リトライ時のレース条件対策）
     const validStatuses: RoomDoc["status"][] = ["waiting"];
     if (allowFromFinished) {
       validStatuses.push("reveal", "finished");
+    }
+    if (allowFromClue) {
+      validStatuses.push("clue");
     }
 
     if (!validStatuses.includes(room.status)) {
@@ -383,7 +388,7 @@ export async function startGameCommand(params: { roomId: string; allowFromFinish
   });
   await batch.commit();
 
-  traceAction("host.start.server", { roomId: params.roomId, uid, allowFromFinished });
+  traceAction("host.start.server", { roomId: params.roomId, uid, allowFromFinished, allowFromClue });
 }
 
 export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean } & WithAuth) {
@@ -410,48 +415,57 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
   });
   await roomRef.update(resetPayload);
 
-  // Spectator pending cleanup (copied from legacy reset route)
-  try {
-    const sessionsRef = db.collection("spectatorSessions");
-    const pendingSnap = await sessionsRef
-      .where("roomId", "==", params.roomId)
-      .where("rejoinRequest.status", "==", "pending")
-      .get();
-
-    const watchingSnap = await sessionsRef
-      .where("roomId", "==", params.roomId)
-      .where("rejoinRequest", "==", null)
-      .where("status", "==", "watching")
-      .get();
-
-    if (!pendingSnap.empty || !watchingSnap.empty) {
-      const batch = db.batch();
-      pendingSnap.forEach((doc) => {
-        batch.update(doc.ref, {
-          status: "watching",
-          rejoinRequest: null,
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      });
-
-      watchingSnap.forEach((doc) => {
-        batch.update(doc.ref, {
-          rejoinRequest: {
-            status: "pending",
-            source: "auto",
-            createdAt: FieldValue.serverTimestamp(),
-          },
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      });
-
-      await batch.commit();
-    }
-  } catch (cleanupError) {
-    traceError("room.reset.spectator.cleanup", cleanupError, { roomId: params.roomId });
-  }
-
+  // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
   traceAction("room.reset.server", { roomId: params.roomId, uid });
+
+  // Spectator pending cleanup を非同期で実行（ユーザーの体感速度を優先）
+  // API レスポンスはここで返し、cleanup はバックグラウンドで継続
+  void (async () => {
+    try {
+      const sessionsRef = db.collection("spectatorSessions");
+      const pendingSnap = await sessionsRef
+        .where("roomId", "==", params.roomId)
+        .where("rejoinRequest.status", "==", "pending")
+        .get();
+
+      const watchingSnap = await sessionsRef
+        .where("roomId", "==", params.roomId)
+        .where("rejoinRequest", "==", null)
+        .where("status", "==", "watching")
+        .get();
+
+      if (!pendingSnap.empty || !watchingSnap.empty) {
+        const batch = db.batch();
+        pendingSnap.forEach((doc) => {
+          batch.update(doc.ref, {
+            status: "watching",
+            rejoinRequest: null,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+
+        watchingSnap.forEach((doc) => {
+          batch.update(doc.ref, {
+            rejoinRequest: {
+              status: "pending",
+              source: "auto",
+              createdAt: FieldValue.serverTimestamp(),
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+
+        await batch.commit();
+        safeTraceAction("room.reset.spectator.cleanup.done", {
+          roomId: params.roomId,
+          pending: pendingSnap.size,
+          watching: watchingSnap.size,
+        });
+      }
+    } catch (cleanupError) {
+      traceError("room.reset.spectator.cleanup", cleanupError, { roomId: params.roomId });
+    }
+  })();
 }
 
 export async function submitOrder(params: SubmitOrderParams) {
@@ -1134,4 +1148,212 @@ export async function topicCommand(params: { token: string; roomId: string; acti
     topicBox: topicType,
     topic: picked ?? undefined,
   });
+}
+
+// ============================================================================
+// nextRoundCommand: 「次のゲーム」専用 API
+// ============================================================================
+// reset + start + topic選択 + deal をアトミックに実行する。
+// これにより、クライアント側のレース条件やリトライロジックが不要になる。
+// ============================================================================
+
+export type NextRoundParams = WithAuth & {
+  roomId: string;
+  topicType?: string | null;      // 省略時は room.options.defaultTopicType
+  customTopic?: string | null;    // カスタムお題（topicType が "カスタム" の場合）
+};
+
+export type NextRoundResult = {
+  ok: true;
+  round: number;
+  playerCount: number;
+  topic: string | null;
+  topicType: string | null;
+};
+
+export async function nextRoundCommand(params: NextRoundParams): Promise<NextRoundResult> {
+  const uid = await verifyToken(params.token);
+  const db = getAdminDb();
+  const roomRef = db.collection("rooms").doc(params.roomId);
+
+  // 1. room 取得 & 権限チェック
+  const roomSnap = await roomRef.get();
+  if (!roomSnap.exists) {
+    throw codedError("room_not_found", "room_not_found");
+  }
+  const room = roomSnap.data() as RoomDoc | undefined;
+
+  // ホストまたは作成者のみ実行可能
+  const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
+  if (!isHost) {
+    throw codedError("forbidden", "forbidden", "host_only");
+  }
+
+  // 2. 許可されるステータスをチェック
+  //    - 通常: reveal / finished / waiting から実行
+  //    - clue は「直前の開始処理中」に限り許容するが、本来は next-round を押せる UI には出ない想定。
+  //      （status が想定外でもサーバー側で安全に弾けるよう、allowedStatuses は少し広めに取る）
+  const allowedStatuses: RoomDoc["status"][] = ["reveal", "finished", "waiting", "clue"];
+  if (room?.status && !allowedStatuses.includes(room.status)) {
+    throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
+  }
+
+  // 3. プレイヤー一覧を取得
+  const playersSnap = await roomRef.collection("players").get();
+  const now = Date.now();
+  const candidates = playersSnap.docs.map((d) => {
+    const data = d.data() as PlayerDoc | undefined;
+    const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+    const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+    return {
+      id: d.id,
+      uid: typeof data?.uid === "string" ? data.uid : undefined,
+      lastSeen,
+    } as const;
+  });
+
+  // 4. 配布対象プレイヤーを選定
+  const target = selectDealTargetPlayers(candidates, null, now);
+  let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+
+  // フォールバック: eligibleCount > 1 なのに ordered が 1 以下の場合
+  const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+  const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+  if (suspectedMismatch) {
+    const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+    if (fallbackOrdered.length > ordered.length) {
+      ordered = fallbackOrdered;
+    }
+  }
+
+  if (ordered.length === 0) {
+    throw codedError("no_players", "no_players", "no_eligible_players");
+  }
+
+  // 5. topic を決定
+  const sections = await loadTopicSectionsFromFs();
+  const requestedTopicType = params.topicType ?? room?.options?.defaultTopicType ?? "通常版";
+  const normalizedTopicType =
+    typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
+      ? (requestedTopicType as TopicType)
+      : ("通常版" as TopicType);
+
+  let topic: string | null = null;
+  let topicBox: string | null = room?.topicBox ?? normalizedTopicType;
+
+  if (topicBox === "カスタム") {
+    // カスタムお題の場合
+    const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
+    if (customText && customText.trim().length > 0) {
+      topic = customText;
+      topicBox = "カスタム";
+    } else if (room?.topic && String(room.topicBox) === "カスタム") {
+      // 前回のカスタムお題を引き継ぐ
+      topic = room.topic;
+      topicBox = "カスタム";
+    } else {
+      // カスタムお題がない場合は通常版にフォールバック
+      const pool = sections.normal;
+      topic = pickOne(pool) || null;
+      topicBox = "通常版";
+    }
+  } else {
+    // 標準お題の場合
+    const pool = normalizedTopicType === "通常版"
+      ? sections.normal
+      : normalizedTopicType === "レインボー版"
+        ? sections.rainbow
+        : sections.classic;
+    topic = pickOne(pool) || null;
+  }
+
+  // 6. numbers を生成
+  const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const min = 1;
+  const max = 100;
+  const playerIds = ordered.map((p) => p.id);
+  const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+  const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+  // 7. 新しい round 番号
+  const currentRound = typeof room?.round === "number" ? room.round : 0;
+  const nextRound = currentRound + 1;
+
+  // 8. room を更新（アトミックに全てを設定）
+  const roomUpdate: Record<string, unknown> = {
+    status: "clue",
+    round: nextRound,
+    topic,
+    topicBox,
+    topicOptions: null,
+    deal: dealPayload,
+    order: {
+      list: [],
+      lastNumber: null,
+      failed: false,
+      failedAt: null,
+      total: ordered.length,
+    } satisfies OrderState,
+    result: null,
+    mvpVotes: {},
+    lastActiveAt: FieldValue.serverTimestamp(),
+    "ui.roundPreparing": false,
+    "ui.recallOpen": false,
+    "ui.revealPending": false,
+  };
+  await roomRef.update(roomUpdate);
+
+  // 9. players を更新（number, clue1, ready, orderIndex をリセット）
+  try {
+    const batch = db.batch();
+    playersSnap.forEach((doc) => {
+      const pid = doc.id;
+      const seatIndex =
+        typeof dealPayload.seatHistory?.[pid] === "number"
+          ? dealPayload.seatHistory[pid]!
+          : 0;
+      batch.update(doc.ref, {
+        number: dealPayload.numbers[pid] ?? null,
+        clue1: "",
+        ready: false,
+        orderIndex: seatIndex,
+        lastSeen: FieldValue.serverTimestamp(),
+      } satisfies Partial<PlayerDoc>);
+    });
+    await batch.commit();
+  } catch (error) {
+    traceError("nextRound.resetPlayers", error, { roomId: params.roomId });
+  }
+
+  // 10. proposal をリセット
+  try {
+    await db.collection("roomProposals").doc(params.roomId).set(
+      {
+        proposal: [],
+        seed,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    traceError("nextRound.resetProposal", error, { roomId: params.roomId });
+  }
+
+  // 11. ログ出力
+  safeTraceAction("nextRound.server", {
+    roomId: params.roomId,
+    uid,
+    round: nextRound,
+    playerCount: ordered.length,
+    topicType: topicBox,
+    topic: topic ?? undefined,
+  });
+
+  return {
+    ok: true,
+    round: nextRound,
+    playerCount: ordered.length,
+    topic,
+    topicType: topicBox,
+  };
 }
