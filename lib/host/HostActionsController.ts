@@ -277,8 +277,9 @@ export function createHostActionsController() {
     await toggleRoundPreparing(roomId, true);
     let success = false;
     try {
-      const allowFromFinished = req.allowFromFinished ?? false;
-      const allowFromClue = req.allowFromClue ?? false;
+      // 一本化後のレースを極力減らすため、デフォルトで寛容に進行中ステータスも許可する。
+      const allowFromFinished = req.allowFromFinished ?? true;
+      const allowFromClue = req.allowFromClue ?? true;
       traceAction("ui.host.quickStart.api", {
         roomId,
         type: effectiveType,
