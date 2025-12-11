@@ -193,6 +193,7 @@ export function RoomView({
         disabled={isSpectatorMode}
         hasPlacedCard={meHasPlacedCard}
         roundPreparing={Boolean(room.ui?.roundPreparing)}
+        roundKey={room.deal?.seed ?? room.round ?? null}
       />
     </>
   );

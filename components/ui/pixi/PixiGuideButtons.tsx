@@ -364,6 +364,7 @@ interface PixiGuideButtonsAutoProps {
   disabled?: boolean;
   hasPlacedCard?: boolean;
   roundPreparing?: boolean;
+  roundKey?: string | number | null;
 }
 
 export function PixiGuideButtonsAuto({
@@ -372,28 +373,73 @@ export function PixiGuideButtonsAuto({
   disabled = false,
   hasPlacedCard = false,
   roundPreparing = false,
+  roundKey = null,
 }: PixiGuideButtonsAutoProps) {
   const [guidesReady, setGuidesReady] = useState<boolean>(() => !roundPreparing);
+  const [clueHintReady, setClueHintReady] = useState<boolean>(true);
+  const [roundInitialized, setRoundInitialized] = useState<boolean>(false);
+
+  // ラウンドが切り替わったら初期化フラグをリセット
+  useEffect(() => {
+    setRoundInitialized(false);
+  }, [roundKey]);
+
+  // me の ready/clue1 が初期化されたのを確認したら roundInitialized を立てる
+  useEffect(() => {
+    if (roundInitialized) return;
+    const clue = me?.clue1?.trim() ?? "";
+    const ready = !!me?.ready;
+    // 「ready=false かつ clue1 空」を一度確認したら、そのラウンドでの旧値ちらつきを許容しない
+    if (!ready && clue.length === 0) {
+      setRoundInitialized(true);
+    }
+  }, [me?.ready, me?.clue1, roundInitialized]);
 
   useEffect(() => {
     let timer: number | null = null;
+    // ラウンド切り替え直後はプレイヤーdocのready/clueが旧値のまま届くことがあるため、
+    // 少し待ってからガイド表示を許可する（チラつき防止）。
+    const settleDelayMs = 550;
     if (roundPreparing) {
       setGuidesReady(false);
-    } else if (typeof window !== "undefined") {
-      timer = window.setTimeout(() => {
-        setGuidesReady(true);
-      }, 120);
     } else {
-      setGuidesReady(true);
+      if (typeof window !== "undefined") {
+        timer = window.setTimeout(() => {
+          setGuidesReady(true);
+        }, settleDelayMs);
+      } else {
+        setGuidesReady(true);
+      }
     }
     return () => {
       if (timer !== null && typeof window !== "undefined") {
         window.clearTimeout(timer);
       }
     };
-  }, [roundPreparing]);
+  }, [roundPreparing, currentPhase]);
 
-  const canShowGuides = !roundPreparing && guidesReady;
+  useEffect(() => {
+    let timer: number | null = null;
+    // clue へ遷移した直後だけ、旧ラウンドの ready/clue が残っていてもガイドを出さないクッションを入れる
+    const clueGuardMs = 900;
+    if (currentPhase === "clue") {
+      setClueHintReady(false);
+      if (typeof window !== "undefined") {
+        timer = window.setTimeout(() => setClueHintReady(true), clueGuardMs);
+      } else {
+        setClueHintReady(true);
+      }
+    } else {
+      setClueHintReady(true);
+    }
+    return () => {
+      if (timer !== null && typeof window !== "undefined") {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [currentPhase]);
+
+  const canShowGuides = !roundPreparing && guidesReady && clueHintReady && roundInitialized;
   const showSpace =
     canShowGuides && !disabled && currentPhase === "clue" && !me?.ready;
   const showE =
