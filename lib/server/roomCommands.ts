@@ -96,6 +96,14 @@ const safeTraceAction = (name: string, detail?: Record<string, unknown>) => {
   }
 };
 
+const releaseLockSafely = async (roomId: string, holder: string) => {
+  try {
+    await releaseRoomLock(roomId, holder);
+  } catch (error) {
+    traceError("room.lock.release", error, { roomId, holder });
+  }
+};
+
 const fetchPresenceUids = async (roomId: string): Promise<string[] | null> => {
   const rtdb = getAdminRtdb();
   if (!rtdb) return null;
@@ -418,176 +426,221 @@ export async function startGameCommand(params: {
     throw codedError("rate_limited", "rate_limited");
   }
 
-  // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
-  let preparedDeal:
-    | {
-        dealPayload: ReturnType<typeof buildDealPayload>;
-        orderedPlayers: { id: string; uid?: string }[];
-        topic: string | null;
-        topicBox: TopicType | "カスタム" | null;
+  try {
+    // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
+    let preparedDeal:
+      | {
+          dealPayload: ReturnType<typeof buildDealPayload>;
+          orderedPlayers: { id: string; uid?: string }[];
+          topic: string | null;
+          topicBox: TopicType | "カスタム" | null;
+        }
+      | null = null;
+
+    if (doAutoDeal) {
+      const playersSnap = await roomRef.collection("players").get();
+      const now = Date.now();
+      const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
+      const candidates = playersSnap.docs.map((d) => {
+        const data = d.data() as PlayerDoc | undefined;
+        const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+        const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+        return {
+          id: d.id,
+          uid: typeof data?.uid === "string" ? data.uid : undefined,
+          lastSeen,
+        } as const;
+      });
+      const target = selectDealTargetPlayers(candidates, presenceUids, now);
+      let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+      const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+      const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+      if (suspectedMismatch) {
+        const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+        if (fallbackOrdered.length > ordered.length) {
+          ordered = fallbackOrdered;
+        }
       }
-    | null = null;
-
-  if (doAutoDeal) {
-    const playersSnap = await roomRef.collection("players").get();
-    const now = Date.now();
-    const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
-    const candidates = playersSnap.docs.map((d) => {
-      const data = d.data() as PlayerDoc | undefined;
-      const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
-      const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
-      return {
-        id: d.id,
-        uid: typeof data?.uid === "string" ? data.uid : undefined,
-        lastSeen,
-      } as const;
-    });
-    const target = selectDealTargetPlayers(candidates, presenceUids, now);
-    let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-    const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
-    const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
-    if (suspectedMismatch) {
-      const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-      if (fallbackOrdered.length > ordered.length) {
-        ordered = fallbackOrdered;
+      if (ordered.length === 0) {
+        throw codedError("no_players", "no_players", "no_eligible_players");
       }
-    }
-    if (ordered.length === 0) {
-      await releaseRoomLock(params.roomId, lockHolder);
-      throw codedError("no_players", "no_players", "no_eligible_players");
-    }
 
-    // topic 決定（nextRound と同等のロジックを流用）
-    const sections = await loadTopicSectionsFromFs();
-    const requestedTopicType = params.topicType ?? roomForAuth?.options?.defaultTopicType ?? "通常版";
-    const normalizedTopicType =
-      typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
-        ? (requestedTopicType as TopicType)
-        : ("通常版" as TopicType);
+      // topic 決定（nextRound と同等のロジックを流用）
+      const sections = await loadTopicSectionsFromFs();
+      const requestedTopicType = params.topicType ?? roomForAuth?.options?.defaultTopicType ?? "通常版";
+      const normalizedTopicType =
+        typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
+          ? (requestedTopicType as TopicType)
+          : ("通常版" as TopicType);
 
-    let topic: string | null = null;
-    let topicBox: TopicType | "カスタム" | null =
-      (roomForAuth?.topicBox as TopicType | "カスタム" | null | undefined) ?? normalizedTopicType;
+      let topic: string | null = null;
+      let topicBox: TopicType | "カスタム" | null =
+        (roomForAuth?.topicBox as TopicType | "カスタム" | null | undefined) ?? normalizedTopicType;
 
-    if (topicBox === "カスタム") {
-      const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
-      if (customText && customText.trim().length > 0) {
-        topic = customText;
-        topicBox = "カスタム";
-      } else if (roomForAuth?.topic && String(roomForAuth.topicBox) === "カスタム") {
-        topic = roomForAuth.topic;
-        topicBox = "カスタム";
+      if (topicBox === "カスタム") {
+        const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
+        if (customText && customText.trim().length > 0) {
+          topic = customText;
+          topicBox = "カスタム";
+        } else if (roomForAuth?.topic && String(roomForAuth.topicBox) === "カスタム") {
+          topic = roomForAuth.topic;
+          topicBox = "カスタム";
+        } else {
+          const pool = sections.normal;
+          topic = pickOne(pool) || null;
+          topicBox = "通常版";
+        }
       } else {
-        const pool = sections.normal;
+        const pool =
+          normalizedTopicType === "通常版"
+            ? sections.normal
+            : normalizedTopicType === "レインボー版"
+              ? sections.rainbow
+              : sections.classic;
         topic = pickOne(pool) || null;
-        topicBox = "通常版";
       }
-    } else {
-      const pool =
-        normalizedTopicType === "通常版"
-          ? sections.normal
-          : normalizedTopicType === "レインボー版"
-            ? sections.rainbow
-            : sections.classic;
-      topic = pickOne(pool) || null;
+
+      const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const min = 1;
+      const max = 100;
+      const playerIds = ordered.map((p) => p.id);
+      const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+      const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+      preparedDeal = {
+        dealPayload,
+        orderedPlayers: ordered,
+        topic,
+        topicBox,
+      };
     }
 
-    const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const min = 1;
-    const max = 100;
-    const playerIds = ordered.map((p) => p.id);
-    const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
-    const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists) {
+        throw codedError("room_not_found", "room_not_found");
+      }
+      const room = snap.data() as RoomDoc;
+      prevStatus = room.status ?? null;
 
-    preparedDeal = {
-      dealPayload,
-      orderedPlayers: ordered,
-      topic,
-      topicBox,
-    };
-  }
+      // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
+      if (room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
+        alreadyStarted = true;
+        return;
+      }
 
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(roomRef);
-    if (!snap.exists) {
-      throw codedError("room_not_found", "room_not_found");
-    }
-    const room = snap.data() as RoomDoc;
-    prevStatus = room.status ?? null;
+      // Rate limit (per room): 拒否してクライアントにリトライさせる
+      const lastMs = toMillis(room.lastCommandAt);
+      const nowMs = Date.now();
+      const existingNumbers =
+        room && typeof room.deal === "object" && room.deal
+          ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
+          : undefined;
+      const isFreshWaiting =
+        (room.status === "waiting" || room.status === "reveal" || room.status === "finished") &&
+        (!existingNumbers || Object.keys(existingNumbers).length === 0);
+      const canBypassRateLimit = isFreshWaiting;
+      if (!canBypassRateLimit && lastMs !== null && nowMs - lastMs < rateLimitMs) {
+        throw codedError("rate_limited", "rate_limited");
+      }
 
-    // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
-    if (room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
-      alreadyStarted = true;
+      // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
+      // これにより「次のゲーム」ボタン押下時のレース条件を解消
+      // allowFromClue が true の場合、clue 状態からも開始可能（リトライ時のレース条件対策）
+      const validStatuses: RoomDoc["status"][] = ["waiting"];
+      if (allowFromFinished) {
+        validStatuses.push("reveal", "finished");
+      }
+      if (allowFromClue) {
+        validStatuses.push("clue");
+      }
+
+      if (!validStatuses.includes(room.status)) {
+        throw codedError("invalid_status", "invalid_status");
+      }
+      if (room.hostId && room.hostId !== uid) {
+        throw codedError("forbidden", "forbidden", "host_only");
+      }
+      const payload: Partial<RoomDoc> = {
+        status: "clue",
+        result: null,
+        deal: doAutoDeal && preparedDeal ? preparedDeal.dealPayload : null,
+        order: doAutoDeal && preparedDeal
+          ? {
+              list: [],
+              lastNumber: null,
+              failed: false,
+              failedAt: null,
+              total: preparedDeal.orderedPlayers.length,
+              numbers: preparedDeal.dealPayload.numbers,
+            }
+          : null,
+        mvpVotes: {},
+        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+        ui: { ...(room.ui ?? {}), recallOpen: false },
+        startRequestId: requestId,
+        dealRequestId: doAutoDeal && preparedDeal ? requestId : room.dealRequestId ?? null,
+        lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
+        statusVersion: FieldValue.increment(1) as unknown as number,
+      };
+
+      if (doAutoDeal && preparedDeal) {
+        payload.topic = preparedDeal.topic;
+        payload.topicBox = preparedDeal.topicBox as RoomDoc["topicBox"] | null;
+        payload.topicOptions = null;
+        payload.deal = preparedDeal.dealPayload;
+      }
+
+      tx.update(roomRef, payload);
+    });
+
+    if (alreadyStarted) {
+      traceAction("host.start.server.idempotent", { roomId: params.roomId, uid, requestId });
+      void logRoomCommandAudit({
+        roomId: params.roomId,
+        uid,
+        requestId,
+        command: "start",
+        prevStatus,
+        nextStatus: "clue",
+        note: "idempotent",
+      });
       return;
     }
 
-    // Rate limit (per room): 拒否してクライアントにリトライさせる
-    const lastMs = toMillis(room.lastCommandAt);
-    const nowMs = Date.now();
-    const existingNumbers =
-      room && typeof room.deal === "object" && room.deal
-        ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
-        : undefined;
-    const isFreshWaiting =
-      (room.status === "waiting" || room.status === "reveal" || room.status === "finished") &&
-      (!existingNumbers || Object.keys(existingNumbers).length === 0);
-    const canBypassRateLimit = isFreshWaiting;
-    if (!canBypassRateLimit && lastMs !== null && nowMs - lastMs < rateLimitMs) {
-      throw codedError("rate_limited", "rate_limited");
-    }
+    // reset players in a batch (autoDeal 時は配札も同時に反映)
+    const playersSnap = await db.collection("rooms").doc(params.roomId).collection("players").get();
+    const batch = db.batch();
+    playersSnap.forEach((doc) => {
+      const pid = doc.id;
+      if (doAutoDeal && preparedDeal) {
+        const seatIndex =
+          typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
+            ? preparedDeal.dealPayload.seatHistory[pid]!
+            : 0;
+        batch.update(doc.ref, {
+          number: preparedDeal.dealPayload.numbers[pid] ?? null,
+          clue1: "",
+          ready: false,
+          orderIndex: seatIndex,
+          lastSeen: FieldValue.serverTimestamp(),
+        } satisfies Partial<PlayerDoc>);
+      } else {
+        batch.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+      }
+    });
+    await batch.commit();
 
-    // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
-    // これにより「次のゲーム」ボタン押下時のレース条件を解消
-    // allowFromClue が true の場合、clue 状態からも開始可能（リトライ時のレース条件対策）
-    const validStatuses: RoomDoc["status"][] = ["waiting"];
-    if (allowFromFinished) {
-      validStatuses.push("reveal", "finished");
-    }
-    if (allowFromClue) {
-      validStatuses.push("clue");
-    }
-
-    if (!validStatuses.includes(room.status)) {
-      throw codedError("invalid_status", "invalid_status");
-    }
-    if (room.hostId && room.hostId !== uid) {
-      throw codedError("forbidden", "forbidden", "host_only");
-    }
-    const payload: Partial<RoomDoc> = {
-      status: "clue",
-      result: null,
-      deal: doAutoDeal && preparedDeal ? preparedDeal.dealPayload : null,
-      order: doAutoDeal && preparedDeal
-        ? {
-            list: [],
-            lastNumber: null,
-            failed: false,
-            failedAt: null,
-            total: preparedDeal.orderedPlayers.length,
-            numbers: preparedDeal.dealPayload.numbers,
-          }
-        : null,
-      mvpVotes: {},
-      lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-      ui: { ...(room.ui ?? {}), recallOpen: false },
-      startRequestId: requestId,
-      dealRequestId: doAutoDeal && preparedDeal ? requestId : room.dealRequestId ?? null,
-      lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
-      statusVersion: FieldValue.increment(1) as unknown as number,
-    };
-
-    if (doAutoDeal && preparedDeal) {
-      payload.topic = preparedDeal.topic;
-      payload.topicBox = preparedDeal.topicBox as RoomDoc["topicBox"] | null;
-      payload.topicOptions = null;
-      payload.deal = preparedDeal.dealPayload;
-    }
-
-    tx.update(roomRef, payload);
-  });
-
-  if (alreadyStarted) {
-    traceAction("host.start.server.idempotent", { roomId: params.roomId, uid, requestId });
+    traceAction("host.start.server", {
+      roomId: params.roomId,
+      uid,
+      requestId,
+      allowFromFinished,
+      allowFromClue,
+      prevStatus,
+      nextStatus: "clue",
+      autoDeal: doAutoDeal ? "1" : "0",
+    });
     void logRoomCommandAudit({
       roomId: params.roomId,
       uid,
@@ -595,56 +648,11 @@ export async function startGameCommand(params: {
       command: "start",
       prevStatus,
       nextStatus: "clue",
-      note: "idempotent",
+      note: doAutoDeal ? "autoDeal" : undefined,
     });
-    await releaseRoomLock(params.roomId, lockHolder);
-    return;
+  } finally {
+    await releaseLockSafely(params.roomId, lockHolder);
   }
-
-  // reset players in a batch (autoDeal 時は配札も同時に反映)
-  const playersSnap = await db.collection("rooms").doc(params.roomId).collection("players").get();
-  const batch = db.batch();
-  playersSnap.forEach((doc) => {
-    const pid = doc.id;
-    if (doAutoDeal && preparedDeal) {
-      const seatIndex =
-        typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
-          ? preparedDeal.dealPayload.seatHistory[pid]!
-          : 0;
-      batch.update(doc.ref, {
-        number: preparedDeal.dealPayload.numbers[pid] ?? null,
-        clue1: "",
-        ready: false,
-        orderIndex: seatIndex,
-        lastSeen: FieldValue.serverTimestamp(),
-      } satisfies Partial<PlayerDoc>);
-    } else {
-      batch.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
-    }
-  });
-  await batch.commit();
-
-  traceAction("host.start.server", {
-    roomId: params.roomId,
-    uid,
-    requestId,
-    allowFromFinished,
-    allowFromClue,
-    prevStatus,
-    nextStatus: "clue",
-    autoDeal: doAutoDeal ? "1" : "0",
-  });
-  void logRoomCommandAudit({
-    roomId: params.roomId,
-    uid,
-    requestId,
-    command: "start",
-    prevStatus,
-    nextStatus: "clue",
-    note: doAutoDeal ? "autoDeal" : undefined,
-  });
-
-  await releaseRoomLock(params.roomId, lockHolder);
 }
 
 export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId: string | null; sessionId?: string } & WithAuth) {
@@ -658,15 +666,55 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
   if (!locked) {
     throw codedError("rate_limited", "rate_limited");
   }
-  const snap = await roomRef.get();
-  if (!snap.exists) {
-    throw codedError("room_not_found", "room_not_found");
-  }
-  const room = snap.data() as RoomDoc | undefined;
-  const prevStatus = room?.status ?? null;
-  // Idempotent: 同じ requestId で既に waiting なら成功扱い
-  if (params.requestId && room?.resetRequestId === params.requestId && room?.status === "waiting") {
-    traceAction("room.reset.server.idempotent", { roomId: params.roomId, uid, requestId: params.requestId });
+  try {
+    const snap = await roomRef.get();
+    if (!snap.exists) {
+      throw codedError("room_not_found", "room_not_found");
+    }
+    const room = snap.data() as RoomDoc | undefined;
+    const prevStatus = room?.status ?? null;
+    // Idempotent: 同じ requestId で既に waiting なら成功扱い
+    if (params.requestId && room?.resetRequestId === params.requestId && room?.status === "waiting") {
+      traceAction("room.reset.server.idempotent", { roomId: params.roomId, uid, requestId: params.requestId });
+      void logRoomCommandAudit({
+        roomId: params.roomId,
+        uid,
+        requestId: params.requestId,
+        command: "reset",
+        prevStatus,
+        nextStatus: "waiting",
+        note: "idempotent",
+      });
+      return;
+    }
+    const authorized =
+      uid === room?.hostId || uid === room?.creatorId || (await getAdminAuth().verifyIdToken(params.token)).admin === true;
+    if (!authorized) {
+      throw codedError("forbidden", "forbidden", "host_only");
+    }
+
+    const resetPayload = composeWaitingResetPayload({
+      recallOpen: params.recallSpectators ?? true,
+      resetRound: true,
+      clearTopic: true,
+      closedAt: null,
+      expiresAt: null,
+    });
+    if (params.requestId) {
+      resetPayload.resetRequestId = params.requestId;
+    }
+    resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
+    resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
+    await roomRef.update(resetPayload);
+
+    // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
+    traceAction("room.reset.server", {
+      roomId: params.roomId,
+      uid,
+      requestId: params.requestId ?? null,
+      prevStatus: room?.status ?? null,
+      nextStatus: "waiting",
+    });
     void logRoomCommandAudit({
       roomId: params.roomId,
       uid,
@@ -674,98 +722,59 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
       command: "reset",
       prevStatus,
       nextStatus: "waiting",
-      note: "idempotent",
     });
-    await releaseRoomLock(params.roomId, lockHolder);
-    return;
-  }
-  const authorized =
-    uid === room?.hostId || uid === room?.creatorId || (await getAdminAuth().verifyIdToken(params.token)).admin === true;
-  if (!authorized) {
-    throw codedError("forbidden", "forbidden", "host_only");
-  }
 
-  const resetPayload = composeWaitingResetPayload({
-    recallOpen: params.recallSpectators ?? true,
-    resetRound: true,
-    clearTopic: true,
-    closedAt: null,
-    expiresAt: null,
-  });
-  if (params.requestId) {
-    resetPayload.resetRequestId = params.requestId;
-  }
-  resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
-  resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
-  await roomRef.update(resetPayload);
+    // Spectator pending cleanup を非同期で実行（ユーザーの体感速度を優先）
+    // API レスポンスはここで返し、cleanup はバックグラウンドで継続
+    void (async () => {
+      try {
+        const sessionsRef = db.collection("spectatorSessions");
+        const pendingSnap = await sessionsRef
+          .where("roomId", "==", params.roomId)
+          .where("rejoinRequest.status", "==", "pending")
+          .get();
 
-  await releaseRoomLock(params.roomId, lockHolder);
+        const watchingSnap = await sessionsRef
+          .where("roomId", "==", params.roomId)
+          .where("rejoinRequest", "==", null)
+          .where("status", "==", "watching")
+          .get();
 
-  // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
-  traceAction("room.reset.server", {
-    roomId: params.roomId,
-    uid,
-    requestId: params.requestId ?? null,
-    prevStatus: room?.status ?? null,
-    nextStatus: "waiting",
-  });
-  void logRoomCommandAudit({
-    roomId: params.roomId,
-    uid,
-    requestId: params.requestId,
-    command: "reset",
-    prevStatus,
-    nextStatus: "waiting",
-  });
-
-  // Spectator pending cleanup を非同期で実行（ユーザーの体感速度を優先）
-  // API レスポンスはここで返し、cleanup はバックグラウンドで継続
-  void (async () => {
-    try {
-      const sessionsRef = db.collection("spectatorSessions");
-      const pendingSnap = await sessionsRef
-        .where("roomId", "==", params.roomId)
-        .where("rejoinRequest.status", "==", "pending")
-        .get();
-
-      const watchingSnap = await sessionsRef
-        .where("roomId", "==", params.roomId)
-        .where("rejoinRequest", "==", null)
-        .where("status", "==", "watching")
-        .get();
-
-      if (!pendingSnap.empty || !watchingSnap.empty) {
-        const batch = db.batch();
-        pendingSnap.forEach((doc) => {
-          batch.update(doc.ref, {
-            status: "watching",
-            rejoinRequest: null,
-            updatedAt: FieldValue.serverTimestamp(),
+        if (!pendingSnap.empty || !watchingSnap.empty) {
+          const batch = db.batch();
+          pendingSnap.forEach((doc) => {
+            batch.update(doc.ref, {
+              status: "watching",
+              rejoinRequest: null,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
           });
-        });
 
-        watchingSnap.forEach((doc) => {
-          batch.update(doc.ref, {
-            rejoinRequest: {
-              status: "pending",
-              source: "auto",
-              createdAt: FieldValue.serverTimestamp(),
-            },
-            updatedAt: FieldValue.serverTimestamp(),
+          watchingSnap.forEach((doc) => {
+            batch.update(doc.ref, {
+              rejoinRequest: {
+                status: "pending",
+                source: "auto",
+                createdAt: FieldValue.serverTimestamp(),
+              },
+              updatedAt: FieldValue.serverTimestamp(),
+            });
           });
-        });
 
-        await batch.commit();
-        safeTraceAction("room.reset.spectator.cleanup.done", {
-          roomId: params.roomId,
-          pending: pendingSnap.size,
-          watching: watchingSnap.size,
-        });
+          await batch.commit();
+          safeTraceAction("room.reset.spectator.cleanup.done", {
+            roomId: params.roomId,
+            pending: pendingSnap.size,
+            watching: watchingSnap.size,
+          });
+        }
+      } catch (cleanupError) {
+        traceError("room.reset.spectator.cleanup", cleanupError, { roomId: params.roomId });
       }
-    } catch (cleanupError) {
-      traceError("room.reset.spectator.cleanup", cleanupError, { roomId: params.roomId });
-    }
-  })();
+    })();
+  } finally {
+    await releaseLockSafely(params.roomId, lockHolder);
+  }
 }
 
 export async function submitOrder(params: SubmitOrderParams) {
@@ -1054,106 +1063,108 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     throw codedError("rate_limited", "rate_limited");
   }
 
-  const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const min = 1;
-  const max = 100;
-
-  const playersSnap = await roomRef.collection("players").get();
-  const now = Date.now();
-  const presenceUids = params.presenceUids ?? (params.skipPresence ? null : await fetchPresenceUids(params.roomId));
-  const candidates = playersSnap.docs.map((d) => {
-    const data = d.data() as PlayerDoc | undefined;
-    const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
-    const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
-    return {
-      id: d.id,
-      uid: typeof data?.uid === "string" ? data.uid : undefined,
-      lastSeen,
-    } as const;
-  });
-
-  const target = selectDealTargetPlayers(candidates, presenceUids, now);
-  let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-  const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
-  const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
-  if (suspectedMismatch) {
-    const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-    if (fallbackOrdered.length > ordered.length) {
-      ordered = fallbackOrdered;
-    }
-  }
-
-  const playerIds = ordered.map((p) => p.id);
-  const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
-  const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
-
-  await roomRef.update({
-    deal: dealPayload,
-    "order.total": ordered.length,
-    "order.numbers": dealPayload.numbers,
-    "order.list": [],
-    "order.proposal": [],
-    dealRequestId: params.requestId,
-    lastActiveAt: FieldValue.serverTimestamp(),
-    lastCommandAt: FieldValue.serverTimestamp(),
-    statusVersion: FieldValue.increment(1) as unknown as number,
-  });
-
   try {
-    const batch = db.batch();
-    playersSnap.forEach((doc) => {
-      const pid = doc.id;
-      const seatIndex =
-        typeof dealPayload.seatHistory?.[pid] === "number"
-          ? dealPayload.seatHistory[pid]!
-          : 0;
-      batch.update(doc.ref, {
-        number: dealPayload.numbers[pid] ?? null,
-        clue1: "",
-        ready: false,
-        orderIndex: seatIndex,
-        lastSeen: FieldValue.serverTimestamp(),
-      } satisfies Partial<PlayerDoc>);
+    const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const min = 1;
+    const max = 100;
+
+    const playersSnap = await roomRef.collection("players").get();
+    const now = Date.now();
+    const presenceUids = params.presenceUids ?? (params.skipPresence ? null : await fetchPresenceUids(params.roomId));
+    const candidates = playersSnap.docs.map((d) => {
+      const data = d.data() as PlayerDoc | undefined;
+      const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+      const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+      return {
+        id: d.id,
+        uid: typeof data?.uid === "string" ? data.uid : undefined,
+        lastSeen,
+      } as const;
     });
-    await batch.commit();
-  } catch (error) {
-    traceError("deal.resetPlayers", error, { roomId: params.roomId });
+
+    const target = selectDealTargetPlayers(candidates, presenceUids, now);
+    let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+    const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+    const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+    if (suspectedMismatch) {
+      const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+      if (fallbackOrdered.length > ordered.length) {
+        ordered = fallbackOrdered;
+      }
+    }
+
+    const playerIds = ordered.map((p) => p.id);
+    const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+    const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+    await roomRef.update({
+      deal: dealPayload,
+      "order.total": ordered.length,
+      "order.numbers": dealPayload.numbers,
+      "order.list": [],
+      "order.proposal": [],
+      dealRequestId: params.requestId,
+      lastActiveAt: FieldValue.serverTimestamp(),
+      lastCommandAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
+    });
+
+    try {
+      const batch = db.batch();
+      playersSnap.forEach((doc) => {
+        const pid = doc.id;
+        const seatIndex =
+          typeof dealPayload.seatHistory?.[pid] === "number"
+            ? dealPayload.seatHistory[pid]!
+            : 0;
+        batch.update(doc.ref, {
+          number: dealPayload.numbers[pid] ?? null,
+          clue1: "",
+          ready: false,
+          orderIndex: seatIndex,
+          lastSeen: FieldValue.serverTimestamp(),
+        } satisfies Partial<PlayerDoc>);
+      });
+      await batch.commit();
+    } catch (error) {
+      traceError("deal.resetPlayers", error, { roomId: params.roomId });
+    }
+
+    try {
+      await db.collection("roomProposals").doc(params.roomId).set(
+        {
+          proposal: [],
+          seed,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      traceError("proposal.reset", error, { roomId: params.roomId });
+    }
+
+    traceAction("deal.end", {
+      roomId: params.roomId,
+      count: ordered.length,
+      eligibleCount,
+      requestId: params.requestId,
+      prevStatus: room?.status ?? null,
+      nextStatus: room?.status ?? null,
+    });
+    void logRoomCommandAudit({
+      roomId: params.roomId,
+      uid,
+      requestId: params.requestId,
+      command: "deal",
+      prevStatus: room?.status ?? null,
+      nextStatus: room?.status ?? null,
+      note: `count:${ordered.length}`,
+    });
+
+    return ordered.length;
+  } finally {
+    await releaseLockSafely(params.roomId, lockHolder);
   }
-
-  try {
-    await db.collection("roomProposals").doc(params.roomId).set(
-      {
-        proposal: [],
-        seed,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (error) {
-    traceError("proposal.reset", error, { roomId: params.roomId });
-  }
-
-  await releaseRoomLock(params.roomId, lockHolder);
-
-  traceAction("deal.end", {
-    roomId: params.roomId,
-    count: ordered.length,
-    eligibleCount,
-    requestId: params.requestId,
-    prevStatus: room?.status ?? null,
-    nextStatus: room?.status ?? null,
-  });
-  void logRoomCommandAudit({
-    roomId: params.roomId,
-    uid,
-    requestId: params.requestId,
-    command: "deal",
-    prevStatus: room?.status ?? null,
-    nextStatus: room?.status ?? null,
-    note: `count:${ordered.length}`,
-  });
-
-  return ordered.length;
 }
 
 export async function continueAfterFailCommand(params: { token: string; roomId: string }) {
@@ -1558,230 +1569,231 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   if (!locked) {
     throw codedError("rate_limited", "rate_limited");
   }
+  try {
+    // 1. room 取得 & 権限チェック
+    const roomSnap = await roomRef.get();
+    if (!roomSnap.exists) {
+      throw codedError("room_not_found", "room_not_found");
+    }
+    const room = roomSnap.data() as RoomDoc | undefined;
+    const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
 
-  // 1. room 取得 & 権限チェック
-  const roomSnap = await roomRef.get();
-  if (!roomSnap.exists) {
-    throw codedError("room_not_found", "room_not_found");
-  }
-  const room = roomSnap.data() as RoomDoc | undefined;
-  const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
+    // ホストまたは作成者のみ実行可能
+    const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
+    if (!isHost) {
+      throw codedError("forbidden", "forbidden", "host_only");
+    }
 
-  // ホストまたは作成者のみ実行可能
-  const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
-  if (!isHost) {
-    throw codedError("forbidden", "forbidden", "host_only");
-  }
+    // 2. 許可されるステータスをチェック
+    //    - 通常: reveal / finished / waiting から実行
+    //    - clue は「直前の開始処理中」に限り許容するが、本来は next-round を押せる UI には出ない想定。
+    //      （status が想定外でもサーバー側で安全に弾けるよう、allowedStatuses は少し広めに取る）
+    const allowedStatuses: RoomDoc["status"][] = ["reveal", "finished", "waiting", "clue"];
+    if (room?.status && !allowedStatuses.includes(room.status)) {
+      throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
+    }
 
-  // 2. 許可されるステータスをチェック
-  //    - 通常: reveal / finished / waiting から実行
-  //    - clue は「直前の開始処理中」に限り許容するが、本来は next-round を押せる UI には出ない想定。
-  //      （status が想定外でもサーバー側で安全に弾けるよう、allowedStatuses は少し広めに取る）
-  const allowedStatuses: RoomDoc["status"][] = ["reveal", "finished", "waiting", "clue"];
-  if (room?.status && !allowedStatuses.includes(room.status)) {
-    throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
-  }
+    // Idempotent: 直前と同じ requestId ですでに遷移済みならそのまま返す
+    if (room?.nextRequestId && room.nextRequestId === params.requestId && room.status === "clue") {
+      const playerCount = Array.isArray(room?.deal?.players) ? room.deal!.players!.length : 0;
+      return {
+        ok: true,
+        round: typeof room?.round === "number" ? room.round : 0,
+        playerCount,
+        topic: room?.topic ?? null,
+        topicType: (room?.topicBox as string | null | undefined) ?? null,
+      };
+    }
 
-  // Idempotent: 直前と同じ requestId ですでに遷移済みならそのまま返す
-  if (room?.nextRequestId && room.nextRequestId === params.requestId && room.status === "clue") {
-    const playerCount = Array.isArray(room?.deal?.players) ? room.deal!.players!.length : 0;
-    await releaseRoomLock(params.roomId, lockHolder);
+    // レートリミット（ルーム単位）
+    const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
+    if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
+      throw codedError("rate_limited", "rate_limited");
+    }
+
+    // 3. プレイヤー一覧を取得
+    const playersSnap = await roomRef.collection("players").get();
+    const now = Date.now();
+    const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
+    const candidates = playersSnap.docs.map((d) => {
+      const data = d.data() as PlayerDoc | undefined;
+      const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+      const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+      return {
+        id: d.id,
+        uid: typeof data?.uid === "string" ? data.uid : undefined,
+        lastSeen,
+      } as const;
+    });
+
+    // 4. 配布対象プレイヤーを選定
+    const target = selectDealTargetPlayers(candidates, presenceUids, now);
+    let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+
+    // フォールバック: eligibleCount > 1 なのに ordered が 1 以下の場合
+    const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+    const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+    if (suspectedMismatch) {
+      const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+      if (fallbackOrdered.length > ordered.length) {
+        ordered = fallbackOrdered;
+      }
+    }
+
+    if (ordered.length === 0) {
+      throw codedError("no_players", "no_players", "no_eligible_players");
+    }
+
+    // 5. topic を決定
+    const sections = await loadTopicSectionsFromFs();
+    const requestedTopicType = params.topicType ?? room?.options?.defaultTopicType ?? "通常版";
+    const normalizedTopicType =
+      typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
+        ? (requestedTopicType as TopicType)
+        : ("通常版" as TopicType);
+
+    let topic: string | null = null;
+    let topicBox: string | null = room?.topicBox ?? normalizedTopicType;
+
+    if (topicBox === "カスタム") {
+      // カスタムお題の場合
+      const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
+      if (customText && customText.trim().length > 0) {
+        topic = customText;
+        topicBox = "カスタム";
+      } else if (room?.topic && String(room.topicBox) === "カスタム") {
+        // 前回のカスタムお題を引き継ぐ
+        topic = room.topic;
+        topicBox = "カスタム";
+      } else {
+        // カスタムお題がない場合は通常版にフォールバック
+        const pool = sections.normal;
+        topic = pickOne(pool) || null;
+        topicBox = "通常版";
+      }
+    } else {
+      // 標準お題の場合
+      const pool = normalizedTopicType === "通常版"
+        ? sections.normal
+        : normalizedTopicType === "レインボー版"
+          ? sections.rainbow
+          : sections.classic;
+      topic = pickOne(pool) || null;
+    }
+
+    // 6. numbers を生成
+    const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const min = 1;
+    const max = 100;
+    const playerIds = ordered.map((p) => p.id);
+    const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+    const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+    // 7. 新しい round 番号
+    const currentRound = typeof room?.round === "number" ? room.round : 0;
+    const nextRound = currentRound + 1;
+
+    // 8. room を更新（アトミックに全てを設定）
+    const roomUpdate: Record<string, unknown> = {
+      status: "clue",
+      round: nextRound,
+      topic,
+      topicBox,
+      topicOptions: null,
+      deal: dealPayload,
+      order: {
+        list: [],
+        lastNumber: null,
+        failed: false,
+        failedAt: null,
+        total: ordered.length,
+      } satisfies OrderState,
+      result: null,
+      mvpVotes: {},
+      lastActiveAt: FieldValue.serverTimestamp(),
+      startRequestId: params.requestId,
+      nextRequestId: params.requestId,
+      dealRequestId: params.requestId,
+      lastCommandAt: FieldValue.serverTimestamp(),
+      statusVersion: FieldValue.increment(1) as unknown as number,
+      "ui.roundPreparing": false,
+      "ui.recallOpen": false,
+      "ui.revealPending": false,
+    };
+    await roomRef.update(roomUpdate);
+    traceAction("room.nextRound.server", {
+      roomId: params.roomId,
+      uid,
+      requestId: params.requestId,
+      prevStatus: room?.status ?? null,
+      nextStatus: "clue",
+      playerCount: ordered.length,
+      topicType: topicBox ?? null,
+    });
+    void logRoomCommandAudit({
+      roomId: params.roomId,
+      uid,
+      requestId: params.requestId,
+      command: "next",
+      prevStatus: room?.status ?? null,
+      nextStatus: "clue",
+      note: `playerCount:${ordered.length}`,
+    });
+
+    // 9. players を更新（number, clue1, ready, orderIndex をリセット）
+    try {
+      const batch = db.batch();
+      playersSnap.forEach((doc) => {
+        const pid = doc.id;
+        const seatIndex =
+          typeof dealPayload.seatHistory?.[pid] === "number"
+            ? dealPayload.seatHistory[pid]!
+            : 0;
+        batch.update(doc.ref, {
+          number: dealPayload.numbers[pid] ?? null,
+          clue1: "",
+          ready: false,
+          orderIndex: seatIndex,
+          lastSeen: FieldValue.serverTimestamp(),
+        } satisfies Partial<PlayerDoc>);
+      });
+      await batch.commit();
+    } catch (error) {
+      traceError("nextRound.resetPlayers", error, { roomId: params.roomId });
+    }
+
+    // 10. proposal をリセット
+    try {
+      await db.collection("roomProposals").doc(params.roomId).set(
+        {
+          proposal: [],
+          seed,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      traceError("nextRound.resetProposal", error, { roomId: params.roomId });
+    }
+
+    // 11. ログ出力
+    safeTraceAction("nextRound.server", {
+      roomId: params.roomId,
+      uid,
+      round: nextRound,
+      playerCount: ordered.length,
+      topicType: topicBox,
+      topic: topic ?? undefined,
+    });
+
     return {
       ok: true,
-      round: typeof room?.round === "number" ? room.round : 0,
-      playerCount,
-      topic: room?.topic ?? null,
-      topicType: (room?.topicBox as string | null | undefined) ?? null,
+      round: nextRound,
+      playerCount: ordered.length,
+      topic,
+      topicType: topicBox,
     };
+  } finally {
+    await releaseLockSafely(params.roomId, lockHolder);
   }
-
-  // レートリミット（ルーム単位）
-  const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
-  if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
-    throw codedError("rate_limited", "rate_limited");
-  }
-
-  // 3. プレイヤー一覧を取得
-  const playersSnap = await roomRef.collection("players").get();
-  const now = Date.now();
-  const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
-  const candidates = playersSnap.docs.map((d) => {
-    const data = d.data() as PlayerDoc | undefined;
-    const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
-    const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
-    return {
-      id: d.id,
-      uid: typeof data?.uid === "string" ? data.uid : undefined,
-      lastSeen,
-    } as const;
-  });
-
-  // 4. 配布対象プレイヤーを選定
-  const target = selectDealTargetPlayers(candidates, presenceUids, now);
-  let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-
-  // フォールバック: eligibleCount > 1 なのに ordered が 1 以下の場合
-  const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
-  const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
-  if (suspectedMismatch) {
-    const fallbackOrdered = [...candidates].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
-    if (fallbackOrdered.length > ordered.length) {
-      ordered = fallbackOrdered;
-    }
-  }
-
-  if (ordered.length === 0) {
-    throw codedError("no_players", "no_players", "no_eligible_players");
-  }
-
-  // 5. topic を決定
-  const sections = await loadTopicSectionsFromFs();
-  const requestedTopicType = params.topicType ?? room?.options?.defaultTopicType ?? "通常版";
-  const normalizedTopicType =
-    typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
-      ? (requestedTopicType as TopicType)
-      : ("通常版" as TopicType);
-
-  let topic: string | null = null;
-  let topicBox: string | null = room?.topicBox ?? normalizedTopicType;
-
-  if (topicBox === "カスタム") {
-    // カスタムお題の場合
-    const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
-    if (customText && customText.trim().length > 0) {
-      topic = customText;
-      topicBox = "カスタム";
-    } else if (room?.topic && String(room.topicBox) === "カスタム") {
-      // 前回のカスタムお題を引き継ぐ
-      topic = room.topic;
-      topicBox = "カスタム";
-    } else {
-      // カスタムお題がない場合は通常版にフォールバック
-      const pool = sections.normal;
-      topic = pickOne(pool) || null;
-      topicBox = "通常版";
-    }
-  } else {
-    // 標準お題の場合
-    const pool = normalizedTopicType === "通常版"
-      ? sections.normal
-      : normalizedTopicType === "レインボー版"
-        ? sections.rainbow
-        : sections.classic;
-    topic = pickOne(pool) || null;
-  }
-
-  // 6. numbers を生成
-  const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const min = 1;
-  const max = 100;
-  const playerIds = ordered.map((p) => p.id);
-  const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
-  const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
-
-  // 7. 新しい round 番号
-  const currentRound = typeof room?.round === "number" ? room.round : 0;
-  const nextRound = currentRound + 1;
-
-  // 8. room を更新（アトミックに全てを設定）
-  const roomUpdate: Record<string, unknown> = {
-    status: "clue",
-    round: nextRound,
-    topic,
-    topicBox,
-    topicOptions: null,
-    deal: dealPayload,
-    order: {
-      list: [],
-      lastNumber: null,
-      failed: false,
-      failedAt: null,
-      total: ordered.length,
-    } satisfies OrderState,
-    result: null,
-    mvpVotes: {},
-    lastActiveAt: FieldValue.serverTimestamp(),
-    startRequestId: params.requestId,
-    nextRequestId: params.requestId,
-    dealRequestId: params.requestId,
-    lastCommandAt: FieldValue.serverTimestamp(),
-    statusVersion: FieldValue.increment(1) as unknown as number,
-    "ui.roundPreparing": false,
-    "ui.recallOpen": false,
-    "ui.revealPending": false,
-  };
-  await roomRef.update(roomUpdate);
-  traceAction("room.nextRound.server", {
-    roomId: params.roomId,
-    uid,
-    requestId: params.requestId,
-    prevStatus: room?.status ?? null,
-    nextStatus: "clue",
-    playerCount: ordered.length,
-    topicType: topicBox ?? null,
-  });
-  void logRoomCommandAudit({
-    roomId: params.roomId,
-    uid,
-    requestId: params.requestId,
-    command: "next",
-    prevStatus: room?.status ?? null,
-    nextStatus: "clue",
-    note: `playerCount:${ordered.length}`,
-  });
-  await releaseRoomLock(params.roomId, lockHolder);
-
-  // 9. players を更新（number, clue1, ready, orderIndex をリセット）
-  try {
-    const batch = db.batch();
-    playersSnap.forEach((doc) => {
-      const pid = doc.id;
-      const seatIndex =
-        typeof dealPayload.seatHistory?.[pid] === "number"
-          ? dealPayload.seatHistory[pid]!
-          : 0;
-      batch.update(doc.ref, {
-        number: dealPayload.numbers[pid] ?? null,
-        clue1: "",
-        ready: false,
-        orderIndex: seatIndex,
-        lastSeen: FieldValue.serverTimestamp(),
-      } satisfies Partial<PlayerDoc>);
-    });
-    await batch.commit();
-  } catch (error) {
-    traceError("nextRound.resetPlayers", error, { roomId: params.roomId });
-  }
-
-  // 10. proposal をリセット
-  try {
-    await db.collection("roomProposals").doc(params.roomId).set(
-      {
-        proposal: [],
-        seed,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (error) {
-    traceError("nextRound.resetProposal", error, { roomId: params.roomId });
-  }
-
-  // 11. ログ出力
-  safeTraceAction("nextRound.server", {
-    roomId: params.roomId,
-    uid,
-    round: nextRound,
-    playerCount: ordered.length,
-    topicType: topicBox,
-    topic: topic ?? undefined,
-  });
-
-  return {
-    ok: true,
-    round: nextRound,
-    playerCount: ordered.length,
-    topic,
-    topicType: topicBox,
-  };
 }
