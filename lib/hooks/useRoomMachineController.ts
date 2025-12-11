@@ -147,9 +147,21 @@ export function useRoomMachineController({
   const machineDeps = useMemo(
     () => ({
       startGame: (targetRoomId: string) =>
-        runAsyncTask("startGame", () => GameService.startGame(targetRoomId)),
+        runAsyncTask("startGame", () =>
+          GameService.startGame(
+            targetRoomId,
+            `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+          )
+        ),
       dealNumbers: (targetRoomId: string, options?: Parameters<typeof GameService.dealNumbers>[1]) =>
-        runAsyncTask("dealNumbers", () => GameService.dealNumbers(targetRoomId, options)),
+        runAsyncTask("dealNumbers", () =>
+          GameService.dealNumbers(targetRoomId, {
+            ...(options || {}),
+            requestId:
+              (options as { requestId?: string } | undefined)?.requestId ??
+              `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          })
+        ),
       submitSortedOrder: (targetRoomId: string, list: string[]) =>
         runAsyncTask("submitSortedOrder", () => GameService.submitSortedOrder(targetRoomId, list)),
       finalizeReveal: (targetRoomId: string) =>
@@ -158,7 +170,15 @@ export function useRoomMachineController({
         targetRoomId: string,
         keepIds: Parameters<typeof GameService.resetRoomWithPrune>[1],
         opts?: Parameters<typeof GameService.resetRoomWithPrune>[2]
-      ) => runAsyncTask("resetRoomWithPrune", () => GameService.resetRoomWithPrune(targetRoomId, keepIds, opts)),
+      ) =>
+        runAsyncTask("resetRoomWithPrune", () =>
+          GameService.resetRoomWithPrune(targetRoomId, keepIds, {
+            ...(opts || {}),
+            requestId:
+              (opts as { requestId?: string } | undefined)?.requestId ??
+              `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          })
+        ),
       cancelSeatRequest: (targetRoomId: string, uid: string) =>
         runAsyncTask("cancelSeatRequest", () => GameService.cancelSeatRequest(targetRoomId, uid)),
     }),

@@ -11,9 +11,6 @@ import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
 import {
-  apiDealNumbers,
-  apiSetCustomTopic,
-  apiSelectTopicCategory,
   apiStartGame,
   apiNextRound,
   type ApiError,
@@ -25,6 +22,11 @@ const generateRequestId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+type HostSessionProvider = {
+  getSessionId?: () => string | null;
+  ensureSession?: () => Promise<string | null>;
+};
 
 type PresenceInfo = {
   presenceReady?: boolean;
@@ -64,6 +66,7 @@ export type QuickStartResult =
         | "functions-unavailable"
         | "auth-error"
         | "not-waiting"
+        | "rate-limited"
         | "callable-error";
       topicType?: string;
       topic?: string | null;
@@ -124,7 +127,7 @@ export type NextRoundApiResult =
     }
   | {
       ok: false;
-      reason: "forbidden" | "invalid_status" | "no_players" | "api-error";
+      reason: "forbidden" | "invalid_status" | "no_players" | "rate-limited" | "api-error";
       errorCode?: string;
       errorMessage?: string;
     };
@@ -162,12 +165,26 @@ async function toggleRoundPreparing(roomId: string, value: boolean) {
   }
 }
 
-export function createHostActionsController() {
+export function createHostActionsController(session?: HostSessionProvider) {
+  const resolveSessionId = async (): Promise<string | null> => {
+    try {
+      const cached = session?.getSessionId?.() ?? null;
+      if (cached) return cached;
+      if (session?.ensureSession) {
+        return (await session.ensureSession()) ?? null;
+      }
+    } catch (error) {
+      traceError("ui.host.session.resolve", error);
+    }
+    return null;
+  };
+
   const quickStartWithTopic = async (
     req: QuickStartRequest
   ): Promise<QuickStartResult> => {
     const { roomId, presenceInfo, currentTopic, customTopic } = req;
     const startRequestId = generateRequestId();
+    const sessionId = await resolveSessionId();
     const { activeCount, onlineCount, playerCount } = safeActiveCounts(
       presenceInfo
     );
@@ -298,26 +315,11 @@ export function createHostActionsController() {
         allowFromFinished,
         allowFromClue,
         requestId: startRequestId,
+        sessionId,
+        autoDeal: true,
+        topicType: effectiveType,
+        customTopic: customTopic ?? topic ?? undefined,
       });
-
-      if (effectiveType === "カスタム") {
-        const text = customTopic ?? topic ?? "";
-        if (!text.trim()) {
-          return {
-            ok: false,
-            reason: "needs-custom-topic",
-            topicType: effectiveType,
-            topic,
-            activeCount,
-          };
-        }
-        await apiSetCustomTopic(roomId, text.trim());
-        topic = text.trim();
-      } else {
-        await apiSelectTopicCategory(roomId, effectiveType);
-      }
-
-      const dealResult = await apiDealNumbers(roomId, { skipPresence });
 
       try {
         postRoundReset(roomId);
@@ -328,7 +330,7 @@ export function createHostActionsController() {
         ok: true,
         topicType: effectiveType,
         topic: topic ?? null,
-        assignedCount: dealResult?.count,
+        assignedCount: undefined,
         durationMs: undefined,
         activeCount,
         skipPresence,
@@ -337,6 +339,19 @@ export function createHostActionsController() {
       const code = (error as ApiError)?.code ?? null;
       const message = (error as { message?: string })?.message ?? "";
       traceError("ui.host.quickStart.error", error, { roomId, code });
+      if (code === "rate_limited") {
+        return {
+          ok: false,
+          reason: "rate-limited",
+          topicType: effectiveType,
+          topic,
+          activeCount,
+          onlineCount,
+          playerCount,
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
       if (code === "invalid_status") {
         return {
           ok: false,
@@ -446,10 +461,13 @@ export function createHostActionsController() {
       recall: req.recallSpectators ? "1" : "0",
     });
 
+    const sessionId = await resolveSessionId();
+
     await resetRoomWithPrune(req.roomId, keep, {
       notifyChat: true,
       recallSpectators: req.recallSpectators ?? true,
       requestId: resetRequestId,
+      sessionId,
     });
 
     try {
@@ -475,6 +493,7 @@ export function createHostActionsController() {
     return quickStartWithTopic({
       ...req,
       allowFromFinished: true,
+      allowFromClue: true,
     });
   };
 
@@ -516,6 +535,8 @@ export function createHostActionsController() {
   // ============================================================================
   const nextRound = async (req: NextRoundRequest): Promise<NextRoundApiResult> => {
     const { roomId, topicType, customTopic } = req;
+    const requestId = generateRequestId();
+    const sessionId = await resolveSessionId();
 
     traceAction("ui.host.nextRound.api", {
       roomId,
@@ -527,6 +548,8 @@ export function createHostActionsController() {
       const result = await apiNextRound(roomId, {
         topicType,
         customTopic,
+        requestId,
+        sessionId,
       });
 
       // broadcast でラウンドリセットを通知
@@ -552,6 +575,14 @@ export function createHostActionsController() {
         return {
           ok: false,
           reason: "forbidden",
+          errorCode: code,
+          errorMessage: message,
+        };
+      }
+      if (code === "rate_limited") {
+        return {
+          ok: false,
+          reason: "rate-limited",
           errorCode: code,
           errorMessage: message,
         };

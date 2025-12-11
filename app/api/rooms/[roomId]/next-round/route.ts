@@ -8,11 +8,13 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
+  sessionId: z.string().min(8).max(128).optional().nullable(),
   clientVersion: z.string().optional().nullable(),
   // お題タイプ（省略時は room.options.defaultTopicType）
   topicType: z.string().optional().nullable(),
   // カスタムお題（topicType が "カスタム" の場合）
   customTopic: z.string().optional().nullable(),
+  requestId: z.string().min(8).max(64),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -49,8 +51,10 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
     const result = await nextRoundCommand({
       roomId,
       token: parsed.data.token,
+      sessionId: parsed.data.sessionId ?? undefined,
       topicType: parsed.data.topicType ?? undefined,
       customTopic: parsed.data.customTopic ?? undefined,
+      requestId: parsed.data.requestId,
     });
     return NextResponse.json(result);
   } catch (error) {
@@ -64,9 +68,11 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
           ? 403
           : code === "invalid_status"
             ? 409
-            : code === "no_players"
-              ? 400
-              : 500;
+            : code === "rate_limited"
+              ? 429
+              : code === "no_players"
+                ? 400
+                : 500;
     return NextResponse.json({ error: code ?? "internal_error", reason }, { status });
   }
 }

@@ -1,5 +1,6 @@
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { useHostSession } from "@/lib/hooks/useHostSession";
 import {
   createHostActionsController,
   type HostActionsController,
@@ -102,9 +103,18 @@ export function useHostActions({
   const actionLatencyRef = useRef<Record<string, number>>({});
   const presenceWarningShownRef = useRef(false);
   const resetUiTimerRef = useRef<number | null>(null);
+  const auth = getAuth();
+  const { sessionId, ensureSession } = useHostSession(roomId, async () => {
+    const idToken = await auth?.currentUser?.getIdToken();
+    return idToken ?? null;
+  });
   const hostActions = useMemo<HostActionsController>(
-    () => createHostActionsController(),
-    []
+    () =>
+      createHostActionsController({
+        getSessionId: () => sessionId,
+        ensureSession,
+      }),
+    [ensureSession, sessionId]
   );
 
   const markActionStart = useCallback((action: string) => {
@@ -461,6 +471,14 @@ export function useHostActions({
 
           if (result.reason === "presence-not-ready") {
             ensurePresenceReady();
+          } else if (result.reason === "rate-limited") {
+            notify({
+              id: toastIds.genericInfo(roomId, "quickstart-rate-limited"),
+              title: "少し間をおいて再試行しています…",
+              description: "短時間に複数の開始要求が重なりました。",
+              type: "info",
+              duration: 1600,
+            });
           } else if (result.reason === "host-mismatch") {
             notify({
               id: toastIds.genericInfo(roomId, "host-mismatch"),
@@ -650,6 +668,7 @@ export function useHostActions({
         });
         finalizeAction("reset", "success");
       } catch (error: unknown) {
+        const code = (error as { code?: string })?.code;
         traceError("ui.room.reset", error, { roomId });
         const msg =
           error instanceof Error
@@ -658,12 +677,22 @@ export function useHostActions({
               ? error
               : "";
         console.error("❌ resetGame: 失敗", error);
-        notify({
-          id: toastIds.genericError(roomId, "game-reset"),
-          title: "リセットに失敗しました",
-          description: msg,
-          type: "error",
-        });
+        if (code === "rate_limited") {
+          notify({
+            id: toastIds.genericInfo(roomId, "reset-rate-limited"),
+            title: "リセット要求が立て込んでいます",
+            description: "数秒待って自動的に再試行します。",
+            type: "info",
+            duration: 2000,
+          });
+        } else {
+          notify({
+            id: toastIds.genericError(roomId, "game-reset"),
+            title: "リセットに失敗しました",
+            description: msg,
+            type: "error",
+          });
+        }
         onFeedback?.(null);
         finalizeAction("reset", "error");
         clearResetUiHold();
@@ -767,6 +796,14 @@ export function useHostActions({
             description: "最低1人が入室してから開始してください。",
             type: "warning",
             duration: 2600,
+          });
+        } else if (result.reason === "rate-limited") {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-rate-limit"),
+            title: "処理を順番待ちしています…",
+            description: "短時間に複数の開始要求が重なりました。",
+            type: "info",
+            duration: 1600,
           });
         } else {
           notify({

@@ -214,7 +214,14 @@ function isHighFrequencyTrace(name: string) {
   return HIGH_FREQUENCY_PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
-export function traceAction(name: string, detail?: Record<string, unknown>): void {
+export function traceAction(
+  name: string,
+  detail?: Record<string, unknown>,
+  opts?: { level?: "debug" | "info" | "warn" | "error"; sampleRate?: number }
+): void {
+  if (opts?.sampleRate && opts.sampleRate < 1 && Math.random() > opts.sampleRate) {
+    return;
+  }
   const highFreq = isHighFrequencyTrace(name);
   if (highFreq && Math.random() > HIGH_FREQUENCY_SAMPLE_RATE) {
     return; // サンプリングで間引き

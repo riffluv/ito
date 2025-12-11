@@ -30,17 +30,21 @@ export async function POST(
     typeof body?.recallSpectators === "boolean"
       ? (body.recallSpectators as boolean)
       : true;
-  const requestId =
-    typeof body?.requestId === "string" && (body.requestId as string).length > 0
-      ? (body.requestId as string)
+  const sessionId =
+    typeof body?.sessionId === "string" && (body.sessionId as string).length >= 8
+      ? (body.sessionId as string)
       : undefined;
+  const requestId =
+    typeof body?.requestId === "string" && (body.requestId as string).length >= 8
+      ? (body.requestId as string)
+      : null;
 
   if (!token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
   try {
-    await resetRoomCommand({ roomId, recallSpectators, token, requestId });
+    await resetRoomCommand({ roomId, recallSpectators, token, requestId, sessionId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     logError("rooms", "reset-route error", { roomId, error });
@@ -52,7 +56,9 @@ export async function POST(
           ? 404
           : code === "forbidden"
             ? 403
-            : 500;
+            : code === "rate_limited"
+              ? 429
+              : 500;
     return NextResponse.json({ error: code ?? "reset_failed" }, { status });
   }
 }

@@ -8,8 +8,10 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
+  sessionId: z.string().min(8).max(128).optional().nullable(),
   clientVersion: z.string().optional().nullable(),
   skipPresence: z.boolean().optional(),
+  requestId: z.string().min(8).max(64),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -46,7 +48,9 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
     const count = await dealNumbersCommand({
       roomId,
       token: parsed.data.token,
+      sessionId: parsed.data.sessionId ?? undefined,
       skipPresence: parsed.data.skipPresence,
+      requestId: parsed.data.requestId,
     });
     return NextResponse.json({ ok: true, count });
   } catch (error) {
@@ -59,7 +63,9 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
           ? 404
           : code === "forbidden"
             ? 403
-            : 500;
+            : code === "rate_limited"
+              ? 429
+              : 500;
     return NextResponse.json({ error: code ?? "internal_error" }, { status });
   }
 }
