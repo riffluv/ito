@@ -23,6 +23,10 @@ export function getPresenceEligibleIds({
   onlineUids,
   presenceReady,
 }: PresenceArgs): string[] {
+  // presenceReady が立っておらず、オンライン情報も空なら開始をブロック
+  if (!presenceReady && (!Array.isArray(onlineUids) || onlineUids.length === 0)) {
+    return [];
+  }
   if (!presenceReady) {
     return [...baseIds];
   }

@@ -166,7 +166,15 @@ async function toggleRoundPreparing(roomId: string, value: boolean) {
   }
 }
 
-export function createHostActionsController(session?: HostSessionProvider) {
+type HostActionsOverrides = {
+  apiNextRound?: typeof apiNextRound;
+};
+
+export function createHostActionsController(
+  session?: HostSessionProvider,
+  overrides?: HostActionsOverrides
+) {
+  const apiNextRoundImpl = overrides?.apiNextRound ?? apiNextRound;
   const resolveSessionId = async (): Promise<string | null> => {
     try {
       const cached = session?.getSessionId?.() ?? null;
@@ -558,7 +566,7 @@ export function createHostActionsController(session?: HostSessionProvider) {
         Array.isArray(req.presenceInfo?.onlineUids) && req.presenceInfo.onlineUids.length > 0
           ? req.presenceInfo.onlineUids.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
           : undefined;
-      const result = await apiNextRound(roomId, {
+      const result = await apiNextRoundImpl(roomId, {
         topicType,
         customTopic,
         requestId,

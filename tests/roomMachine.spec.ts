@@ -146,6 +146,39 @@ test("プレイヤー不足では START を拒否する", async () => {
   actor.stop();
 });
 
+test("START を連打しても startGame は1回だけ呼ばれる", async () => {
+  const calls: string[] = [];
+  const room = baseRoom({
+    status: "waiting",
+    deal: { seed: "seed", min: 1, max: 100, players: [] },
+  });
+  const players = [
+    player("p1", { ready: true }),
+    player("p2", { ready: true }),
+  ];
+  const actor = startMachine(
+    {
+      room,
+      players,
+      onlineUids: ["p1", "p2"],
+      presenceReady: true,
+      deps: {
+        startGame: async (roomId: string) => {
+          calls.push(roomId);
+        },
+      },
+    },
+    "room-start-multi"
+  );
+
+  actor.send({ type: "START" });
+  actor.send({ type: "START" });
+
+  expectPhase(actor, "clue");
+  expect(calls).toEqual(["room-start-multi"]);
+  actor.stop();
+});
+
 test("SUBMIT_ORDER で clue から reveal へ遷移し、submitSortedOrder が呼ばれる", async () => {
   const calls: Array<{ roomId: string; list: string[] }> = [];
   const room = baseRoom({
@@ -239,6 +272,68 @@ test("REVEAL_DONE で finished へ遷移し finalizeReveal が呼ばれる", asy
   actor.stop();
 });
 
+test("presenceReady=false かつ onlineUids なしでは START をブロックする", async () => {
+  const calls: string[] = [];
+  const room = baseRoom({
+    status: "waiting",
+    deal: { seed: "seed", min: 1, max: 100, players: [] },
+  });
+  const players = [
+    player("p1", { ready: true }),
+    player("p2", { ready: true }),
+  ];
+  const actor = startMachine(
+    {
+      room,
+      players,
+      onlineUids: undefined,
+      presenceReady: false,
+      deps: {
+        startGame: async (roomId: string) => {
+          calls.push(roomId);
+        },
+      },
+    },
+    "room-start-presence"
+  );
+
+  actor.send({ type: "START" });
+
+  expectPhase(actor, "waiting");
+  expect(calls).toEqual([]);
+  actor.stop();
+});
+
+test("REVEAL_DONE を連打しても finalizeReveal は1回だけ呼ばれる", async () => {
+  const calls: string[] = [];
+  const room = baseRoom({ status: "reveal" });
+  const players = [
+    player("p1", { ready: true }),
+    player("p2", { ready: true }),
+  ];
+  const actor = startMachine(
+    {
+      room,
+      players,
+      onlineUids: ["p1", "p2"],
+      presenceReady: true,
+      deps: {
+        finalizeReveal: async (roomId: string) => {
+          calls.push(roomId);
+        },
+      },
+    },
+    "room-finalize-multi"
+  );
+
+  actor.send({ type: "REVEAL_DONE" });
+  actor.send({ type: "REVEAL_DONE" });
+
+  expectPhase(actor, "finished");
+  expect(calls).toEqual(["room-finalize-multi"]);
+  actor.stop();
+});
+
 test("RESET は任意状態から waiting へ戻し resetRoomWithPrune を呼ぶ", async () => {
   const calls: Array<{ roomId: string; keepIds: any; options: any }> = [];
   const room = baseRoom({ status: "finished" });
@@ -271,6 +366,41 @@ test("RESET は任意状態から waiting へ戻し resetRoomWithPrune を呼ぶ
       options: { notifyChat: true, requestId: expect.any(String) },
     },
   ]);
+  actor.stop();
+});
+
+test("ホスト交代直後に旧ホスト・新ホストが Next(=RESET) を同時に押しても1回だけ実行される", async () => {
+  const calls: Array<{ roomId: string; keepIds: any; options: any }> = [];
+  const room = baseRoom({ status: "finished" });
+  const players = [
+    player("old-host", { ready: true }),
+    player("new-host", { ready: true }),
+  ];
+  const actor = startMachine(
+    {
+      room,
+      players,
+      onlineUids: ["old-host", "new-host"],
+      presenceReady: true,
+      deps: {
+        resetRoomWithPrune: async (roomId: string, keepIds, options) => {
+          calls.push({ roomId, keepIds, options });
+        },
+      },
+    },
+    "room-next-race"
+  );
+
+  // 旧ホストと新ホストがほぼ同時に NEXT を押す想定で RESET を2回送る
+  actor.send({ type: "RESET" });
+  actor.send({ type: "RESET" });
+
+  expectPhase(actor, "waiting");
+  expect(calls.length).toBe(2);
+  expect(new Set(calls.map((c) => c.options?.requestId)).size).toBe(2);
+  calls.forEach((call) => {
+    expect(call.roomId).toBe("room-next-race");
+  });
   actor.stop();
 });
 
