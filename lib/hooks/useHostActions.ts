@@ -278,19 +278,20 @@ export function useHostActions({
         });
         return false;
       }
-      const basePlayerCount =
+      const basePlayerCountRaw =
         typeof playerCount === "number" && Number.isFinite(playerCount)
           ? Math.max(0, playerCount)
           : 0;
-      if (basePlayerCount === 0) {
+      // 初期同期遅延で playerCount が 0 になりがちなため、ホスト自身がいれば 1 人として扱い警告だけ出す
+      const basePlayerCount = basePlayerCountRaw === 0 ? 1 : basePlayerCountRaw;
+      if (basePlayerCountRaw === 0) {
         notify({
           id: toastIds.numberDealWarningPlayers(roomId),
-          title: "プレイヤーが0人です",
-          description: "最低1人が入室してから開始してください。",
-          type: "warning",
-          duration: 2600,
+          title: "プレイヤー数を確認しています…",
+          description: "ホストのみ検出中ですが、そのまま開始します。",
+          type: "info",
+          duration: 2000,
         });
-        return false;
       }
       const onlineCount =
         presenceReady && Array.isArray(onlineUids)

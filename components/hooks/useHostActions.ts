@@ -143,16 +143,18 @@ export function useHostActions({
       if (autoStartControl?.locked) {
         return;
       }
-      const activeCount =
+      const activeCountRaw =
         typeof onlineCount === "number" ? onlineCount : players.length;
-      if (activeCount < 2) {
+      // 初回同期で0〜1人になることがあるので、1人でも進める。警告だけ出す。
+      const activeCount = Math.max(1, activeCountRaw);
+      if (activeCountRaw < 2) {
         notify({
           id: toastIds.numberDealWarningPlayers(roomId),
-          title: "プレイヤーは2人以上必要です",
-          type: "warning",
-          duration: 2200,
+          title: "プレイヤー数を確認しています…",
+          description: "現在はホストのみ検出中ですがそのまま開始します。",
+          type: "info",
+          duration: 2000,
         });
-        return;
       }
       const defaultType = room.options?.defaultTopicType || "通常版";
       traceAction("ui.host.quickStart", {
