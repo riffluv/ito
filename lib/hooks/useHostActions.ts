@@ -94,12 +94,14 @@ export function useHostActions({
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [resetUiPending, setResetUiPending] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
   const actionLatencyRef = useRef<Record<string, number>>({});
   const presenceWarningShownRef = useRef(false);
+  const resetUiTimerRef = useRef<number | null>(null);
   const hostActions = useMemo<HostActionsController>(
     () => createHostActionsController(),
     []
@@ -129,6 +131,7 @@ export function useHostActions({
     setMetric("hostAction", `${action}.pending`, 0);
   }, []);
 
+  // Host-only start confirmation sound. Global start cue is controlled in Showtime (currently muted).
   const playOrderConfirm = useSoundEffect("order_confirm");
   const playResetGame = useSoundEffect("reset_game");
 
@@ -189,6 +192,41 @@ export function useHostActions({
   useEffect(() => {
     presenceWarningShownRef.current = false;
   }, [roomId]);
+
+  const clearResetUiHold = useCallback(() => {
+    if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
+      window.clearTimeout(resetUiTimerRef.current);
+      resetUiTimerRef.current = null;
+    }
+    setResetUiPending(false);
+  }, []);
+
+  const beginResetUiHold = useCallback((durationMs = 2800) => {
+    if (typeof window === "undefined") return;
+    setResetUiPending(true);
+    if (resetUiTimerRef.current !== null) {
+      window.clearTimeout(resetUiTimerRef.current);
+    }
+    resetUiTimerRef.current = window.setTimeout(() => {
+      setResetUiPending(false);
+      resetUiTimerRef.current = null;
+    }, durationMs);
+  }, []);
+
+  useEffect(() => {
+    if (roomStatus === "waiting") {
+      clearResetUiHold();
+    }
+  }, [roomStatus, clearResetUiHold]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
+        window.clearTimeout(resetUiTimerRef.current);
+        resetUiTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // NOTE: setRoundPreparingFlag は現在 next-round 専用フロー内でのみ使用しているため、
   // ここでの直接呼び出しは一旦無効化している（将来のUI連携用に残しておく）。
@@ -564,6 +602,7 @@ export function useHostActions({
         options?.recallSpectators ?? true;
       markActionStart("reset");
       setIsResetting(true);
+      beginResetUiHold(3400);
       onStageEvent?.("reset:start");
       if (shouldPlaySound) {
         playResetGame();
@@ -588,6 +627,8 @@ export function useHostActions({
           includeOnline,
           recallSpectators,
         });
+        // Hold the UI in a waiting-like state until Firestore/FSM catches up.
+        beginResetUiHold(2400);
         if (showFeedback) {
           onFeedback?.({
             message: "待機状態に戻しました！",
@@ -620,6 +661,7 @@ export function useHostActions({
         });
         onFeedback?.(null);
         finalizeAction("reset", "error");
+        clearResetUiHold();
       } finally {
         setIsResetting(false);
         onStageEvent?.("reset:done");
@@ -635,6 +677,8 @@ export function useHostActions({
       finalizeAction,
       hostActions,
       onStageEvent,
+      beginResetUiHold,
+      clearResetUiHold,
     ]
   );
 
@@ -941,6 +985,7 @@ export function useHostActions({
     quickStart,
     quickStartPending,
     isResetting,
+    resetUiPending,
     isRestarting,
     resetGame,
     restartGame,

@@ -409,6 +409,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     quickStart,
     quickStartPending,
     isResetting,
+    resetUiPending,
     isRestarting,
     resetGame,
     handleNextGame,
@@ -442,8 +443,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   });
 
   const effectiveDefaultTopicType = hostDefaultTopicType;
-  const effectiveRoomStatus =
-    isResetting && roomStatus === "clue" ? "waiting" : roomStatus;
+  const optimisticResetting =
+    (resetUiPending || isResetting) && roomStatus !== "waiting";
+  const effectiveRoomStatus = optimisticResetting ? "waiting" : roomStatus;
 
   const {
     text,

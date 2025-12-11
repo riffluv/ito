@@ -1,3 +1,4 @@
+import { getRoundStartSoundId, ROUND_START_GLOBAL_SOUND_ENABLED } from "@/lib/audio/roundStart";
 import type { Scenario } from "@/lib/showtime/types";
 
 /**
@@ -28,8 +29,11 @@ export const roundStartScenario: Scenario<RoundContext> = [
   },
   {
     action: "audio.play",
+    when: () => ROUND_START_GLOBAL_SOUND_ENABLED,
     params: (ctx) => ({
-      id: ctx.status === "waiting" ? "order_confirm" : "round_start",
+      // Host-confirm sound is played separately (useHostActions).
+      // This branch is reserved for future "everyone hears the round start" cue.
+      id: getRoundStartSoundId(ctx.status),
     }),
     fireAndForget: true,
   },
