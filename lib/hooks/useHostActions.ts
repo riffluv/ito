@@ -373,7 +373,7 @@ export function useHostActions({
 
         // 409 invalid_status → reason: not-waiting を明示的に処理。
         // allowFromFinished=true でリトライすることで、Firestore 伝播のレース条件を回避。
-        const MAX_RETRY_ATTEMPTS = 2;
+        const MAX_RETRY_ATTEMPTS = 3;
         while (!result.ok && result.reason === "not-waiting" && attempts < MAX_RETRY_ATTEMPTS) {
           attempts += 1;
           const currentStatus = result.roomStatus ?? roomStatus ?? "unknown";
@@ -390,9 +390,14 @@ export function useHostActions({
             duration: 1800,
           });
 
-          // 進行中ステータスが残っている場合のみ待機リセットを実行
+          // 進行中ステータスが残っている場合は待機リセットを実行
           let resetSucceeded = false;
-          if (!currentStatus || currentStatus === "finished" || currentStatus === "reveal") {
+          if (
+            !currentStatus ||
+            currentStatus === "finished" ||
+            currentStatus === "reveal" ||
+            currentStatus === "clue"
+          ) {
             try {
               await hostActions.resetRoomToWaitingWithPrune({
                 roomId,
@@ -418,8 +423,8 @@ export function useHostActions({
 
           // Firestore の伝播を待つ（リトライ回数に応じて待ち時間を増加）
           // リセット失敗時は待ち時間を長めに取る
-          const baseWaitMs = resetSucceeded ? 400 : 800;
-          const waitMs = baseWaitMs + attempts * 300;
+          const baseWaitMs = resetSucceeded ? 700 : 1200;
+          const waitMs = baseWaitMs + attempts * 350;
           await new Promise((resolve) => setTimeout(resolve, waitMs));
 
           // リトライ時は allowFromFinished=true + allowFromClue=true でレース条件に対応
