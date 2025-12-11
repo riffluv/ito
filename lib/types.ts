@@ -90,6 +90,9 @@ export type RoomDoc = {
   round?: number;
   // MVP投票 (記録簿内で完結)
   mvpVotes?: Record<string, string> | null; // { voterId: votedPlayerId }
+  // リクエスト冪等化用（サーバー側のみ利用）。存在しなくても良い。
+  startRequestId?: string | null;
+  resetRequestId?: string | null;
   // --- Version Align (PWA update) ---
   updatePhase?: 'required' | 'done' | undefined;
   requiredSwVersion?: string | undefined;

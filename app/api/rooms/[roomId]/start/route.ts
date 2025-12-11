@@ -13,6 +13,7 @@ const schema = z.object({
   allowFromFinished: z.boolean().optional().nullable(),
   // リトライ時のレース条件対策: clue 状態からも開始可能にするフラグ
   allowFromClue: z.boolean().optional().nullable(),
+  requestId: z.string().min(4).max(64).optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
       token: parsed.data.token,
       allowFromFinished: parsed.data.allowFromFinished ?? false,
       allowFromClue: parsed.data.allowFromClue ?? false,
+      requestId: parsed.data.requestId ?? undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

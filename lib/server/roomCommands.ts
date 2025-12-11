@@ -337,12 +337,19 @@ export async function submitClue(params: SubmitClueParams) {
   traceAction("clue.submit.server", { roomId: params.roomId, uid });
 }
 
-export async function startGameCommand(params: { roomId: string; allowFromFinished?: boolean; allowFromClue?: boolean } & WithAuth) {
+export async function startGameCommand(params: {
+  roomId: string;
+  allowFromFinished?: boolean;
+  allowFromClue?: boolean;
+  requestId?: string;
+} & WithAuth) {
   const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const allowFromFinished = params.allowFromFinished ?? false;
   const allowFromClue = params.allowFromClue ?? false;
+  const requestId = params.requestId;
+  let alreadyStarted = false;
 
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(roomRef);
@@ -350,6 +357,12 @@ export async function startGameCommand(params: { roomId: string; allowFromFinish
       throw codedError("room_not_found", "room_not_found");
     }
     const room = snap.data() as RoomDoc;
+
+    // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
+    if (requestId && room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
+      alreadyStarted = true;
+      return;
+    }
 
     // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
     // これにより「次のゲーム」ボタン押下時のレース条件を解消
@@ -376,9 +389,15 @@ export async function startGameCommand(params: { roomId: string; allowFromFinish
       mvpVotes: {},
       lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
       ui: { ...(room.ui ?? {}), recallOpen: false },
+      startRequestId: requestId ?? null,
     };
     tx.update(roomRef, payload);
   });
+
+  if (alreadyStarted) {
+    traceAction("host.start.server.idempotent", { roomId: params.roomId, uid, requestId });
+    return;
+  }
 
   // reset players in a batch
   const playersSnap = await db.collection("rooms").doc(params.roomId).collection("players").get();
@@ -391,7 +410,7 @@ export async function startGameCommand(params: { roomId: string; allowFromFinish
   traceAction("host.start.server", { roomId: params.roomId, uid, allowFromFinished, allowFromClue });
 }
 
-export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean } & WithAuth) {
+export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId?: string } & WithAuth) {
   const uid = await verifyToken(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
@@ -400,6 +419,11 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
     throw codedError("room_not_found", "room_not_found");
   }
   const room = snap.data() as RoomDoc | undefined;
+  // Idempotent: 同じ requestId で既に waiting なら成功扱い
+  if (params.requestId && room?.resetRequestId === params.requestId && room?.status === "waiting") {
+    traceAction("room.reset.server.idempotent", { roomId: params.roomId, uid, requestId: params.requestId });
+    return;
+  }
   const authorized =
     uid === room?.hostId || uid === room?.creatorId || (await getAdminAuth().verifyIdToken(params.token)).admin === true;
   if (!authorized) {
@@ -413,6 +437,9 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
     closedAt: null,
     expiresAt: null,
   });
+  if (params.requestId) {
+    resetPayload.resetRequestId = params.requestId;
+  }
   await roomRef.update(resetPayload);
 
   // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
