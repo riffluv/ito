@@ -24,7 +24,8 @@ type MetricsBuckets = Record<string, Record<string, unknown>>;
 type MetricsWindow = typeof window & {
   __ITO_METRICS__?: MetricsBuckets;
   __ITO_TRACE_BUFFER__?: TraceBufferRecord[];
-  dumpItoMetrics?: () => void;
+  dumpItoMetrics?: (label?: string) => unknown;
+  dumpItoMetricsJson?: (label?: string) => string;
 };
 
 type ExtendedPerformanceObserver = typeof PerformanceObserver & {
@@ -41,7 +42,8 @@ type InteractionWithId = PerformanceEventTiming & {
 
 declare global {
   interface Window {
-    dumpItoMetrics?: () => void;
+    dumpItoMetrics?: (label?: string) => unknown;
+    dumpItoMetricsJson?: (label?: string) => string;
   }
 }
 
@@ -90,32 +92,59 @@ export default function PerformanceMetricsInitializer() {
     const cleanup = () => {
       if (typeof window !== "undefined") {
         delete window.dumpItoMetrics;
+        delete window.dumpItoMetricsJson;
       }
     };
     if (typeof window === "undefined") {
       return cleanup;
     }
     const metricsWindow = window as MetricsWindow;
-    metricsWindow.dumpItoMetrics = () => {
+    const buildSnapshot = (label?: string) => {
       const metrics = metricsWindow.__ITO_METRICS__ ?? {};
       const traces = metricsWindow.__ITO_TRACE_BUFFER__ ?? [];
 
       const perf = metrics.perf ?? {};
       const audio = metrics.audio ?? {};
+      const hostAction = metrics.hostAction ?? {};
+      const presence = metrics.presence ?? {};
       const dropRecords = Object.fromEntries(
         Object.entries(metrics).filter(([key]) => key.startsWith("client.drop"))
       );
 
+      return {
+        label: typeof label === "string" && label.trim().length > 0 ? label.trim() : null,
+        at: new Date().toISOString(),
+        path: typeof window.location?.pathname === "string" ? window.location.pathname : null,
+        perf,
+        hostAction,
+        presence,
+        audio,
+        dropRecords: Object.keys(dropRecords).length > 0 ? dropRecords : null,
+        traces,
+      };
+    };
+
+    metricsWindow.dumpItoMetrics = (label?: string) => {
+      const snapshot = buildSnapshot(label);
       /* eslint-disable no-console */
-      console.group("ITO metrics snapshot");
-      console.log("perf:", perf);
-      console.log("audio:", audio);
-      if (Object.keys(dropRecords).length > 0) {
-        console.log("drop-related:", dropRecords);
-      }
-      console.log("trace buffer (latest 10):", traces);
+      const title = snapshot.label ? `ITO metrics snapshot (${snapshot.label})` : "ITO metrics snapshot";
+      console.group(title);
+      console.log("snapshot:", snapshot);
       console.groupEnd();
       /* eslint-enable no-console */
+      return snapshot;
+    };
+
+    metricsWindow.dumpItoMetricsJson = (label?: string) => {
+      const snapshot = buildSnapshot(label);
+      const json = JSON.stringify(snapshot, null, 2);
+      /* eslint-disable no-console */
+      const title = snapshot.label ? `ITO metrics JSON (${snapshot.label})` : "ITO metrics JSON";
+      console.group(title);
+      console.log(json);
+      console.groupEnd();
+      /* eslint-enable no-console */
+      return json;
     };
     return cleanup;
   }, []);
