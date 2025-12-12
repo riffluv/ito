@@ -223,6 +223,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     players,
     onlineUids,
     presenceReady,
+    presenceDegraded,
     onlinePlayers,
     loading,
     isHost,
@@ -2546,6 +2547,8 @@ export function RoomLayout(props: RoomLayoutProps) {
         baseIds,
         onlineUids,
         presenceReady,
+        // 表示・UI側はフォールバックを優先し、START/DEAL の厳密ガードは FSM 側で担保する
+        blockWhenNotReadyEmpty: false,
       }),
     [baseIds, presenceReady, onlineUids]
   );
@@ -3196,6 +3199,7 @@ export function RoomLayout(props: RoomLayoutProps) {
       playerCount={players.length}
       roundIds={clueTargetIds}
       presenceReady={presenceReady}
+      presenceDegraded={presenceDegraded}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
       pop={pop}

@@ -6,6 +6,12 @@ type PresenceArgs = {
   baseIds: readonly string[];
   onlineUids?: readonly string[] | null;
   presenceReady: boolean;
+  /**
+   * presence が未準備かつ onlineUids が空のときに eligibleIds を空にしてブロックするか。
+   * 既定 true（START/DEAL ガード目的）。
+   * UI 表示などでフォールバックしたい場合は false を渡す。
+   */
+  blockWhenNotReadyEmpty?: boolean;
 };
 
 type ClueTargetArgs = {
@@ -22,9 +28,14 @@ export function getPresenceEligibleIds({
   baseIds,
   onlineUids,
   presenceReady,
+  blockWhenNotReadyEmpty = true,
 }: PresenceArgs): string[] {
   // presenceReady が立っておらず、オンライン情報も空なら開始をブロック
-  if (!presenceReady && (!Array.isArray(onlineUids) || onlineUids.length === 0)) {
+  if (
+    blockWhenNotReadyEmpty &&
+    !presenceReady &&
+    (!Array.isArray(onlineUids) || onlineUids.length === 0)
+  ) {
     return [];
   }
   if (!presenceReady) {
