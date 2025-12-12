@@ -28,6 +28,9 @@ export function useHostAutoStartLock(
     return false;
   });
   const timerRef = React.useRef<number | null>(null);
+  const latestStatusRef = React.useRef<string | null>(roomStatus ?? null);
+  const lockedFromStatusRef = React.useRef<string | null>(null);
+  const maxHoldUntilRef = React.useRef<number>(0);
   const [showIndicator, setShowIndicator] = React.useState(false);
   const indicatorTimerRef = React.useRef<number | null>(null);
   const hideTimerRef = React.useRef<number | null>(null);
@@ -58,6 +61,9 @@ export function useHostAutoStartLock(
   const beginLock = React.useCallback(
     (duration = DEFAULT_DURATION, options?: LockOptions) => {
       if (!roomId) return;
+      lockedFromStatusRef.current = roomStatus ?? null;
+      // 最長でもこの時間を超えたら解除（サーバーロックTTLと揃える）
+      maxHoldUntilRef.current = Date.now() + Math.max(duration, 8000);
       setAutoStartLocked(true);
       setShowIndicator(false);
       if (typeof window !== "undefined") {
@@ -74,11 +80,21 @@ export function useHostAutoStartLock(
             minVisibleUntilRef.current = Date.now() + MIN_VISIBLE;
           }, delay);
         }
-        timerRef.current = window.setTimeout(() => {
+        const releaseIfStale = () => {
           timerRef.current = null;
+          const fromStatus = lockedFromStatusRef.current;
+          const currentStatus = latestStatusRef.current;
+          const now = Date.now();
+          if (fromStatus && currentStatus === fromStatus && now < maxHoldUntilRef.current) {
+            // まだ元フェーズのままなら短い間隔で再チェックして保持する
+            timerRef.current = window.setTimeout(releaseIfStale, 500);
+            return;
+          }
+          lockedFromStatusRef.current = null;
           setShowIndicator(false);
           setAutoStartLocked(false);
-        }, duration);
+        };
+        timerRef.current = window.setTimeout(releaseIfStale, duration);
         if (options?.broadcast) {
           try {
             window.dispatchEvent(
@@ -89,11 +105,12 @@ export function useHostAutoStartLock(
         }
       }
     },
-    [roomId, stopTimer]
+    [roomId, roomStatus, stopTimer]
   );
 
   const clearLock = React.useCallback(() => {
     stopTimer();
+    lockedFromStatusRef.current = null;
     if (typeof window === "undefined") {
       setShowIndicator(false);
       setAutoStartLocked(false);
@@ -144,7 +161,10 @@ export function useHostAutoStartLock(
   }, [roomId, beginLock]);
 
   React.useEffect(() => {
-    if (roomStatus && roomStatus !== "waiting") {
+    latestStatusRef.current = roomStatus ?? null;
+    const from = lockedFromStatusRef.current;
+    if (!from) return;
+    if (roomStatus && roomStatus !== from) {
       clearLock();
     }
   }, [roomStatus, clearLock]);

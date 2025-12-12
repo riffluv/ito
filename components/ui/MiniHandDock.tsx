@@ -564,31 +564,47 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const baseActionTooltip =
     isSortMode && placed ? "カードを待機エリアに戻す" : "カードを場に出す";
-  const clearButtonDisabled = !clueEditable || !hasText || placed;
-  const clearTooltip = !clueEditable
-    ? "判定中は操作できません"
-    : placed
-      ? "カード提出中は操作できません"
-      : !displayHasText
-        ? "連想ワードが入力されていません"
-        : "連想ワードをクリア";
-  const decideTooltip = !clueEditable
-    ? "判定中は操作できません"
-    : !displayHasText
-      ? "連想ワードを入力してください"
-      : "連想ワードを決定";
-  const submitDisabledReason = !clueEditable
-    ? "このタイミングではカードを出せません"
-    : !me?.id
-      ? "参加処理が終わるまで待ってください"
-      : typeof me?.number !== "number"
-        ? "番号が配られるまで待ってください"
+  const preparing = !!(
+    showSpinner ||
+    autoStartLocked ||
+    quickStartPending ||
+    isRestarting ||
+    isResetting ||
+    resetUiPending ||
+    roundPreparing
+  );
+  const clearButtonDisabled = preparing || !clueEditable || !hasText || placed;
+  const clearTooltip = preparing
+    ? "準備中は操作できません"
+    : !clueEditable
+      ? "判定中は操作できません"
+      : placed
+        ? "カード提出中は操作できません"
         : !displayHasText
-          ? "連想ワードを入力するとカードを出せます"
-          : !ready
-            ? "「決定」を押すとカードを出せます"
-            : "カードを場に出せません";
-  const submitTooltip = canClickProposalButton
+          ? "連想ワードが入力されていません"
+          : "連想ワードをクリア";
+  const decideTooltip = preparing
+    ? "準備中は操作できません"
+    : !clueEditable
+      ? "判定中は操作できません"
+      : !displayHasText
+        ? "連想ワードを入力してください"
+        : "連想ワードを決定";
+  const submitDisabledReason = preparing
+    ? "準備中は操作できません"
+    : !clueEditable
+      ? "このタイミングではカードを出せません"
+      : !me?.id
+        ? "参加処理が終わるまで待ってください"
+        : typeof me?.number !== "number"
+          ? "番号が配られるまで待ってください"
+          : !displayHasText
+            ? "連想ワードを入力するとカードを出せます"
+            : !ready
+              ? "「決定」を押すとカードを出せます"
+              : "カードを場に出せません";
+  const effectiveCanClickProposalButton = !preparing && canClickProposalButton;
+  const submitTooltip = effectiveCanClickProposalButton
     ? baseActionTooltip
     : submitDisabledReason;
 
@@ -619,12 +635,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     resetStage,
   ]);
 
-  const preparing = !!(
-    autoStartLocked ||
-    quickStartPending ||
-    isRestarting ||
-    isResetting
-  );
+  // preparing is defined above and includes roundPreparing/resetUiPending.
   const isGameFinished = phaseStatus === "finished";
   // 戦績ボタンは MiniHandDock 側では表示しない（MinimalChat 側に一本化）
   const showLedgerButton = false;
@@ -869,7 +880,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               minH={{ base: "44px", md: "48px" }}
               w={{ base: "200px", md: "280px" }}
               transition="box-shadow 150ms ease"
-              disabled={!clueEditable}
+              disabled={!clueEditable || preparing}
               css={{
                 [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
                   minHeight: "40px",
@@ -898,7 +909,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 visual="solid"
                 palette="brand"
                 onClick={handleDecide}
-                disabled={!canDecide}
+                disabled={preparing || !canDecide}
                 w="auto"
                 minW="60px"
               >
@@ -926,7 +937,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 visual="solid"
                 palette="brand"
                 onClick={handleSubmit}
-                disabled={!canClickProposalButton}
+                disabled={!effectiveCanClickProposalButton}
                 w="auto"
                 minW="70px"
               >
