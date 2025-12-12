@@ -561,10 +561,13 @@ export function createHostActionsController(
       hasCustomTopic: customTopic ? "1" : "0",
     });
 
+    await toggleRoundPreparing(roomId, true);
     try {
       const presenceUids =
         Array.isArray(req.presenceInfo?.onlineUids) && req.presenceInfo.onlineUids.length > 0
-          ? req.presenceInfo.onlineUids.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+          ? req.presenceInfo.onlineUids.filter(
+              (id): id is string => typeof id === "string" && id.trim().length > 0
+            )
           : undefined;
       const result = await apiNextRoundImpl(roomId, {
         topicType,
@@ -631,6 +634,8 @@ export function createHostActionsController(
         errorCode: code ?? undefined,
         errorMessage: message,
       };
+    } finally {
+      await toggleRoundPreparing(roomId, false);
     }
   };
 
