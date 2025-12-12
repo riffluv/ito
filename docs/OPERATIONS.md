@@ -38,9 +38,11 @@
 1. `.env.production` / Vercel 環境変数で必要なキーが揃っているか確認。  
    - `NEXT_PUBLIC_APP_VERSION` を更新済みか。  
    - `NEXT_PUBLIC_ENABLE_PWA=1` / `NEXT_PUBLIC_FEATURE_SAFE_UPDATE=1` が有効か。  
-2. `npm run typecheck` と必要なテストを実行。影響範囲が大きい場合は Playwright 個別テストも走らせる。  
-3. `npm run build` を実行し、ビルドエラーや lint 警告を確認。  
-4. Service Worker のキャッシュ対象（`public/sw.js` の `CORE_ASSETS`）に変更がないか確認。追加アセットがある場合は忘れずに追記。  
+2. `npm run lint -- --max-warnings=0` と `npm run typecheck` を必ず実行。  
+3. 進行/ホスト系の変更が入った場合は最低限以下を個別実行して“ゴールデンパス”を守る。  
+   - `npx playwright test tests/roomMachine.spec.ts tests/hostActions.nextRound.spec.ts tests/hostActions.preparing.spec.ts`  
+4. `npm run build` を実行し、ビルドエラーや lint 警告を確認。  
+5. Service Worker のキャッシュ対象（`public/sw.js` の `CORE_ASSETS`）に変更がないか確認。追加アセットがある場合は忘れずに追記。  
 
 ---
 

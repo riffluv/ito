@@ -67,6 +67,8 @@ export function buildHostActionModel(
 ): HostIntent[] {
   const status = room.status;
   const resolveMode = room.options?.resolveMode;
+  const uiPreparing =
+    room.ui?.roundPreparing === true || room.ui?.revealPending === true;
   const topicSelected = hasValidTopic(room);
   const proposal = getProposalArray(room);
   // アクティブ人数: realtime presence 集計があればそれを、なければ players 配列長
@@ -83,14 +85,20 @@ export function buildHostActionModel(
       label: "開始",
       palette: "orange",
       variant: "solid",
-      disabled: !enoughPlayers,
-      reason: enoughPlayers ? undefined : `2人必要: 現在${effectiveActive}人`,
+      disabled: uiPreparing || !enoughPlayers,
+      reason: uiPreparing
+        ? "準備中です"
+        : enoughPlayers
+          ? undefined
+          : `2人必要: 現在${effectiveActive}人`,
     });
     intents.push({
       key: "advancedMode",
       label: "詳細",
       palette: "gray",
       variant: "outline",
+      disabled: uiPreparing,
+      reason: uiPreparing ? "準備中です" : undefined,
     });
   }
   // finished: show primary (もう一度)
@@ -99,6 +107,8 @@ export function buildHostActionModel(
       key: "primary",
       label: hostPrimary.label,
       palette: "orange",
+      disabled: uiPreparing,
+      reason: uiPreparing ? "準備中です" : undefined,
     });
   }
 
@@ -109,6 +119,8 @@ export function buildHostActionModel(
       label: "詳細",
       palette: "gray",
       variant: "outline",
+      disabled: uiPreparing,
+      reason: uiPreparing ? "準備中です" : undefined,
     });
 
     // ゲーム中断・リセットボタン
@@ -117,6 +129,8 @@ export function buildHostActionModel(
       label: "中断",
       palette: "gray",
       variant: "ghost",
+      disabled: uiPreparing,
+      reason: uiPreparing ? "準備中です" : undefined,
       confirm: {
         title: "ゲームを中断しますか?",
         body: "現在の進行状況は失われ、待機状態に戻ります。よろしいですか?",
@@ -140,8 +154,8 @@ export function buildHostActionModel(
         key: "evaluate",
         label: "並びを確定",
         palette: "teal",
-        disabled: !canEval,
-        reason,
+        disabled: uiPreparing || !canEval,
+        reason: uiPreparing ? "準備中です" : reason,
       });
     }
   }

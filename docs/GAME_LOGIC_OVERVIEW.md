@@ -147,6 +147,19 @@ interface RoomDocLike {
 
 ## 10. 有効化条件（Enablement）
 
+### 10.1 処理中ゲートの優先ルール
+
+API 一本化後は、開始/次ラウンド/リセットなどの「決定処理」はサーバーが唯一の真実になります。
+UI 側は **まず処理中ゲートを最優先で見る** ことで、Firestore 伝播やローカル state のレースによる
+再表示・一瞬有効化（ちらつき）を防ぎます。
+
+- 優先ゲート（真なら全入力/ホスト操作を無効化）:
+  - `room.ui.roundPreparing === true`
+  - `room.ui.revealPending === true`
+  - ローカルの `resetUiPending / quickStartPending / isRestarting / showSpinner` など
+- ゲートが立っている間は Start/NextGame/Decide/Submit などは **一方向に disabled** に遷移し、
+  ボタンの再表示や一瞬の enable を許さない。
+
 | ボタン/操作            | 有効条件                                 | 無効理由例                    |
 | ---------------------- | ---------------------------------------- | ----------------------------- |
 | 開始（quickStart）     | `effectiveActive >= 2`                    | `2人必要: 残り1人`            |
