@@ -1,4 +1,8 @@
-import { computeSlotCount, computeVisibleProposal } from "@/lib/game/selectors";
+import {
+  computeSlotCount,
+  computeVisibleProposal,
+  getPresenceEligibleIds,
+} from "@/lib/game/selectors";
 
 describe("selectors minimal", () => {
   test("computeSlotCount uses online count when presenceReady", () => {
@@ -37,5 +41,24 @@ describe("selectors minimal", () => {
       eligibleIds: ["x"],
     });
     expect(v).toEqual(["x"]);
+  });
+
+  test("getPresenceEligibleIds blocks by default when not ready and empty", () => {
+    const ids = getPresenceEligibleIds({
+      baseIds: ["a", "b"],
+      onlineUids: undefined,
+      presenceReady: false,
+    });
+    expect(ids).toEqual([]);
+  });
+
+  test("getPresenceEligibleIds falls back when blockWhenNotReadyEmpty=false", () => {
+    const ids = getPresenceEligibleIds({
+      baseIds: ["a", "b"],
+      onlineUids: undefined,
+      presenceReady: false,
+      blockWhenNotReadyEmpty: false,
+    });
+    expect(ids).toEqual(["a", "b"]);
   });
 });

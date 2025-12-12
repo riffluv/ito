@@ -271,6 +271,7 @@ interface MiniHandDockProps {
   currentTopic?: string | null;
   hostClaimStatus?: HostClaimStatus;
   presenceReady?: boolean;
+  presenceDegraded?: boolean;
   phaseMessage?: string | null;
   roundPreparing?: boolean;
   showtimeIntentHandlers?: ShowtimeIntentHandlers;
@@ -302,6 +303,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     currentTopic,
     hostClaimStatus,
     presenceReady = true,
+    presenceDegraded = false,
     phaseMessage,
     roundPreparing = false,
     showtimeIntentHandlers,
@@ -420,6 +422,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     setCustomText,
     handleSubmitCustom,
     effectiveDefaultTopicType: hostDefaultTopicType,
+    presenceCanStart,
+    presenceForceEligible,
+    presenceWaitRemainingMs,
   } = useHostActionsCore({
     roomId,
     roomStatus,
@@ -437,6 +442,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     proposal,
     currentTopic,
     presenceReady,
+    presenceDegraded,
     onFeedback: setInlineFeedback,
     showtimeIntents: showtimeIntentHandlers,
     onStageEvent: emitStageEvent,
@@ -446,6 +452,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const optimisticResetting =
     (resetUiPending || isResetting) && roomStatus !== "waiting";
   const effectiveRoomStatus = optimisticResetting ? "waiting" : roomStatus;
+
+  // 以降のフェーズ分岐は optimisticResetting を反映した値を使う
+  const phaseStatus = effectiveRoomStatus;
 
   const {
     text,
@@ -517,7 +526,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     topicBox === "カスタム" ||
     (!topicBox && effectiveDefaultTopicType === "カスタム");
   const shouldShowSeinoButton =
-    !!isHost && isSortMode && roomStatus === "clue" && allSubmitted;
+    !!isHost && isSortMode && phaseStatus === "clue" && allSubmitted;
 
   React.useEffect(() => {
     if (!ready) return;
@@ -616,7 +625,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isRestarting ||
     isResetting
   );
-  const isGameFinished = roomStatus === "finished";
+  const isGameFinished = phaseStatus === "finished";
   // 戦績ボタンは MiniHandDock 側では表示しない（MinimalChat 側に一本化）
   const showLedgerButton = false;
 
@@ -693,7 +702,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         </Box>
       )}
 
-      {roomStatus === "waiting" &&
+      {phaseStatus === "waiting" &&
         !preparing &&
         (isHost || hostClaimActive) && (
           <Box
@@ -717,7 +726,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 size="lg"
                 visual="solid"
                 onClick={() => quickStart()}
-                disabled={!presenceReady || quickStartPending}
+                disabled={!presenceCanStart || quickStartPending}
                 css={{
                   animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
                 }}
@@ -735,7 +744,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 {hostClaimMessage}
               </Text>
             )}
-            {isHost && !presenceReady ? (
+            {isHost && !presenceReady && !presenceDegraded && !presenceForceEligible ? (
               <Text
                 mt={2}
                 fontSize="xs"
@@ -743,7 +752,18 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 color="rgba(255,255,255,0.75)"
                 textAlign="center"
               >
-                参加者の接続を待っています…
+                参加者の接続を待っています…（あと{Math.ceil(presenceWaitRemainingMs / 1000)}秒）
+              </Text>
+            ) : null}
+            {isHost && !presenceReady && (presenceDegraded || presenceForceEligible) ? (
+              <Text
+                mt={2}
+                fontSize="xs"
+                fontWeight="bold"
+                color="rgba(255,255,255,0.75)"
+                textAlign="center"
+              >
+                接続未確認ですが開始できます
               </Text>
             ) : null}
           </Box>
@@ -751,11 +771,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {/* 次のゲームボタン (フッターパネルとカードの間) */}
       {isHost &&
-        ((roomStatus === "reveal" && !!allowContinueAfterFail) ||
-          roomStatus === "finished") &&
+        ((phaseStatus === "reveal" && !!allowContinueAfterFail) ||
+          phaseStatus === "finished") &&
         !autoStartLocked &&
         !isRestarting &&
-        !(roomStatus === "reveal" && isRevealAnimating) && (
+        !(phaseStatus === "reveal" && isRevealAnimating) && (
           <Box
             position="fixed"
             bottom={{
@@ -1061,7 +1081,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
           {!isHost &&
             isCustomModeSelectable &&
-            (roomStatus === "waiting" || roomStatus === "clue") && (
+            (phaseStatus === "waiting" || phaseStatus === "clue") && (
               <Tooltip content="カスタムお題を設定" showArrow openDelay={300}>
                 <IconButton
                   aria-label="カスタムお題"

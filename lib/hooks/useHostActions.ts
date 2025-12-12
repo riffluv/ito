@@ -12,6 +12,7 @@ import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
+import { PRESENCE_FORCE_START_AFTER_MS } from "@/lib/constants/presence";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -102,6 +103,8 @@ export function useHostActions({
   const [customText, setCustomText] = useState("");
   const actionLatencyRef = useRef<Record<string, number>>({});
   const presenceWarningShownRef = useRef(false);
+  const presenceWaitSinceRef = useRef<number | null>(null);
+  const [presenceWaitedMs, setPresenceWaitedMs] = useState(0);
   const resetUiTimerRef = useRef<number | null>(null);
   const lastActionAtRef = useRef<Record<string, number>>({});
   const auth = getAuth();
@@ -153,22 +156,48 @@ export function useHostActions({
     return "通常版";
   }, [defaultTopicType]);
 
+  // presence の初期同期が遅延した場合の待ち時間を計測し、一定時間で強制開始を許可する。
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return () => {};
+    }
+    if (presenceReady || presenceDegraded) {
+      presenceWaitSinceRef.current = null;
+      setPresenceWaitedMs(0);
+      return () => {};
+    }
+    if (presenceWaitSinceRef.current === null) {
+      presenceWaitSinceRef.current = Date.now();
+    }
+    const tick = () => {
+      const since = presenceWaitSinceRef.current;
+      if (since === null) return;
+      setPresenceWaitedMs(Date.now() - since);
+    };
+    tick();
+    const handle = window.setInterval(tick, 1000);
+    return () => {
+      window.clearInterval(handle);
+    };
+  }, [presenceReady, presenceDegraded, roomId]);
+
+  const presenceForceEligible =
+    !presenceReady &&
+    !presenceDegraded &&
+    presenceWaitedMs >= PRESENCE_FORCE_START_AFTER_MS;
+  const presenceCanStart =
+    presenceReady || presenceDegraded || presenceForceEligible;
+  const presenceWaitRemainingMs = useMemo(() => {
+    if (presenceCanStart) return 0;
+    return Math.max(PRESENCE_FORCE_START_AFTER_MS - presenceWaitedMs, 0);
+  }, [presenceCanStart, presenceWaitedMs]);
+
   const ensurePresenceReady = useCallback(() => {
     if (presenceReady) {
       return true;
     }
-    const onlineCount =
-      Array.isArray(onlineUids) && onlineUids.length > 0
-        ? onlineUids.filter(
-            (id): id is string => typeof id === "string" && id.trim().length > 0
-          ).length
-        : null;
-    const fallbackAllowed =
-      presenceDegraded === true ||
-      onlineCount !== null ||
-      (typeof playerCount === "number" && playerCount >= 0);
-
-    if (fallbackAllowed) {
+    const forceAllowed = presenceForceEligible;
+    if (presenceDegraded === true || forceAllowed) {
       if (!presenceWarningShownRef.current) {
         notify({
           id: toastIds.genericInfo(roomId, "presence-warn"),
@@ -183,13 +212,17 @@ export function useHostActions({
         roomId,
         ready: presenceReady ? "1" : "0",
         degraded: presenceDegraded ? "1" : "0",
-        online: onlineCount ?? -1,
+        forced: forceAllowed ? "1" : "0",
+        waitedMs: Math.round(presenceWaitedMs),
         players: typeof playerCount === "number" ? playerCount : -1,
       });
       return true;
     }
 
-    traceAction("ui.host.presence.wait", { roomId });
+    traceAction("ui.host.presence.wait", {
+      roomId,
+      waitedMs: Math.round(presenceWaitedMs),
+    });
     notify({
       id: toastIds.genericInfo(roomId, "presence-wait"),
       title: "参加者の接続を待っています",
@@ -198,7 +231,14 @@ export function useHostActions({
       duration: 2000,
     });
     return false;
-  }, [presenceReady, presenceDegraded, onlineUids, playerCount, roomId]);
+  }, [
+    presenceReady,
+    presenceDegraded,
+    presenceForceEligible,
+    presenceWaitedMs,
+    playerCount,
+    roomId,
+  ]);
 
   useEffect(() => {
     presenceWarningShownRef.current = false;
@@ -390,7 +430,7 @@ export function useHostActions({
           roomStatus,
           defaultTopicType: effectiveDefaultTopicType,
           presenceInfo: {
-            presenceReady,
+            presenceReady: presenceCanStart,
             onlineUids,
             playerCount: basePlayerCount,
           },
@@ -460,7 +500,7 @@ export function useHostActions({
             roomStatus,
             defaultTopicType: effectiveDefaultTopicType,
             presenceInfo: {
-              presenceReady,
+              presenceReady: presenceCanStart,
               onlineUids,
               playerCount: basePlayerCount,
             },
@@ -620,6 +660,7 @@ export function useHostActions({
       currentTopic,
       playerCount,
       presenceReady,
+      presenceCanStart,
       onlineUids,
       showtimeIntents,
       abortAction,
@@ -970,7 +1011,7 @@ export function useHostActions({
           customTopic: trimmed,
           currentTopic: trimmed,
           presenceInfo: {
-            presenceReady,
+            presenceReady: presenceCanStart,
             onlineUids,
             playerCount,
           },
@@ -1046,7 +1087,7 @@ export function useHostActions({
     ensurePresenceReady,
     showtimeIntents,
     hostActions,
-    presenceReady,
+    presenceCanStart,
     onlineUids,
     playerCount,
   ]
@@ -1069,5 +1110,8 @@ export function useHostActions({
     customStartPending,
     handleSubmitCustom,
     effectiveDefaultTopicType,
+    presenceCanStart,
+    presenceForceEligible,
+    presenceWaitRemainingMs,
   };
 }

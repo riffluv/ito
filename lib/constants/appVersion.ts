@@ -21,6 +21,7 @@ const runtimeBuildId =
 const shortCommit = commitSha ? commitSha.slice(0, 7) : null;
 
 let resolved: string | null = null;
+const isProd = typeof process !== "undefined" && process.env.NODE_ENV === "production";
 
 if (shortCommit) {
   resolved =
@@ -29,7 +30,7 @@ if (shortCommit) {
       : shortCommit;
 } else if (rawVersion && rawVersion.trim().length > 0) {
   resolved = rawVersion.trim();
-} else if (runtimeBuildId) {
+} else if (runtimeBuildId && isProd) {
   resolved = runtimeBuildId;
 }
 

@@ -38,3 +38,15 @@ export const PRESENCE_CLEANUP_INTERVAL_MS = pickMs(
   ["PRESENCE_CLEANUP_INTERVAL_MS"],
   60_000
 );
+
+// ホストが presenceReady を待たずに開始できるまでの猶予。
+// RTDB 初期化が遅延した場合の“詰まり出口”として使用する。
+export const PRESENCE_FORCE_START_AFTER_MS = (() => {
+  const resolved = pickMs(
+    ["NEXT_PUBLIC_PRESENCE_FORCE_START_AFTER_MS", "PRESENCE_FORCE_START_AFTER_MS"],
+    25_000
+  );
+  // あまり短すぎると hydration 前に強制開始が開いてしまうため、最低でも heartbeat より長くする。
+  const minValue = PRESENCE_HEARTBEAT_MS + 1_000;
+  return resolved < minValue ? minValue : resolved;
+})();
