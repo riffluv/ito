@@ -254,7 +254,7 @@ export function RoomLayout(props: RoomLayoutProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const showtimeProcessedRef = useRef<Set<string>>(new Set());
   const lastShowtimePlayRef = useRef<{ type: ShowtimeEventType; ts: number } | null>(null);
-  const lastStartRoundRef = useRef<number | null>(null);
+  const lastStartRequestIdRef = useRef<string | null>(null);
   const showtimeStartIntentRef = useRef<ShowtimeIntentState>({
     pending: false,
     intentId: null,
@@ -420,7 +420,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     }
     showtimeProcessedRef.current.clear();
     lastShowtimePlayRef.current = null;
-    lastStartRoundRef.current = null;
+    lastStartRequestIdRef.current = null;
     const unsubscribe = subscribeShowtimeEvents(roomId, (event) => {
       const eventKey = event.intentId ? `intent:${event.intentId}` : event.id;
       if (eventKey && showtimeProcessedRef.current.has(eventKey)) {
@@ -2236,31 +2236,46 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   useEffect(() => {
     if (!room) {
-      lastStartRoundRef.current = null;
+      lastStartRequestIdRef.current = null;
       return;
     }
     if (!showtimeStartIntentRef.current.pending) {
       return;
     }
-    const currentRound =
-      typeof room.round === "number" && room.round > 0 ? room.round : null;
-    if (!currentRound) {
+    if (room.status !== "clue") {
       return;
     }
-    if (lastStartRoundRef.current === currentRound) {
+    const startRequestId =
+      typeof room.startRequestId === "string" && room.startRequestId.trim().length > 0
+        ? room.startRequestId
+        : null;
+    if (!startRequestId) {
+      return;
+    }
+    if (lastStartRequestIdRef.current === startRequestId) {
       return;
     }
     const intentSnapshot = consumeShowtimeIntent("start");
     if (!intentSnapshot) {
       return;
     }
-    lastStartRoundRef.current = currentRound;
+    lastStartRequestIdRef.current = startRequestId;
     void publishIntentPlayback(
       "round:start",
-      { round: currentRound, status: room.status ?? null },
+      {
+        round: typeof room.round === "number" && Number.isFinite(room.round) ? room.round : null,
+        status: room.status ?? null,
+      },
       intentSnapshot
     );
-  }, [room, room?.round, room?.status, consumeShowtimeIntent, publishIntentPlayback]);
+  }, [
+    room,
+    room?.status,
+    room?.round,
+    room?.startRequestId,
+    consumeShowtimeIntent,
+    publishIntentPlayback,
+  ]);
 
   useEffect(() => {
     if (!room) {
@@ -2336,18 +2351,22 @@ export function RoomLayout(props: RoomLayoutProps) {
 
 
   const [seenRound, setSeenRound] = useState<number>(0);
+  const myPlayer = useMemo(
+    () => players.find((p) => p.id === uid),
+    [players, uid]
+  );
 
   useEffect(() => {
     if (!uid) return;
     const r = room?.round || 0;
     if (r !== seenRound) {
       setSeenRound(r);
-      resetPlayerReadyOnRoundChange(roomId, uid, r).catch(() => void 0);
+      // Avoid spurious calls/errors when the server has already reset "ready" (or when the user is not a member).
+      if (myPlayer?.ready) {
+        resetPlayerReadyOnRoundChange(roomId, uid, r).catch(() => void 0);
+      }
     }
-  }, [room?.round, uid, roomId, seenRound]);
-
-
-  const myPlayer = useMemo(() => players.find((p) => p.id === uid), [players, uid]);
+  }, [room?.round, uid, roomId, seenRound, myPlayer?.ready]);
   const shouldResetPlayer = useMemo(() => {
     if (!myPlayer) return false;
     return (
