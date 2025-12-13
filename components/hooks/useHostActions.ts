@@ -184,6 +184,15 @@ export function useHostActions({
         },
       });
 
+      traceAction("ui.host.quickStart.result", {
+        roomId,
+        ok: result.ok ? "1" : "0",
+        requestId: result.requestId,
+        reason: result.ok ? "ok" : result.reason,
+        status: result.ok ? undefined : String(result.status ?? -1),
+        errorCode: result.ok ? undefined : result.errorCode ?? undefined,
+      });
+
       if (!result.ok) {
         if (result.reason === "needs-custom-topic") {
           notify({
@@ -191,6 +200,14 @@ export function useHostActions({
             title: "カスタムお題が未入力です",
             description: "お題を入力してから開始してください",
             type: "warning",
+            duration: 2200,
+          });
+        } else if (result.reason === "presence-not-ready") {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-presence"),
+            title: "参加者の接続を確認しています",
+            description: "数秒後にもう一度お試しください",
+            type: "info",
             duration: 2200,
           });
         } else if (result.reason === "host-mismatch") {
@@ -212,18 +229,56 @@ export function useHostActions({
             type: "warning",
             duration: 2200,
           });
+        } else if (result.reason === "rate-limited") {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-rate-limited"),
+            title: "少し待ってから再試行してください",
+            description: "短時間に複数の開始要求が重なりました。",
+            type: "info",
+            duration: 2400,
+          });
+        } else if (result.reason === "auth-error") {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-auth"),
+            title: "認証を更新できませんでした",
+            description: "ブラウザを再読み込みして再試行してください。",
+            type: "error",
+            duration: 2600,
+          });
         } else if (result.reason === "callable-error") {
+          const status =
+            typeof result.status === "number" ? result.status : undefined;
+          const code = result.errorCode ?? "unknown";
+          const isVersionMismatch =
+            code === "room/join/version-mismatch" ||
+            code === "client_version_required" ||
+            code === "room/create/update-required" ||
+            code === "room/create/version-mismatch";
+          const debugBits = [
+            typeof status === "number" ? `status:${status}` : null,
+            code ? `code:${code}` : null,
+            `reason:${result.reason}`,
+          ].filter((x): x is string => typeof x === "string" && x.length > 0);
           notify({
             id: toastIds.genericInfo(roomId, "quickstart-callable-error"),
-            title: "ゲーム開始に失敗しました",
-            description:
-              result.errorCode === "failed-precondition"
-                ? "少し待ってから再度お試しください"
-                : result.errorCode
-                ? `code: ${result.errorCode}`
-                : undefined,
-            type: "warning",
+            title: isVersionMismatch ? "更新が必要です" : "ゲーム開始に失敗しました",
+            description: isVersionMismatch
+              ? `メインメニューで「更新を適用」後に再読み込みしてください。（${debugBits.join(", ")}）`
+              : result.errorCode === "failed-precondition"
+                ? `少し待ってから再度お試しください（${debugBits.join(", ")}）`
+                : debugBits.length > 0
+                  ? debugBits.join(" / ")
+                  : "少し待ってから再度お試しください",
+            type: isVersionMismatch ? "error" : "warning",
             duration: 2400,
+          });
+        } else {
+          notify({
+            id: toastIds.genericInfo(roomId, "quickstart-unknown"),
+            title: "ゲーム開始に失敗しました",
+            description: `reason: ${result.reason}`,
+            type: "error",
+            duration: 2600,
           });
         }
       }
