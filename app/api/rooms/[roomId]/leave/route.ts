@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { leaveRoomSchema } from "@/lib/schema/roomLeave";
 import { leaveRoom } from "@/lib/server/roomCommands";
-import { logError } from "@/lib/utils/log";
+import { traceError } from "@/lib/utils/trace";
 
 export const runtime = "nodejs";
 
@@ -25,13 +25,18 @@ export async function POST(
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
-  const { token } = parsed.data;
+  const { uid, token, displayName } = parsed.data;
 
   try {
-    await leaveRoom({ roomId, token });
+    await leaveRoom({ roomId, uid, token, displayName: displayName ?? null });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    logError("rooms", "leave-route error", error);
-    return NextResponse.json({ error: "internal_error" }, { status: 500 });
+    traceError("room.leave.api", error, { roomId, uid });
+    const code = (error as { code?: string }).code;
+    const status = code === "unauthorized" ? 401 : code === "forbidden" ? 403 : 500;
+    return NextResponse.json(
+      { error: code ?? "internal_error", message: (error as Error | undefined)?.message },
+      { status }
+    );
   }
 }

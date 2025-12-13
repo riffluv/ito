@@ -17,7 +17,7 @@ import {
   buildRevealOutcomePayload,
 } from "@/lib/game/domain";
 import { acquireRoomLock, releaseRoomLock } from "@/lib/server/roomQueue";
-import { composeWaitingResetPayload } from "@/lib/server/roomActions";
+import { composeWaitingResetPayload, leaveRoomServer } from "@/lib/server/roomActions";
 import { logRoomCommandAudit } from "@/lib/server/roomAudit";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -34,7 +34,6 @@ import {
   type TopicType,
 } from "@/lib/topics";
 import { verifyHostSession } from "@/lib/server/hostToken";
-
 type WithAuth = { token: string };
 type CodedError = Error & { code?: string; reason?: string };
 
@@ -62,6 +61,7 @@ export type JoinRoomParams = WithAuth & {
 
 export type LeaveRoomParams = WithAuth & {
   roomId: string;
+  uid: string;
   displayName?: string | null;
 };
 
@@ -358,12 +358,12 @@ export async function joinRoom(params: JoinRoomParams) {
 }
 
 export async function leaveRoom(params: LeaveRoomParams) {
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-  const roomSnapForAuth = await roomRef.get();
-  const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
-  const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId);
-  await roomRef.collection("players").doc(uid).delete();
+  const uid = await verifyToken(params.token);
+  if (uid !== params.uid) {
+    throw codedError("forbidden", "forbidden", "uid_mismatch");
+  }
+
+  await leaveRoomServer(params.roomId, uid, params.displayName ?? null);
   traceAction("room.leave.server", { roomId: params.roomId, uid });
 }
 
