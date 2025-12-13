@@ -91,6 +91,19 @@ export function areAllCluesReady({
   return targets.length > 0 && targets.every((player) => player.ready === true);
 }
 
+export function prioritizeHostId(opts: {
+  eligibleIds: string[];
+  hostId?: string | null;
+}): string[] {
+  const hostId = typeof opts.hostId === "string" ? opts.hostId : "";
+  const eligibleIds = opts.eligibleIds;
+  if (!hostId) return eligibleIds;
+  if (eligibleIds.length === 0) return eligibleIds;
+  if (eligibleIds[0] === hostId) return eligibleIds;
+  if (!eligibleIds.includes(hostId)) return eligibleIds;
+  return [hostId, ...eligibleIds.filter((id) => id !== hostId)];
+}
+
 
 // 正規化ヘルパー
 const normalizeIdArray = (arr: unknown): (string | null)[] =>
@@ -126,6 +139,27 @@ export function computeVisibleProposal(opts: {
   );
   if (filteredOrder.length > 0) return filteredOrder;
   return [];
+}
+
+export function collectServerAssignedSeatIds(opts: {
+  dealPlayers?: unknown;
+  orderList?: unknown;
+  proposal?: unknown;
+}): Set<string> {
+  const assigned = new Set<string>();
+
+  const pushList = (list: unknown) => {
+    for (const value of normalizeIdArray(list)) {
+      if (typeof value === "string") {
+        assigned.add(value);
+      }
+    }
+  };
+
+  pushList(opts.dealPlayers);
+  pushList(opts.orderList);
+  pushList(opts.proposal);
+  return assigned;
 }
 
 /**

@@ -18,11 +18,7 @@ import { notify } from "@/components/ui/notify";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
-import {
-  useSpectatorController,
-  type SeatRequestViewState,
-  type SpectatorMachineState,
-} from "@/lib/spectator/v2/useSpectatorController";
+import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
 import {
   resetPlayerState,
   setPlayerName,
@@ -30,19 +26,21 @@ import {
 import {
   PRESENCE_STALE_MS,
 } from "@/lib/constants/presence";
-import {
-  leaveRoom as leaveRoomAction,
-  requestSpectatorRecall,
-} from "@/lib/firebase/rooms";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
-import { areAllCluesReady, getClueTargetIds, getPresenceEligibleIds, computeSlotCount } from "@/lib/game/selectors";
+import {
+  areAllCluesReady,
+  collectServerAssignedSeatIds,
+  computeSlotCount,
+  getClueTargetIds,
+  getPresenceEligibleIds,
+  prioritizeHostId,
+} from "@/lib/game/selectors";
 import { clearRevealPending, pruneProposalByEligible } from "@/lib/game/service";
-import { useLeaveCleanup } from "@/lib/hooks/useLeaveCleanup";
+import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
+import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import type {
   RoomMachineClientEvent,
-  SpectatorReason as MachineSpectatorReason,
-  SpectatorRequestSource,
 } from "@/lib/state/roomMachine";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
@@ -500,10 +498,6 @@ export function RoomLayout(props: RoomLayoutProps) {
       }
     };
   }, []);
-  const [dealRecoveryDismissed, setDealRecoveryDismissed] = useState(false);
-  const [dealRecoveryOpen, setDealRecoveryOpen] = useState(false);
-  const [recallPending, setRecallPending] = useState(false);
-  const dealRecoveryTimerRef = useRef<number | null>(null);
 
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
@@ -511,6 +505,19 @@ export function RoomLayout(props: RoomLayoutProps) {
   const spectatorHostPanelEnabled = SPECTATOR_HOST_PANEL_ENABLED;
   const canRecallSpectators =
     spectatorHostPanelEnabled && isHost && roomStatus === "waiting";
+  const {
+    dealRecoveryOpen,
+    handleDealRecoveryDismiss,
+    recallPending,
+    handleSpectatorRecall,
+  } = useRoomHostActionsUi({
+    roomId,
+    room,
+    isHost,
+    spectatorHostPanelEnabled,
+    canRecallSpectators,
+    spectatorRecallEnabled,
+  });
   const spectatorHostQueue = useSpectatorHostQueue(roomId, {
     enabled: spectatorHostPanelEnabled && isHost,
   });
@@ -758,7 +765,6 @@ export function RoomLayout(props: RoomLayoutProps) {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
-  const versionMismatchHandledRef = useRef(false);
   const safeUpdateEnteredRef = useRef(false);
   const safeUpdateStatusRef = useRef<string | null>(null);
   const safeUpdateAutoApplyRef = useRef(false);
@@ -1184,18 +1190,26 @@ export function RoomLayout(props: RoomLayoutProps) {
     playersSignature: string;
     waitingToRejoin: boolean;
   } | null>(null);
-  const [seatRequestTimedOut, setSeatRequestTimedOut] = useState(false);
-  const prevSeatRequestStatusRef = useRef<SeatRequestViewState["status"]>(fsmSpectatorRequestStatus);
-  const seatRequestTimeoutTriggeredRef = useRef(false);
-  const spectatorTimeoutPrevRef = useRef(false);
   const spectatorLeaveTimerRef = useRef<number | null>(null);
   const spectatorEnterTimerRef = useRef<number | null>(null);
   const spectatorCandidateRef = useRef<boolean>(false);
-  const isSpectatorMode = !isMember && !isHost && fsmSpectatorNode !== "idle";
-  const boardMeId = isSpectatorMode ? "" : meId;
-
-  const spectatorMachineState = useMemo<SpectatorMachineState>(
-    () => ({
+  const {
+    isSpectatorMode,
+    seatRequestTimedOut,
+    spectatorController,
+    handleRetryJoin,
+    seatAcceptanceActive,
+    seatRequestPending,
+    seatRequestAccepted,
+    clearRejoinIntent,
+    suppressAutoJoinIntent,
+    cancelSeatRequestSafely,
+  } = useRoomSpectatorFlow({
+    roomId,
+    uid,
+    isHost,
+    isMember,
+    spectatorFsm: {
       status: fsmSpectatorStatus,
       node: fsmSpectatorNode,
       reason: fsmSpectatorReason,
@@ -1204,204 +1218,39 @@ export function RoomLayout(props: RoomLayoutProps) {
       requestCreatedAt: fsmSpectatorRequestCreatedAt,
       requestFailure: fsmSpectatorRequestFailure,
       error: fsmSpectatorError,
-    }),
-    [
-      fsmSpectatorStatus,
-      fsmSpectatorNode,
-      fsmSpectatorReason,
-      fsmSpectatorRequestSource,
-      fsmSpectatorRequestStatus,
-      fsmSpectatorRequestCreatedAt,
-      fsmSpectatorRequestFailure,
-      fsmSpectatorError,
-    ]
-  );
-
-  const spectatorController = useSpectatorController({
-    roomId,
-    uid,
-    isSpectatorMode,
-    spectatorMachineState,
+    },
     versionMismatchBlocksAccess,
     emitSpectatorEvent,
-    setSeatRequestTimedOut,
     leavingRef,
     spectatorSession,
-  });
-  const {
-    state: {
-      reason: spectatorReason,
-      seatRequest: seatRequestState,
-      seatRequestPending,
-      seatRequestAccepted,
-      seatAcceptanceActive,
-    },
-    actions: {
-      clearRejoinIntent,
-      suppressAutoJoinIntent,
-      clearPendingSeatRequest,
-      handleSeatRecovery,
-      cancelSeatRequestSafely,
-    },
-    utils: {
-      hasRejoinIntent,
-      hasPendingSeatRequest,
-      consumePendingSeatRequest,
-    },
-  } = spectatorController;
-  useEffect(() => {
-    if (seatRequestState.status !== "pending") return;
-    if (spectatorRecallEnabled) return;
-    if (!uid) return;
-    clearPendingSeatRequest();
-    emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-    setSeatRequestTimedOut(false);
-    clearRejoinIntent();
-    void cancelSeatRequestSafely();
-  }, [
-    seatRequestState.status,
     spectatorRecallEnabled,
-    clearPendingSeatRequest,
-    uid,
-    roomId,
-    clearRejoinIntent,
-    cancelSeatRequestSafely,
-    emitSpectatorEvent,
-  ]);
-  useEffect(() => {
-    if (seatRequestState.status === "pending") return;
-    clearRejoinIntent();
-  }, [seatRequestState.status, clearRejoinIntent]);
-  const reattachScheduledRef = useRef(false);
-  useEffect(() => {
-    if (!seatRequestAccepted) {
-      reattachScheduledRef.current = false;
-      return;
-    }
-    if (typeof reattachPresence !== "function") return;
-    if (reattachScheduledRef.current) return;
-    reattachScheduledRef.current = true;
-    Promise.resolve(reattachPresence()).catch((error) => {
-      logDebug("room-page", "reattach-presence-failed", error);
-      reattachScheduledRef.current = false;
-    });
-  }, [seatRequestAccepted, reattachPresence]);
-
-  const forcedExitScheduledRef = useRef(false);
-  const forcedExitRecoveryPendingRef = useRef(false);
-
-  useEffect(() => {
-    if (!versionMismatchBlocksAccess) {
-      versionMismatchHandledRef.current = false;
-      if (forcedExitReason === "version-mismatch") {
-        setForcedExitReason(null);
-        if (leavingRef.current) {
-          leavingRef.current = false;
-        }
-      }
-      return;
-    }
-    if (!uid) return;
-    if (versionMismatchHandledRef.current) return;
-    versionMismatchHandledRef.current = true;
-    bumpMetric("forcedExit", "versionMismatch");
-    bumpMetric("forcedExit", "versionMismatch");
-    leavingRef.current = true;
-
-    void (async () => {
-      try {
-        await detachNow();
-      } catch (error) {
-        logError("room-page", "version-mismatch-detach-now", error);
-      }
-
-      try {
-        await leaveRoomAction(roomId, uid, displayName);
-      } catch (error) {
-        logError("room-page", "version-mismatch-leave-room-action", error);
-      }
-    })();
-  }, [
-    versionMismatchBlocksAccess,
-    uid,
-    detachNow,
-    roomId,
-    displayName,
+    roomStatus,
+    recallOpen,
     setForcedExitReason,
-    forcedExitReason,
-    leavingRef,
-  ]);
+    reattachPresence,
+  });
 
-  const executeForcedExit = useCallback(async () => {
-    if (!uid) return;
+  const boardMeId = isSpectatorMode ? "" : meId;
+  const spectatorReason = spectatorController.state.reason;
+  const seatRequestState = spectatorController.state.seatRequest;
+  const hasRejoinIntent = spectatorController.utils.hasRejoinIntent;
 
-    forcedExitRecoveryPendingRef.current = false;
-
-    if (!leavingRef.current) {
-      leavingRef.current = true;
-    }
-
-    const performExit = async () => {
-      const forceExitReason: MachineSpectatorReason =
-        roomStatus === "waiting"
-          ? recallOpen
-            ? "waiting-open"
-            : "waiting-closed"
-          : "mid-game";
-
-      emitSpectatorEvent({ type: "SPECTATOR_FORCE_EXIT", reason: forceExitReason });
-
-      try {
-        await detachNow();
-      } catch (error) {
-        logError("room-page", "forced-exit-detach-now", error);
-      }
-
-      try {
-        await leaveRoomAction(roomId, uid, displayName);
-      } catch (error) {
-        logError("room-page", "forced-exit-leave-room-action", error);
-      }
-    };
-
-    try {
-      if (transition) {
-        await transition.navigateWithTransition(
-          "/",
-          {
-            direction: "fade",
-            duration: 1.0,
-            showLoading: true,
-            loadingSteps: [
-              { id: "disconnect", message: "せつだん中です...", duration: 730 },
-              { id: "exit", message: "ロビーへ もどります...", duration: 880 },
-              { id: "done", message: "かんりょう！", duration: 390 },
-            ],
-          },
-          performExit
-        );
-      } else {
-        await performExit();
-        router.replace("/");
-      }
-    } catch (error) {
-      logError("room-page", "forced-exit-router-replace", error);
-    } finally {
-      forcedExitScheduledRef.current = false;
-      setForcedExitReason(null);
-    }
-  }, [
-    uid,
-    leavingRef,
-    detachNow,
+  const { leaveRoom, handleForcedExitLeaveNow } = useRoomLeaveFlow({
     roomId,
+    uid,
     displayName,
     router,
     transition,
-    emitSpectatorEvent,
-    recallOpen,
+    user,
+    detachNow,
+    leavingRef,
+    versionMismatchBlocksAccess,
+    forcedExitReason,
+    setForcedExitReason,
     roomStatus,
-  ]);
+    recallOpen,
+    sendRoomEvent: emitSpectatorEvent,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => setRedirectGuard(false), 1200);
@@ -1475,19 +1324,11 @@ export function RoomLayout(props: RoomLayoutProps) {
     !(forcedExitReason || versionMismatchBlocksAccess);
 
   const serverAssignedSeatIds = useMemo(() => {
-    const assigned = new Set<string>();
-    const pushList = (list: unknown) => {
-      if (!Array.isArray(list)) return;
-      for (const value of list) {
-        if (typeof value === "string" && value.trim().length > 0) {
-          assigned.add(value);
-        }
-      }
-    };
-    pushList(room?.deal?.players ?? null);
-    pushList(room?.order?.list ?? null);
-    pushList(room?.order?.proposal ?? null);
-    return assigned;
+    return collectServerAssignedSeatIds({
+      dealPlayers: room?.deal?.players ?? null,
+      orderList: room?.order?.list ?? null,
+      proposal: room?.order?.proposal ?? null,
+    });
   }, [room?.deal?.players, room?.order?.list, room?.order?.proposal]);
 
   const hasServerAssignedSeat = !!(uid && serverAssignedSeatIds.has(uid));
@@ -1757,58 +1598,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const waitingToRejoin = roomStatus === "waiting";
 
   useEffect(() => {
-    if (!isSpectatorMode) {
-      spectatorTimeoutPrevRef.current = false;
-      return;
-    }
-    if (seatRequestTimedOut && !spectatorTimeoutPrevRef.current) {
-      traceAction("spectator.request.timeout", {
-        roomId,
-        uid,
-        source: seatRequestState.source ?? null,
-      });
-      emitSpectatorEvent({ type: "SPECTATOR_TIMEOUT" });
-    }
-    spectatorTimeoutPrevRef.current = seatRequestTimedOut;
-  }, [
-    emitSpectatorEvent,
-    isSpectatorMode,
-    seatRequestTimedOut,
-    roomId,
-    uid,
-    seatRequestState.source,
-  ]);
-
-  const spectatorEnteredRef = useRef(false);
-  useEffect(() => {
-    if (!isSpectatorMode) {
-      spectatorEnteredRef.current = false;
-      return;
-    }
-    if (spectatorEnteredRef.current) {
-      return;
-    }
-    spectatorEnteredRef.current = true;
-    if (seatRequestState.status !== "idle") {
-      emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-    }
-    clearPendingSeatRequest();
-    setSeatRequestTimedOut(false);
-    leavingRef.current = false;
-    if (seatRequestState.status !== "idle") {
-      void cancelSeatRequestSafely();
-    }
-  }, [
-    isSpectatorMode,
-    setSeatRequestTimedOut,
-    leavingRef,
-    seatRequestState.status,
-    emitSpectatorEvent,
-    cancelSeatRequestSafely,
-    clearPendingSeatRequest,
-  ]);
-
-  useEffect(() => {
     if (!seatRequestAccepted) return;
     if (!uid) return;
     if (me) return;
@@ -1901,268 +1690,14 @@ export function RoomLayout(props: RoomLayoutProps) {
     skip: skipForcedExit,
   });
 
-  const handleForcedExitLeaveNow = useCallback(() => {
-    void executeForcedExit();
-  }, [executeForcedExit]);
-
-  const performSeatRecovery = useCallback(
-    ({
-      silent,
-      source,
-    }: {
-      silent: boolean;
-      source: Exclude<SpectatorRequestSource, null>;
-    }) => {
-      return handleSeatRecovery({
-        silent,
-        source,
-        spectatorRecallEnabled,
-        roomStatus,
-        recallOpen,
-        notify,
-      });
-    },
-    [handleSeatRecovery, spectatorRecallEnabled, roomStatus, recallOpen]
-  );
-  const handleRetryJoin = useCallback(async () => {
-    await performSeatRecovery({ silent: false, source: "manual" });
-  }, [performSeatRecovery]);
-
-  const autoRecallAttemptsRef = useRef(0);
-  const autoRecallTimerRef = useRef<number | null>(null);
-  const pendingRecallRecoveryRef = useRef(false);
-  const resetAutoRecall = useCallback(() => {
-    autoRecallAttemptsRef.current = 0;
-    if (autoRecallTimerRef.current !== null) {
-      window.clearTimeout(autoRecallTimerRef.current);
-      autoRecallTimerRef.current = null;
-    }
-  }, []);
-
-  const attemptAutoRecall = useCallback(
-    async (source: Exclude<SpectatorRequestSource, null> = "auto") => {
-      if (!spectatorRecallEnabled || !isSpectatorMode) return;
-      if (seatRequestPending || seatAcceptanceActive) return;
-      if (autoRecallAttemptsRef.current >= 3) return;
-
-      autoRecallAttemptsRef.current += 1;
-      bumpMetric("spectator", "autoRecallAttempt");
-      try {
-        const ok = await performSeatRecovery({ silent: true, source });
-        traceAction("spectator.autoRecall", {
-          roomId,
-          source,
-          ok,
-          attempt: autoRecallAttemptsRef.current,
-        });
-        bumpMetric("spectator", ok ? "autoRecallSuccess" : "autoRecallFailure");
-        if (!ok && autoRecallAttemptsRef.current < 3) {
-          autoRecallTimerRef.current = window.setTimeout(
-            () => void attemptAutoRecall(source),
-            3000
-          );
-        }
-      } catch (error) {
-        traceError("spectator.autoRecall.failed", error, {
-          roomId,
-          source,
-          attempt: autoRecallAttemptsRef.current,
-        });
-        bumpMetric("spectator", "autoRecallFailure");
-        if (autoRecallAttemptsRef.current < 3) {
-          autoRecallTimerRef.current = window.setTimeout(
-            () => void attemptAutoRecall(source),
-            3000
-          );
-        }
-      }
-    },
-    [
-      spectatorRecallEnabled,
-      isSpectatorMode,
-      seatRequestPending,
-      seatAcceptanceActive,
-      performSeatRecovery,
-      roomId,
-    ]
-  );
-
-  // リセット後に pending が残ったままの場合、いったんキャンセルして再送する
-  useEffect(() => {
-    if (seatRequestState.status !== "pending") {
-      pendingRecallRecoveryRef.current = false;
-      return;
-    }
-    if (!spectatorRecallEnabled) return;
-    if (room?.status !== "waiting" || !recallOpen) return;
-    if (pendingRecallRecoveryRef.current) return;
-
-    pendingRecallRecoveryRef.current = true;
-    const source = (seatRequestState.source as Exclude<SpectatorRequestSource, null> | null) ?? "auto";
-
-    void (async () => {
-      await cancelSeatRequestSafely();
-      await performSeatRecovery({ silent: true, source });
-    })();
-  }, [
-    seatRequestState.status,
-    seatRequestState.source,
-    spectatorRecallEnabled,
-    room?.status,
-    recallOpen,
-    cancelSeatRequestSafely,
-    performSeatRecovery,
-  ]);
-
-  useEffect(() => {
-    resetAutoRecall();
-    const cleanup = () => resetAutoRecall();
-    if (!spectatorRecallEnabled || !isSpectatorMode) return cleanup;
-    if (seatRequestPending || seatAcceptanceActive) return cleanup;
-    const pendingSource = hasPendingSeatRequest()
-      ? consumePendingSeatRequest() ?? "manual"
-      : null;
-    void attemptAutoRecall((pendingSource as Exclude<SpectatorRequestSource, null> | null) ?? "auto");
-    return cleanup;
-  }, [
-    spectatorRecallEnabled,
-    isSpectatorMode,
-    seatRequestPending,
-    seatAcceptanceActive,
-    hasPendingSeatRequest,
-    consumePendingSeatRequest,
-    attemptAutoRecall,
-    resetAutoRecall,
-  ]);
-
-  useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState !== "visible") return;
-      resetAutoRecall();
-      const pendingSource = hasPendingSeatRequest()
-        ? consumePendingSeatRequest() ?? "manual"
-        : null;
-      void attemptAutoRecall((pendingSource as Exclude<SpectatorRequestSource, null> | null) ?? "auto");
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [
-    attemptAutoRecall,
-    resetAutoRecall,
-    hasPendingSeatRequest,
-    consumePendingSeatRequest,
-  ]);
-
-
-  useEffect(() => {
-    if (seatRequestState.status !== "pending" || !seatRequestState.requestedAt) {
-      setSeatRequestTimedOut(false);
-      seatRequestTimeoutTriggeredRef.current = false;
-      return () => {};
-    }
-    const timeoutMs = 15000;
-    const now = Date.now();
-    const remaining = Math.max(timeoutMs - (now - seatRequestState.requestedAt), 0);
-    if (remaining <= 0) {
-      if (!seatRequestTimeoutTriggeredRef.current) {
-        seatRequestTimeoutTriggeredRef.current = true;
-        setSeatRequestTimedOut(true);
-      }
-      return () => {};
-    }
-    seatRequestTimeoutTriggeredRef.current = false;
-    const timer = window.setTimeout(() => {
-      seatRequestTimeoutTriggeredRef.current = true;
-      setSeatRequestTimedOut(true);
-    }, remaining);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [seatRequestState.status, seatRequestState.requestedAt]);
-
-  useEffect(() => {
-    const currentStatus = seatRequestState.status;
-    const previousStatus = prevSeatRequestStatusRef.current;
-    if (currentStatus !== previousStatus) {
-      if (currentStatus === "accepted") {
-        traceAction("spectator.request.accepted", {
-          roomId,
-          uid,
-          source: seatRequestState.source ?? null,
-        });
-        leavingRef.current = false;
-        forcedExitScheduledRef.current = false;
-        forcedExitRecoveryPendingRef.current = false;
-        setForcedExitReason(null);
-        setSeatRequestTimedOut(false);
-      } else if (currentStatus === "rejected") {
-        traceAction("spectator.request.rejected", {
-          roomId,
-          uid,
-          source: seatRequestState.source ?? null,
-          failure: seatRequestState.error ?? null,
-        });
-        leavingRef.current = false;
-        forcedExitRecoveryPendingRef.current = false;
-        setSeatRequestTimedOut(false);
-      } else if (currentStatus === "pending") {
-        traceAction("spectator.request.pending", {
-          roomId,
-          uid,
-          source: seatRequestState.source ?? null,
-        });
-      } else if (
-        previousStatus === "pending" &&
-        currentStatus === "idle" &&
-        isSpectatorMode &&
-        room?.status === "waiting"
-      ) {
-        try {
-          notify({
-            title: "リクエストをリセットしました",
-            description: "ホストの操作に合わせて再度「席に戻る」を押してください。",
-            type: "info",
-          });
-        } catch (error) {
-          logDebug("room-page", "notify-seat-request-reset-failed", error);
-        }
-      } else {
-        setSeatRequestTimedOut(false);
-      }
-      prevSeatRequestStatusRef.current = currentStatus;
-    }
-    if (currentStatus !== "pending") {
-      seatRequestTimeoutTriggeredRef.current = false;
-    }
-  }, [
-    seatRequestState.status,
-    seatRequestState.source,
-    seatRequestState.error,
-    leavingRef,
-    forcedExitScheduledRef,
-    forcedExitRecoveryPendingRef,
-    setForcedExitReason,
-    roomId,
-    uid,
-    isSpectatorMode,
-    room?.status,
-  ]);
-
   useEffect(() => {
     if (!forcedExitReason) return;
     if (!canAccess && room?.status !== "waiting") return;
 
-    forcedExitScheduledRef.current = false;
     if (room?.status === "waiting") {
       leavingRef.current = false;
     }
     setForcedExitReason(null);
-
-    if (room?.status === "waiting" && forcedExitRecoveryPendingRef.current) {
-      forcedExitRecoveryPendingRef.current = false;
-    } else {
-      forcedExitRecoveryPendingRef.current = false;
-    }
   }, [
     forcedExitReason,
     canAccess,
@@ -2171,7 +1706,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     displayName,
     leavingRef,
     setForcedExitReason,
-    forcedExitRecoveryPendingRef,
   ]);
 
 
@@ -2390,86 +1924,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     }
   }, [displayName, uid, roomId]);
 
-  const leaveRoom = useCallback(async () => {
-    if (!uid) return;
-    leavingRef.current = true;
-    const performLeave = async () => {
-      try {
-        await Promise.all([
-          Promise.resolve(detachNow()).catch((error: unknown) => {
-            logError("room-page", "leave-detach-now", error);
-          }),
-          Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(
-            (error: unknown) => {
-              logError("room-page", "leave-room-action", error);
-            }
-          ),
-        ]);
-      } catch (error) {
-        logError("room-page", "leave-parallel-cleanup", error);
-      }
-    };
-
-    try {
-      if (transition) {
-        await transition.navigateWithTransition(
-          "/",
-          {
-            direction: "fade",
-            duration: 1.0,
-            showLoading: true,
-            loadingSteps: [
-              { id: "disconnect", message: "せつだん中です...", duration: 730 },
-              { id: "leave", message: "ロビーへ もどります...", duration: 880 },
-              { id: "done", message: "かんりょう！", duration: 390 },
-            ],
-          },
-          async () => {
-            await performLeave();
-          }
-        );
-      } else {
-        await performLeave();
-        router.push("/");
-      }
-    } catch (error) {
-      logError("room-page", "leave-room", error);
-      if (transition) {
-        await transition.navigateWithTransition("/", {
-          direction: "fade",
-          duration: 0.8,
-          showLoading: true,
-          loadingSteps: [
-            { id: "error", message: "エラーが発生しました...", duration: 800 },
-            { id: "return", message: "ロビーに戻ります...", duration: 800 },
-            { id: "complete", message: "完了しました!", duration: 400 },
-          ],
-        });
-      } else {
-        router.push("/");
-      }
-    }
-  }, [
-    uid,
-    leavingRef,
-    roomId,
-    detachNow,
-    displayName,
-    transition,
-    router,
-  ]);
-
-
-  useLeaveCleanup({
-    enabled: true,
-    roomId,
-    uid,
-    displayName,
-    detachNow,
-    leavingRef,
-    user,
-  });
-
 
 
 
@@ -2507,16 +1961,10 @@ export function RoomLayout(props: RoomLayoutProps) {
   );
 
   const hostId = room?.hostId ?? null;
-  const eligibleIds = useMemo(() => {
-    const pool = presenceEligibleIds;
-    if (!hostId) {
-      return pool;
-    }
-    if (!pool.includes(hostId)) {
-      return pool;
-    }
-    return [hostId, ...pool.filter((id) => id !== hostId)];
-  }, [hostId, presenceEligibleIds]);
+  const eligibleIds = useMemo(
+    () => prioritizeHostId({ eligibleIds: presenceEligibleIds, hostId }),
+    [hostId, presenceEligibleIds]
+  );
 
   const eligibleIdsSignature = useMemo(() => eligibleIds.join(","), [eligibleIds]);
 
@@ -2606,90 +2054,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     room?.status,
     roomId,
   ]);
-
-  const needsDealRecovery = useMemo(() => {
-    if (!room || room.status !== "clue") return false;
-    const deal = room.deal;
-    if (!deal) return true;
-    const dealPlayers = Array.isArray(deal.players)
-      ? (deal.players as string[]).filter(
-          (pid): pid is string => typeof pid === "string" && pid.length > 0
-        )
-      : [];
-    return dealPlayers.length === 0;
-  }, [room]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return () => {};
-
-    if (!isHost || room?.status !== "clue") {
-      if (dealRecoveryTimerRef.current !== null) {
-        window.clearTimeout(dealRecoveryTimerRef.current);
-        dealRecoveryTimerRef.current = null;
-      }
-      if (dealRecoveryOpen) {
-        setDealRecoveryOpen(false);
-      }
-      if (dealRecoveryDismissed) {
-        setDealRecoveryDismissed(false);
-      }
-      return () => {};
-    }
-
-    if (!needsDealRecovery) {
-      if (dealRecoveryTimerRef.current !== null) {
-        window.clearTimeout(dealRecoveryTimerRef.current);
-        dealRecoveryTimerRef.current = null;
-      }
-      if (dealRecoveryOpen) {
-        setDealRecoveryOpen(false);
-      }
-      if (dealRecoveryDismissed) {
-        setDealRecoveryDismissed(false);
-      }
-      return () => {};
-    }
-
-    if (dealRecoveryDismissed) {
-      if (dealRecoveryTimerRef.current !== null) {
-        window.clearTimeout(dealRecoveryTimerRef.current);
-        dealRecoveryTimerRef.current = null;
-      }
-      if (dealRecoveryOpen) {
-        setDealRecoveryOpen(false);
-      }
-      return () => {};
-    }
-
-    if (dealRecoveryTimerRef.current !== null) {
-      return () => {};
-    }
-
-    const timerId = window.setTimeout(() => {
-      setDealRecoveryOpen(true);
-      dealRecoveryTimerRef.current = null;
-    }, 4500);
-
-    dealRecoveryTimerRef.current = timerId;
-
-    return () => {
-      window.window.clearTimeout(timerId);
-      if (dealRecoveryTimerRef.current === timerId) {
-        dealRecoveryTimerRef.current = null;
-      }
-    };
-  }, [
-    isHost,
-    room?.status,
-    needsDealRecovery,
-    dealRecoveryDismissed,
-    dealRecoveryOpen,
-  ]);
-
-  const handleDealRecoveryDismiss = useCallback(() => {
-    setDealRecoveryOpen(false);
-    setDealRecoveryDismissed(true);
-  }, []);
 
   // 戦績モーダルは finished → その他 への遷移時に自動で閉じる（再オープンは手動で可）。
   useEffect(() => {
@@ -2991,54 +2355,6 @@ export function RoomLayout(props: RoomLayoutProps) {
           : "最新アップデートを適用"}
     </AppButton>
   ) : null;
-
-  const handleSpectatorRecall = useCallback(async () => {
-    if (!spectatorHostPanelEnabled) {
-      return;
-    }
-    if (recallPending) return;
-    if (!canRecallSpectators) {
-      notify({
-        type: "info",
-        title: "観戦者を呼び戻せません",
-        description: "ホストのみ、かつ待機状態で操作できます。",
-      });
-      return;
-    }
-    if (spectatorRecallEnabled) {
-      notify({
-        type: "info",
-        title: "観戦ウィンドウは開放済みです",
-        description: "観戦者は「席にもどる」から復帰できます。",
-      });
-      return;
-    }
-    setRecallPending(true);
-    try {
-      await requestSpectatorRecall(roomId);
-      notify({
-        type: "success",
-        title: "観戦者を呼び戻しました",
-        description: "観戦者に再入室を案内してください。",
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "観戦者の呼び戻しに失敗しました。";
-      notify({
-        type: "error",
-        title: "観戦者を呼べませんでした",
-        description: message,
-      });
-    } finally {
-      setRecallPending(false);
-    }
-  }, [
-    spectatorHostPanelEnabled,
-    recallPending,
-    canRecallSpectators,
-    spectatorRecallEnabled,
-    roomId,
-  ]);
 
   const handleSpectatorApprove = useCallback(
     async (request: SpectatorHostRequest) => {
