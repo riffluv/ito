@@ -293,15 +293,6 @@ export function useHostActions({
     };
   }, []);
 
-  // NOTE: setRoundPreparingFlag は現在 next-round 専用フロー内でのみ使用しているため、
-  // ここでの直接呼び出しは一旦無効化している（将来のUI連携用に残しておく）。
-  const _syncRoundPreparing = useCallback(
-    async (value: boolean) => {
-      await hostActions.setRoundPreparingFlag(roomId, value);
-    },
-    [hostActions, roomId]
-  );
-
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (quickStartPending) return false;
@@ -829,6 +820,7 @@ export function useHostActions({
       return;
     }
 
+    markActionStart("nextGame");
     try {
       traceAction("ui.host.nextGame", { roomId, method: "nextRound-api" });
       beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
@@ -843,6 +835,7 @@ export function useHostActions({
 
       if (!result.ok) {
         // 失敗時のログとトースト
+        finalizeAction("nextGame", "error");
         traceAction("ui.host.nextGame.failed", {
           roomId,
           reason: result.reason,
@@ -887,6 +880,7 @@ export function useHostActions({
         return;
       }
 
+      finalizeAction("nextGame", "success");
       // 成功時のトースト
       notify({
         id: toastIds.gameStart(roomId),
@@ -899,6 +893,7 @@ export function useHostActions({
       onStageEvent?.("round:end");
     } catch (error) {
       clearAutoStartLock();
+      finalizeAction("nextGame", "error");
       traceError("ui.host.nextGame", error, { roomId });
       console.error("❌ nextGameButton: 失敗", error);
       notify({
@@ -934,6 +929,8 @@ export function useHostActions({
     clearAutoStartLock,
     onStageEvent,
     canProceed,
+    finalizeAction,
+    markActionStart,
   ]);
 
   const REVEAL_DELAY_MS = 500;
