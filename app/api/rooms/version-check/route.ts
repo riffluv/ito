@@ -1,8 +1,11 @@
 import { APP_VERSION } from "@/lib/constants/appVersion";
-import { getAdminDb } from "@/lib/server/firebaseAdmin";
-import type { RoomDoc } from "@/lib/types";
 import { logError, logDebug } from "@/lib/utils/log";
-import { normalizeVersion, versionsEqual } from "@/lib/server/roomVersionGate";
+import {
+  checkRoomVersionGuard,
+  normalizeVersion,
+  versionsEqual,
+  type RoomVersionMismatchType,
+} from "@/lib/server/roomVersionGate";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -12,7 +15,13 @@ type VersionCheckBody = {
   roomId?: unknown;
 };
 
-type ErrorResponse = { error: string; roomVersion?: string | null; clientVersion?: string };
+type ErrorResponse = {
+  error: string;
+  roomVersion?: string | null;
+  clientVersion?: string;
+  serverVersion?: string | null;
+  mismatchType?: RoomVersionMismatchType;
+};
 
 function invalidBody(reason: string) {
   return NextResponse.json({ error: reason }, { status: 400 });
@@ -61,33 +70,35 @@ export async function POST(req: NextRequest) {
     }
 
     // Join/check existing room
-    const snap = await getAdminDb().collection("rooms").doc(roomId).get();
-    if (!snap.exists) {
-      return NextResponse.json({ error: "room_not_found" }, { status: 404 });
-    }
-
-    const data = snap.data() as Partial<RoomDoc> | undefined;
-    const storedVersion = normalizeVersion(data?.appVersion);
-
-    // 移行期間中の古いルームはバージョン未設定の場合がある。その場合は許可する。
-    // TODO: legacy room without appVersion; consider blocking join after migration period.
-    // 十分な移行期間が経過したら、appVersion がないルームへの join もブロックすることを検討。
-    if (storedVersion && !versionsEqual(storedVersion, clientVersion)) {
-      logDebug("room.versionMismatch", "join-mismatch", {
-        role: "join",
-        roomId,
-        roomVersion: storedVersion,
-        clientVersion,
-      });
+    const guard = await checkRoomVersionGuard(roomId, clientVersion);
+    if (!guard.ok) {
+      if (guard.error === "room/join/version-mismatch") {
+        logDebug("room.versionMismatch", "join-mismatch", {
+          role: "join",
+          roomId,
+          roomVersion: guard.roomVersion,
+          clientVersion: guard.clientVersion,
+          serverVersion: guard.serverVersion,
+          mismatchType: guard.mismatchType ?? "unknown",
+        });
+      }
       const body: ErrorResponse = {
-        error: "room/join/version-mismatch",
-        roomVersion: storedVersion,
-        clientVersion,
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion ?? undefined,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
       };
-      return NextResponse.json(body, { status: 409 });
+      return NextResponse.json(body, { status: guard.status });
     }
 
-    return NextResponse.json({ ok: true, appVersion: storedVersion ?? serverVersion ?? APP_VERSION });
+    // NOTE: legacy room without appVersion may still pass guard (roomVersion is null).
+    // Keep returning serverVersion as the best-effort appVersion for the client UI.
+    return NextResponse.json({
+      ok: true,
+      appVersion: guard.roomVersion ?? serverVersion ?? APP_VERSION,
+      serverVersion: serverVersion ?? APP_VERSION,
+    });
   } catch (error) {
     logError("rooms", "version-check-internal-error", error);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });

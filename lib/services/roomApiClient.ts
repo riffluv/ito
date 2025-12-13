@@ -1,15 +1,39 @@
 import { auth } from "@/lib/firebase/client";
 import { APP_VERSION } from "@/lib/constants/appVersion";
+import { setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 
-export type ApiError = Error & { code?: string; status?: number; details?: unknown };
+export type ApiError = Error & {
+  code?: string;
+  status?: number;
+  details?: unknown;
+  url?: string;
+  method?: string;
+};
 
-const toApiError = (code: string | undefined, status: number, details: unknown): ApiError => {
+const toApiError = (
+  code: string | undefined,
+  status: number,
+  details: unknown,
+  meta?: { url?: string; method?: string }
+): ApiError => {
   const err = new Error(code ?? "api_error") as ApiError;
   err.code = code;
   err.status = status;
   err.details = details;
+  err.url = meta?.url;
+  err.method = meta?.method;
   return err;
 };
+
+function classifyConflict(code: string | undefined): "room/join/version-mismatch" | "room/create/update-required" | "invalid_status" | "other" {
+  if (code === "room/join/version-mismatch") return "room/join/version-mismatch";
+  if (code === "room/create/update-required" || code === "room/create/version-mismatch") {
+    return "room/create/update-required";
+  }
+  if (code === "invalid_status" || code === "not_waiting") return "invalid_status";
+  return "other";
+}
 
 async function getIdTokenOrThrow(reason?: string): Promise<string> {
   const user = auth?.currentUser;
@@ -40,7 +64,12 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
 
   if (!res.ok) {
     const code = typeof (json as { error?: unknown })?.error === "string" ? (json as { error: string }).error : undefined;
-    throw toApiError(code, res.status, json);
+    if (res.status === 409) {
+      const category = classifyConflict(code);
+      traceAction("api.conflict.409", { url, code: code ?? "unknown", category });
+      setMetric("api", "last409", `${category}:${code ?? "unknown"}@${url}`);
+    }
+    throw toApiError(code, res.status, json, { url, method: "POST" });
   }
 
   return json as T;
@@ -82,6 +111,7 @@ export async function apiLeaveRoom(roomId: string): Promise<void> {
     uid: user.uid,
     token,
     displayName: user.displayName ?? null,
+    clientVersion: APP_VERSION,
   });
 }
 
@@ -135,7 +165,13 @@ export async function apiResetRoom(
   sessionId?: string | null
 ): Promise<void> {
   const token = await getIdTokenOrThrow("reset-room");
-  await postJson(`/api/rooms/${roomId}/reset`, { token, recallSpectators, requestId, sessionId: sessionId ?? undefined });
+  await postJson(`/api/rooms/${roomId}/reset`, {
+    token,
+    clientVersion: APP_VERSION,
+    recallSpectators,
+    requestId,
+    sessionId: sessionId ?? undefined,
+  });
 }
 
 // ============================================================================

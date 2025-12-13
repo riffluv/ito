@@ -42,6 +42,16 @@ export async function POST(req: NextRequest) {
 
   const clientVersion = normalizeVersion(parsed.data.clientVersion) ?? null;
   const serverVersion = normalizeVersion(APP_VERSION);
+  if (!clientVersion) {
+    return NextResponse.json(
+      {
+        error: "client_version_required",
+        roomVersion: serverVersion ?? null,
+        clientVersion: null,
+      } satisfies ErrorBody,
+      { status: 400 }
+    );
+  }
   if (clientVersion && serverVersion && !versionsEqual(clientVersion, serverVersion)) {
     const payload: ErrorBody = {
       error: "room/create/version-mismatch",

@@ -29,6 +29,7 @@ export type RoomState = {
   spectatorRequestFailure: ReturnType<typeof useRoomMachineController>["spectatorState"]["spectatorRequestFailure"];
   spectatorNode: ReturnType<typeof useRoomMachineController>["spectatorState"]["spectatorNode"];
   roomAccessError: string | null;
+  roomAccessErrorDetail: ReturnType<typeof useRoomSnapshot>["roomAccessErrorDetail"];
   detachNow: () => void;
   reattachPresence: () => void;
   leavingRef: React.MutableRefObject<boolean>;
@@ -78,6 +79,7 @@ export function useRoomState(
       spectatorRequestFailure: spectatorState.spectatorRequestFailure,
       spectatorNode: spectatorState.spectatorNode,
       roomAccessError: snapshot.roomAccessError,
+      roomAccessErrorDetail: snapshot.roomAccessErrorDetail,
       detachNow: snapshot.detachNow ?? (() => {}),
       reattachPresence: snapshot.reattachPresence ?? (() => {}),
       leavingRef: snapshot.leavingRef,

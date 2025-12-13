@@ -2,13 +2,17 @@ import { APP_VERSION } from "@/lib/constants/appVersion";
 import { getAdminDb } from "@/lib/server/firebaseAdmin";
 import type { RoomDoc } from "@/lib/types";
 
+export type RoomVersionMismatchType = "client_outdated" | "room_outdated" | "unknown";
+
 export type RoomVersionCheckResult =
-  | { ok: true; roomVersion: string | null }
+  | { ok: true; roomVersion: string | null; serverVersion: string | null }
   | {
       ok: false;
       error: "room/join/version-mismatch" | "room_not_found" | "client_version_required";
       roomVersion: string | null;
       clientVersion: string | null;
+      serverVersion: string | null;
+      mismatchType?: RoomVersionMismatchType;
       status: number;
     };
 
@@ -41,7 +45,8 @@ export async function checkRoomVersionGuard(
   roomId: string,
   clientVersionInput: unknown
 ): Promise<RoomVersionCheckResult> {
-  const clientVersion = normalizeVersion(clientVersionInput) ?? normalizeVersion(APP_VERSION) ?? null;
+  const clientVersion = normalizeVersion(clientVersionInput);
+  const serverVersion = normalizeVersion(APP_VERSION);
 
   if (!clientVersion) {
     return {
@@ -49,6 +54,7 @@ export async function checkRoomVersionGuard(
       error: "client_version_required",
       roomVersion: null,
       clientVersion: null,
+      serverVersion: serverVersion ?? null,
       status: 400,
     };
   }
@@ -60,6 +66,7 @@ export async function checkRoomVersionGuard(
       error: "room_not_found",
       roomVersion: null,
       clientVersion,
+      serverVersion: serverVersion ?? null,
       status: 404,
     };
   }
@@ -68,11 +75,19 @@ export async function checkRoomVersionGuard(
   const roomVersion = normalizeVersion(data?.appVersion);
 
   if (roomVersion && !versionsEqual(roomVersion, clientVersion)) {
+    const mismatchType: RoomVersionMismatchType =
+      serverVersion && versionsEqual(roomVersion, serverVersion)
+        ? "client_outdated"
+        : serverVersion
+          ? "room_outdated"
+          : "unknown";
     return {
       ok: false,
       error: "room/join/version-mismatch",
       roomVersion,
       clientVersion,
+      serverVersion: serverVersion ?? null,
+      mismatchType,
       status: 409,
     };
   }
@@ -80,5 +95,5 @@ export async function checkRoomVersionGuard(
   // TODO: legacy room without appVersion; consider blocking join after migration period.
   // 移行期間中の古いルームは appVersion が未設定の場合があり、現状は許可している。
   // 十分な移行期間が経過したら、appVersion がないルームへの join もブロックすることを検討。
-  return { ok: true, roomVersion: roomVersion ?? null };
+  return { ok: true, roomVersion: roomVersion ?? null, serverVersion: serverVersion ?? null };
 }

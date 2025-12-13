@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef } from "react"
 import { getAuth, onIdTokenChanged, type User } from "firebase/auth"
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms"
+import { APP_VERSION } from "@/lib/constants/appVersion"
 
 const TOKEN_KEY_PREFIX = "leaveToken:"
 const REJOIN_KEY_PREFIX = "pendingRejoin:"
@@ -148,7 +149,12 @@ export function useLeaveCleanup({
     if (!uid) return false
     const token = readToken()
     if (!token) return false
-    const payload = JSON.stringify({ uid, displayName: displayName ?? null, token })
+    const payload = JSON.stringify({
+      uid,
+      displayName: displayName ?? null,
+      token,
+      clientVersion: APP_VERSION,
+    })
     const url = `/api/rooms/${roomId}/leave`
     let beaconOk = false
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {

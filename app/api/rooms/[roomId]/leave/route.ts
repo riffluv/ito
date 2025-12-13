@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { leaveRoomSchema } from "@/lib/schema/roomLeave";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 import { leaveRoom } from "@/lib/server/roomCommands";
 import { traceError } from "@/lib/utils/trace";
 
@@ -25,7 +26,21 @@ export async function POST(
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
-  const { uid, token, displayName } = parsed.data;
+  const { uid, token, displayName, clientVersion } = parsed.data;
+
+  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  if (!guard.ok) {
+    return NextResponse.json(
+      {
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
+      },
+      { status: guard.status }
+    );
+  }
 
   try {
     await leaveRoom({ roomId, uid, token, displayName: displayName ?? null });

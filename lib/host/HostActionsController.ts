@@ -9,6 +9,7 @@ import { postRoundReset } from "@/lib/utils/broadcast";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import {
   apiStartGame,
   apiNextRound,
@@ -451,7 +452,7 @@ export function createHostActionsController(
             await fetch(`/api/rooms/${req.roomId}/prune`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ token, callerUid: user.uid, targets }),
+              body: JSON.stringify({ token, callerUid: user.uid, targets, clientVersion: APP_VERSION }),
             }).catch(() => {});
           }
         } catch {

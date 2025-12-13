@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 import { issueHostSession } from "@/lib/server/hostToken";
 import { traceError } from "@/lib/utils/trace";
 
@@ -7,6 +8,7 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   token: z.string().min(1),
+  clientVersion: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: { roomId: string } }) {
@@ -23,6 +25,19 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+  const guard = await checkRoomVersionGuard(roomId, parsed.data.clientVersion);
+  if (!guard.ok) {
+    return NextResponse.json(
+      {
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
+      },
+      { status: guard.status }
+    );
   }
   try {
     const session = await issueHostSession(roomId, parsed.data.token);
