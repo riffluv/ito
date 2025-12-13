@@ -2,7 +2,6 @@ import { db } from "@/lib/firebase/client";
 import {
   beginRevealPending,
   resetRoomWithPrune,
-  setRoundPreparing,
   submitSortedOrder,
   topicControls,
 } from "@/lib/game/service";
@@ -158,14 +157,6 @@ function safeActiveCounts(info?: PresenceInfo) {
   return { activeCount, onlineCount, playerCount: basePlayers };
 }
 
-async function toggleRoundPreparing(roomId: string, value: boolean) {
-  try {
-    await setRoundPreparing(roomId, value);
-  } catch (error) {
-    traceError("ui.roundPreparing.sync", error, { roomId, value });
-  }
-}
-
 type HostActionsOverrides = {
   apiNextRound?: typeof apiNextRound;
 };
@@ -307,7 +298,6 @@ export function createHostActionsController(
       };
     }
 
-    await toggleRoundPreparing(roomId, true);
     let success = false;
     try {
       // 一本化後のレースを極力減らすため、デフォルトで寛容に進行中ステータスも許可する。
@@ -409,7 +399,6 @@ export function createHostActionsController(
         errorMessage: message,
       };
     } finally {
-      await toggleRoundPreparing(roomId, false);
       if (success) {
         try {
           if (typeof window !== "undefined") {
@@ -561,7 +550,6 @@ export function createHostActionsController(
       hasCustomTopic: customTopic ? "1" : "0",
     });
 
-    await toggleRoundPreparing(roomId, true);
     try {
       const presenceUids =
         Array.isArray(req.presenceInfo?.onlineUids) && req.presenceInfo.onlineUids.length > 0
@@ -634,8 +622,6 @@ export function createHostActionsController(
         errorCode: code ?? undefined,
         errorMessage: message,
       };
-    } finally {
-      await toggleRoundPreparing(roomId, false);
     }
   };
 
@@ -645,7 +631,6 @@ export function createHostActionsController(
     restartRound,
     evaluateSortedOrder,
     submitCustomTopicAndStartIfNeeded,
-    setRoundPreparingFlag: toggleRoundPreparing,
     nextRound,
   };
 }

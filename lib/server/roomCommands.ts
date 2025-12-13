@@ -128,10 +128,36 @@ const fetchPresenceUids = async (roomId: string): Promise<string[] | null> => {
   }
 };
 
+let cachedTopicSections: TopicSections | null = null;
+let cachedTopicSectionsPromise: Promise<TopicSections> | null = null;
+
 const loadTopicSectionsFromFs = async (): Promise<TopicSections> => {
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd && cachedTopicSections) {
+    return cachedTopicSections;
+  }
+  if (isProd && cachedTopicSectionsPromise) {
+    return cachedTopicSectionsPromise;
+  }
+
   const filePath = path.join(process.cwd(), "public", "itoword.md");
-  const text = await fs.readFile(filePath, "utf8");
-  return parseItoWordMarkdown(text);
+  const load = fs
+    .readFile(filePath, "utf8")
+    .then((text) => parseItoWordMarkdown(text));
+
+  if (!isProd) {
+    return load;
+  }
+
+  cachedTopicSectionsPromise = load
+    .then((sections) => {
+      cachedTopicSections = sections;
+      return sections;
+    })
+    .finally(() => {
+      cachedTopicSectionsPromise = null;
+    });
+  return cachedTopicSectionsPromise;
 };
 
 const isTopicTypeValue = (value: string | null | undefined): value is TopicType =>
@@ -426,7 +452,20 @@ export async function startGameCommand(params: {
     throw codedError("rate_limited", "rate_limited");
   }
 
+  let roundPreparingActivated = false;
   try {
+    // Start/NextGame 時の体感遅延（複数API呼び出し＋ガード）を避けるため、
+    // server-authoritative な start command 内で roundPreparing を制御する。
+    try {
+      await roomRef.update({
+        "ui.roundPreparing": true,
+        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+      });
+      roundPreparingActivated = true;
+    } catch (error) {
+      traceError("ui.roundPreparing.start.begin", error, { roomId: params.roomId });
+    }
+
     // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
     let preparedDeal:
       | {
@@ -650,7 +689,31 @@ export async function startGameCommand(params: {
       nextStatus: "clue",
       note: doAutoDeal ? "autoDeal" : undefined,
     });
+  } catch (error) {
+    // roundPreparing が残るとUIが固着するため、失敗時も必ず解除を試みる。
+    if (roundPreparingActivated) {
+      try {
+        await roomRef.update({
+          "ui.roundPreparing": false,
+          lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+        });
+        roundPreparingActivated = false;
+      } catch (clearError) {
+        traceError("ui.roundPreparing.start.clear", clearError, { roomId: params.roomId });
+      }
+    }
+    throw error;
   } finally {
+    if (roundPreparingActivated) {
+      try {
+        await roomRef.update({
+          "ui.roundPreparing": false,
+          lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+        });
+      } catch (error) {
+        traceError("ui.roundPreparing.start.clear", error, { roomId: params.roomId });
+      }
+    }
     await releaseLockSafely(params.roomId, lockHolder);
   }
 }
@@ -1569,6 +1632,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   if (!locked) {
     throw codedError("rate_limited", "rate_limited");
   }
+  let roundPreparingActivated = false;
   try {
     // 1. room 取得 & 権限チェック
     const roomSnap = await roomRef.get();
@@ -1609,6 +1673,18 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
     if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
       throw codedError("rate_limited", "rate_limited");
+    }
+
+    // 次のゲーム開始はクライアントの round-preparing API に頼らず、
+    // server-authoritative な next command 内で即座にUIを凍結する。
+    try {
+      await roomRef.update({
+        "ui.roundPreparing": true,
+        lastActiveAt: FieldValue.serverTimestamp(),
+      });
+      roundPreparingActivated = true;
+    } catch (error) {
+      traceError("ui.roundPreparing.next.begin", error, { roomId: params.roomId });
     }
 
     // 3. プレイヤー一覧を取得
@@ -1721,6 +1797,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       "ui.revealPending": false,
     };
     await roomRef.update(roomUpdate);
+    roundPreparingActivated = false;
     traceAction("room.nextRound.server", {
       roomId: params.roomId,
       uid,
@@ -1793,6 +1870,18 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       topic,
       topicType: topicBox,
     };
+  } catch (error) {
+    if (roundPreparingActivated) {
+      try {
+        await roomRef.update({
+          "ui.roundPreparing": false,
+          lastActiveAt: FieldValue.serverTimestamp(),
+        });
+      } catch (clearError) {
+        traceError("ui.roundPreparing.next.clear", clearError, { roomId: params.roomId });
+      }
+    }
+    throw error;
   } finally {
     await releaseLockSafely(params.roomId, lockHolder);
   }
