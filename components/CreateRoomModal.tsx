@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { UI_TOKENS } from "@/theme/layout";
 import { logError } from "@/lib/utils/log";
+import { traceAction } from "@/lib/utils/trace";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
@@ -163,6 +164,12 @@ export function CreateRoomModal({
         };
 
         if (!res.ok) {
+          if (res.status === 409) {
+            traceAction("api.conflict.409", {
+              url: "/api/rooms/version-check",
+              code: typeof body?.error === "string" ? body.error : "unknown",
+            });
+          }
           if (body?.error === "room/create/update-required") {
             notify({
               title: "アップデートが必要です",

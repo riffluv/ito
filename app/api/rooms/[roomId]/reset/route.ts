@@ -1,6 +1,7 @@
-import { logError } from "@/lib/utils/log";
 import { NextRequest, NextResponse } from "next/server";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 import { resetRoomCommand } from "@/lib/server/roomCommands";
+import { traceError } from "@/lib/utils/trace";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,8 @@ export async function POST(
       : null;
 
   const token = typeof body?.token === "string" ? (body.token as string) : null;
+  const clientVersion =
+    typeof body?.clientVersion === "string" ? (body.clientVersion as string) : null;
   const recallSpectators =
     typeof body?.recallSpectators === "boolean"
       ? (body.recallSpectators as boolean)
@@ -43,11 +46,25 @@ export async function POST(
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
+  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  if (!guard.ok) {
+    return NextResponse.json(
+      {
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
+      },
+      { status: guard.status }
+    );
+  }
+
   try {
     await resetRoomCommand({ roomId, recallSpectators, token, requestId, sessionId });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    logError("rooms", "reset-route error", { roomId, error });
+    traceError("room.reset.api", error, { roomId });
     const code = (error as { code?: string }).code;
     const status =
       code === "unauthorized"
@@ -58,6 +75,8 @@ export async function POST(
             ? 403
             : code === "rate_limited"
               ? 429
+              : code === "invalid_status"
+                ? 409
               : 500;
     return NextResponse.json({ error: code ?? "reset_failed" }, { status });
   }

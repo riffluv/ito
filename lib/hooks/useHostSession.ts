@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import { traceError } from "@/lib/utils/trace";
 
 async function requestHostSession(roomId: string, token: string) {
   const res = await fetch(`/api/rooms/${roomId}/host-session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ token, clientVersion: APP_VERSION }),
   });
   if (!res.ok) throw new Error("host-session-issue-failed");
   const json = (await res.json()) as { ok: boolean; sessionId?: string };
@@ -40,4 +41,3 @@ export function useHostSession(roomId: string, getIdToken: () => Promise<string 
 
   return { sessionId, ensureSession } as const;
 }
-

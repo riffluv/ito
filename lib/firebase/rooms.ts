@@ -1,5 +1,6 @@
 import { auth, db } from "@/lib/firebase/client";
 import { presenceSupported } from "@/lib/firebase/presence";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import { logWarn } from "@/lib/utils/log";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { acquireLeaveLock, releaseLeaveLock } from "@/lib/utils/leaveManager";
@@ -47,7 +48,7 @@ export async function transferHost(roomId: string, newHostId: string) {
     const response = await fetch(`/api/rooms/${roomId}/transfer-host`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUid: newHostId, token: tok }),
+      body: JSON.stringify({ targetUid: newHostId, token: tok, clientVersion: APP_VERSION }),
       keepalive: true,
     });
 
@@ -234,15 +235,31 @@ export async function leaveRoom(
         const response = await fetch(`/api/rooms/${roomId}/leave`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid: userId, token, displayName }),
+          body: JSON.stringify({ uid: userId, token, displayName, clientVersion: APP_VERSION }),
           keepalive: true,
         });
         serverHandled = response.ok;
         if (!response.ok) {
+          let detail: unknown = null;
+          try {
+            detail = await response.json();
+          } catch {}
+          const code =
+            detail && typeof (detail as { error?: unknown }).error === "string"
+              ? String((detail as { error: unknown }).error)
+              : null;
+          if (
+            response.status === 409 &&
+            (code === "room/join/version-mismatch" || code === "client_version_required")
+          ) {
+            // Version Contract: do not fallback to client-side Firestore writes on explicit version guards.
+            serverHandled = true;
+          }
           logWarn("rooms", "leave-room-server-failed", {
             roomId,
             userId,
             status: response.status,
+            code: code ?? undefined,
           });
         }
       } catch (error) {
@@ -299,7 +316,7 @@ export async function requestSpectatorRecall(roomId: string): Promise<void> {
       return await fetch(`/api/rooms/${roomId}/spectators/recall`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({ token, clientVersion: APP_VERSION }),
         keepalive: true,
       });
     } catch (error) {

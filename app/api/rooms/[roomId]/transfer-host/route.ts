@@ -1,5 +1,6 @@
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { transferHostServer } from "@/lib/server/roomActions";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -28,9 +29,25 @@ export async function POST(
   const targetUid =
     typeof body?.targetUid === "string" ? (body.targetUid as string) : null;
   const token = typeof body?.token === "string" ? (body.token as string) : null;
+  const clientVersion =
+    typeof body?.clientVersion === "string" ? (body.clientVersion as string) : null;
 
   if (!targetUid || !token) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  }
+
+  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  if (!guard.ok) {
+    return NextResponse.json(
+      {
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
+      },
+      { status: guard.status }
+    );
   }
 
   try {

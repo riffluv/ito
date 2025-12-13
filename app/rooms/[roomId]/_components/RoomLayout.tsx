@@ -653,14 +653,15 @@ export function RoomLayout(props: RoomLayoutProps) {
     if (typeof raw !== "string") return "";
     return raw.trim();
   }, [room?.requiredSwVersion]);
-  const versionMismatch = useMemo(() => {
-    if (!requiredSwVersion) return false;
-    return requiredSwVersion !== APP_VERSION;
-  }, [requiredSwVersion]);
-  const safeUpdateActive = safeUpdateFeatureEnabled && versionMismatch;
-  const versionMismatchBlocksAccess = versionMismatch && !safeUpdateFeatureEnabled;
+  // NOTE: `requiredSwVersion` は過去の PWA/Safe Update 用フィールド（運用上は外部で書かれる場合がある）。
+  // ルーム参加/操作の Version Contract は `room.appVersion` + server guard を唯一の真実とし、
+  // ここで `requiredSwVersion` によって入室/操作をブロックしない（混同による誤案内を防ぐ）。
+  const versionMismatch = false;
+  const safeUpdateActive =
+    safeUpdateFeatureEnabled && (hasWaitingUpdate || spectatorUpdateApplying || spectatorUpdateFailed);
+  const versionMismatchBlocksAccess = false;
   const phaseMetricRef = useRef<RoomDoc["status"] | null>(null);
-  const shouldBlockUpdateOverlay = versionMismatch;
+  const shouldBlockUpdateOverlay = false;
   useEffect(() => {
     const nextStatus = room?.status ?? null;
     if (!nextStatus) return;
@@ -674,11 +675,10 @@ export function RoomLayout(props: RoomLayoutProps) {
   useEffect(() => {
     if (requiredSwVersion) {
       setMetric("app", "requiredSwVersion", requiredSwVersion);
-      setMetric("app", "versionMismatch", requiredSwVersion === APP_VERSION ? 0 : 1);
     } else {
       setMetric("app", "requiredSwVersion", "");
-      setMetric("app", "versionMismatch", 0);
     }
+    setMetric("app", "versionMismatch", 0);
   }, [requiredSwVersion]);
   useEffect(() => {
     setRequiredSwVersionHint(requiredSwVersion || null);
@@ -2516,13 +2516,22 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   const handleManualVersionUpdate = useCallback(() => {
     const applied = applyServiceWorkerUpdate({
-      reason: "room:version-mismatch",
+      reason: "room:manual",
       safeMode: safeUpdateActive,
     });
     if (!applied) {
-      void resyncWaitingServiceWorker("room:version-mismatch");
+      void resyncWaitingServiceWorker("room:manual");
     }
   }, [safeUpdateActive]);
+  const handleConfirmManualUpdate = useCallback(() => {
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm("注意: 更新するとこの部屋に戻れない可能性があります。更新を適用しますか？");
+    if (!confirmed) {
+      return;
+    }
+    handleManualVersionUpdate();
+  }, [handleManualVersionUpdate]);
   const handleResyncUpdate = useCallback(() => {
     void resyncWaitingServiceWorker("room:safe-banner");
   }, []);
@@ -2530,9 +2539,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const safeUpdateBannerEnabled = globalSafeUpdateActive && !shouldBlockUpdateOverlay;
   const safeUpdateErrorLabel = spectatorUpdateFailed ? safeUpdateLastError ?? "unknown" : null;
   const safeUpdateStatusLabel = (() => {
-    if (versionMismatch) {
-      return "最新バージョンへの更新が必要です";
-    }
     if (spectatorUpdateApplying || safeUpdatePhase === "applying") {
       return "更新を適用しています";
     }
@@ -2566,7 +2572,7 @@ export function RoomLayout(props: RoomLayoutProps) {
       return "完了すると自動で再読み込みします";
     }
     if (hasWaitingUpdate) {
-      return "この間もゲームを続けられます";
+      return "注意: 更新するとこの部屋に戻れない可能性があります";
     }
     return null;
   })();
@@ -2574,10 +2580,10 @@ export function RoomLayout(props: RoomLayoutProps) {
     ? "適用中..."
     : spectatorUpdateFailed
       ? "再試行"
-      : "今すぐ更新";
+      : "更新 (注意)";
   const safeUpdatePrimaryAction = spectatorUpdateFailed
     ? retrySpectatorUpdate
-    : handleManualVersionUpdate;
+    : handleConfirmManualUpdate;
   const safeUpdateBannerNode = safeUpdateBannerEnabled ? (
     <Box
       position="fixed"

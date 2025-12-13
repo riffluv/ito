@@ -3,6 +3,7 @@ import type { User } from "firebase/auth";
 import type { PlayerDoc } from "@/lib/types";
 import { logInfo, logError } from "@/lib/utils/log";
 import { PRESENCE_HEARTBEAT_MS } from "@/lib/constants/presence";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 
 interface UseHostPruningParams {
   isHost: boolean;
@@ -102,7 +103,7 @@ export function useHostPruning({
         await fetch(`/api/rooms/${roomId}/prune`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, callerUid: uid, targets: readyIds }),
+          body: JSON.stringify({ token, callerUid: uid, targets: readyIds, clientVersion: APP_VERSION }),
         });
       } catch (error) {
         logError("room-page", "prune-offline", error);

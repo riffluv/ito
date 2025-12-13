@@ -19,7 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { useAssetPreloader } from "@/hooks/useAssetPreloader";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
-import { resyncWaitingServiceWorker } from "@/lib/serviceWorker/updateChannel";
+import { applyServiceWorkerUpdate, resyncWaitingServiceWorker } from "@/lib/serviceWorker/updateChannel";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Spinner, Text, HStack } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
@@ -482,7 +482,7 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     null
   );
   const roomState = useRoomStateContext();
-  const { room: roomData, loading, roomAccessError } = roomState;
+  const { room: roomData, loading, roomAccessError, roomAccessErrorDetail } = roomState;
   const room = roomData;
 
 
@@ -587,6 +587,238 @@ function RoomGuardContent(props: RoomGuardContentProps) {
               mt={3}
             >
               いったん再ログインしてから部屋に入り直すか、ホストに参加権限を確認してください。
+            </Text>
+          </Box>
+          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+            <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
+              再読み込み
+            </AppButton>
+            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+              ロビーへ戻る
+            </AppButton>
+          </HStack>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (roomAccessError === "client-update-required") {
+    const mismatch = roomAccessErrorDetail?.kind === "version-mismatch" ? roomAccessErrorDetail : null;
+    const roomVersion = mismatch?.roomVersion ?? "不明";
+    const clientVersion = mismatch?.clientVersion ?? APP_VERSION;
+
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition("/", {
+          direction: "fade",
+          duration: 1,
+          showLoading: true,
+        });
+      } else {
+        router.push("/");
+      }
+    };
+
+    const handleHardReload = () => {
+      try {
+        window.location.reload();
+      } catch {}
+    };
+
+    const handleApplyUpdate = () => {
+      const applied = applyServiceWorkerUpdate({
+        reason: "room:client-update-required",
+        safeMode: true,
+      });
+      if (!applied) {
+        void resyncWaitingServiceWorker("room:client-update-required");
+      }
+    };
+
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        bg="rgba(8,9,15,1)"
+      >
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg="rgba(8,9,15,0.9)"
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "560px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+              アップデートが必要です
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) のままでは参加できません。
+              更新を適用してから再度お試しください。
+            </Text>
+          </Box>
+          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+            <AppButton palette="brand" size="md" onClick={handleApplyUpdate}>
+              今すぐ更新
+            </AppButton>
+            <AppButton palette="gray" variant="outline" size="md" onClick={handleHardReload}>
+              ハードリロード
+            </AppButton>
+            <AppButton palette="gray" variant="outline" size="md" onClick={handleBackToLobby}>
+              ロビーへ戻る
+            </AppButton>
+          </HStack>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (roomAccessError === "room-version-mismatch") {
+    const mismatch = roomAccessErrorDetail?.kind === "version-mismatch" ? roomAccessErrorDetail : null;
+    const roomVersion = mismatch?.roomVersion ?? "不明";
+    const clientVersion = mismatch?.clientVersion ?? APP_VERSION;
+
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition("/", {
+          direction: "fade",
+          duration: 1,
+          showLoading: true,
+        });
+      } else {
+        router.push("/");
+      }
+    };
+
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        bg="rgba(8,9,15,1)"
+      >
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg="rgba(8,9,15,0.9)"
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "560px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+              この部屋は別バージョンです
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) からは参加・操作できません。
+              更新してもこの部屋には入れないため、新しい部屋を作成するか招待を取り直してください。
+            </Text>
+          </Box>
+          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+              ロビーへ戻る
+            </AppButton>
+          </HStack>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (roomAccessError === "room-version-check-failed") {
+    const detail = roomAccessErrorDetail?.kind === "version-check-failed" ? roomAccessErrorDetail.detail : null;
+
+    const handleRetry = () => {
+      router.refresh();
+    };
+
+    const handleBackToLobby = async () => {
+      if (transition) {
+        await transition.navigateWithTransition("/", {
+          direction: "fade",
+          duration: 1,
+          showLoading: true,
+        });
+      } else {
+        router.push("/");
+      }
+    };
+
+    return (
+      <Box
+        h="100dvh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        px={4}
+        bg="rgba(8,9,15,1)"
+      >
+        <Box
+          position="relative"
+          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
+          borderRadius={0}
+          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
+          bg="rgba(8,9,15,0.9)"
+          color={UI_TOKENS.COLORS.textBase}
+          px={{ base: 6, md: 8 }}
+          py={{ base: 6, md: 7 }}
+          maxW={{ base: "90%", md: "560px" }}
+          _before={{
+            content: '""',
+            position: "absolute",
+            inset: "8px",
+            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
+            pointerEvents: "none",
+          }}
+        >
+          <Box textAlign="center" mb={5}>
+            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+              バージョン確認に失敗しました
+            </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              color={UI_TOKENS.COLORS.whiteAlpha80}
+              lineHeight={1.7}
+              mt={3}
+            >
+              {detail ? `詳細: ${detail}` : null}
+              {detail ? <br /> : null}
+              ページを再読み込みしてから、もう一度入室をお試しください。
             </Text>
           </Box>
           <HStack justify="center" gap={4} pt={1} flexWrap="wrap">

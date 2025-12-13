@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { User } from "firebase/auth";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 import { logError, logDebug } from "@/lib/utils/log";
 
 interface UseHostClaimParams {
@@ -168,7 +169,7 @@ export function useHostClaim({
         const response = await fetch(`/api/rooms/${roomId}/claim-host`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uid, token }),
+          body: JSON.stringify({ uid, token, clientVersion: APP_VERSION }),
           keepalive: true,
         });
 

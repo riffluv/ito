@@ -11,16 +11,29 @@ type AvatarCacheEntry = {
 };
 
 const avatarCache = new Map<string, AvatarCacheEntry>();
+
+type ClientRoomVersionMismatchType = "client_outdated" | "room_outdated" | "unknown";
 const versionGateCache = new Map<
   string,
-  | { status: "ok"; appVersion: string | null; checkedAt: number }
-  | { status: "mismatch"; roomVersion: string | null; checkedAt: number }
+  | {
+      status: "ok";
+      appVersion: string | null;
+      serverVersion: string | null;
+      checkedAt: number;
+    }
+  | {
+      status: "mismatch";
+      roomVersion: string | null;
+      serverVersion: string | null;
+      mismatchType: ClientRoomVersionMismatchType;
+      checkedAt: number;
+    }
 >();
 const VERSION_CHECK_TTL_MS = 60_000;
 
 type VersionAllowedResult =
-  | { status: "ok"; appVersion: string | null }
-  | { status: "mismatch"; roomVersion: string | null }
+  | { status: "ok"; appVersion: string | null; serverVersion: string | null }
+  | { status: "mismatch"; roomVersion: string | null; serverVersion: string | null; mismatchType: ClientRoomVersionMismatchType }
   | { status: "check_failed"; detail: string };
 
 async function ensureRoomVersionAllowed(
@@ -32,8 +45,8 @@ async function ensureRoomVersionAllowed(
   const cached = versionGateCache.get(roomId);
   if (cached && now - cached.checkedAt < VERSION_CHECK_TTL_MS) {
     return cached.status === "ok"
-      ? { status: "ok", appVersion: cached.appVersion }
-      : { status: "mismatch", roomVersion: cached.roomVersion };
+      ? { status: "ok", appVersion: cached.appVersion, serverVersion: cached.serverVersion }
+      : { status: "mismatch", roomVersion: cached.roomVersion, serverVersion: cached.serverVersion, mismatchType: cached.mismatchType };
   }
 
   try {
@@ -45,17 +58,27 @@ async function ensureRoomVersionAllowed(
     });
 
     if (response.ok) {
-      const data = (await response.json()) as { appVersion?: string | null };
+      const data = (await response.json()) as { appVersion?: string | null; serverVersion?: string | null };
       const appVersion = typeof data?.appVersion === "string" ? data.appVersion : null;
-      versionGateCache.set(roomId, { status: "ok", appVersion, checkedAt: now });
-      return { status: "ok", appVersion };
+      const serverVersion = typeof data?.serverVersion === "string" ? data.serverVersion : null;
+      versionGateCache.set(roomId, { status: "ok", appVersion, serverVersion, checkedAt: now });
+      return { status: "ok", appVersion, serverVersion };
     }
 
-    let errorBody: { error?: unknown; roomVersion?: unknown } | null = null;
+    let errorBody: { error?: unknown; roomVersion?: unknown; serverVersion?: unknown; mismatchType?: unknown } | null = null;
     try {
-      errorBody = (await response.json()) as { error?: unknown; roomVersion?: unknown };
+      errorBody = (await response.json()) as { error?: unknown; roomVersion?: unknown; serverVersion?: unknown; mismatchType?: unknown };
     } catch {
       // ignore body parse errors
+    }
+
+    const errorCode = typeof errorBody?.error === "string" ? errorBody.error : null;
+    if (response.status === 409) {
+      traceAction("api.conflict.409", {
+        url: "/api/rooms/version-check",
+        roomId,
+        code: errorCode ?? "unknown",
+      });
     }
 
     if (errorBody?.error === "room/join/version-mismatch") {
@@ -63,16 +86,26 @@ async function ensureRoomVersionAllowed(
         typeof errorBody.roomVersion === "string" && errorBody.roomVersion.trim().length > 0
           ? errorBody.roomVersion.trim()
           : null;
+      const serverVersion =
+        typeof errorBody.serverVersion === "string" && errorBody.serverVersion.trim().length > 0
+          ? errorBody.serverVersion.trim()
+          : null;
+      const mismatchType: ClientRoomVersionMismatchType =
+        errorBody.mismatchType === "client_outdated" || errorBody.mismatchType === "room_outdated"
+          ? errorBody.mismatchType
+          : "unknown";
       versionGateCache.set(roomId, {
         status: "mismatch",
         roomVersion,
+        serverVersion,
+        mismatchType,
         checkedAt: now,
       });
-      return { status: "mismatch", roomVersion };
+      return { status: "mismatch", roomVersion, serverVersion, mismatchType };
     }
 
     // サーバーからのエラー応答（バージョン不一致以外）
-    logWarn("roomService", "version-check-server-error", { roomId, status: response.status, errorBody });
+    logWarn("roomService", "version-check-server-error", { roomId, status: response.status, errorBody, errorCode });
     return { status: "check_failed", detail: `server_error_${response.status}` };
   } catch (error) {
     logWarn("roomService", "version-check-failed", { roomId, error });
@@ -125,13 +158,28 @@ export class RoomServiceError extends Error {
   readonly code: RoomServiceErrorCode;
   readonly roomVersion?: string | null;
   readonly clientVersion?: string | null;
+  readonly serverVersion?: string | null;
+  readonly mismatchType?: ClientRoomVersionMismatchType;
+  readonly checkFailedDetail?: string | null;
 
-  constructor(code: RoomServiceErrorCode, detail?: { roomVersion?: string | null; clientVersion?: string | null }) {
+  constructor(
+    code: RoomServiceErrorCode,
+    detail?: {
+      roomVersion?: string | null;
+      clientVersion?: string | null;
+      serverVersion?: string | null;
+      mismatchType?: ClientRoomVersionMismatchType;
+      checkFailedDetail?: string | null;
+    }
+  ) {
     super(ROOM_ERROR_MESSAGES[code]);
     this.name = "RoomServiceError";
     this.code = code;
     this.roomVersion = detail?.roomVersion ?? null;
     this.clientVersion = detail?.clientVersion ?? null;
+    this.serverVersion = detail?.serverVersion ?? null;
+    this.mismatchType = detail?.mismatchType;
+    this.checkFailedDetail = detail?.checkFailedDetail ?? null;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -237,11 +285,13 @@ export async function ensureMember({
     throw new RoomServiceError("ROOM_VERSION_MISMATCH", {
       roomVersion: versionGate.roomVersion,
       clientVersion: versionToSend,
+      serverVersion: versionGate.serverVersion,
+      mismatchType: versionGate.mismatchType,
     });
   }
   if (versionGate.status === "check_failed") {
     // フェイルクローズ: バージョン確認ができないため安全のため入室を拒否
-    throw new RoomServiceError("ROOM_VERSION_CHECK_FAILED");
+    throw new RoomServiceError("ROOM_VERSION_CHECK_FAILED", { checkFailedDetail: versionGate.detail });
   }
 
   const { value: resolvedDisplayName } = resolvePreferredDisplayName(displayName);
@@ -263,9 +313,22 @@ export async function ensureMember({
       return { joined: false, reason: "inProgress" } as const;
     }
     if (code === "room/join/version-mismatch") {
+      const details = (error as { details?: { roomVersion?: unknown; serverVersion?: unknown; mismatchType?: unknown } })?.details;
+      const mismatchType: ClientRoomVersionMismatchType =
+        details?.mismatchType === "client_outdated" || details?.mismatchType === "room_outdated"
+          ? details.mismatchType
+          : "unknown";
       throw new RoomServiceError("ROOM_VERSION_MISMATCH", {
-        roomVersion: (error as { details?: { roomVersion?: string | null } })?.details?.roomVersion ?? null,
+        roomVersion:
+          typeof details?.roomVersion === "string" && details.roomVersion.trim().length > 0
+            ? details.roomVersion.trim()
+            : null,
+        serverVersion:
+          typeof details?.serverVersion === "string" && details.serverVersion.trim().length > 0
+            ? details.serverVersion.trim()
+            : null,
         clientVersion: versionToSend,
+        mismatchType,
       });
     }
     throw error;

@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
+import { checkRoomVersionGuard } from "@/lib/server/roomVersionGate";
 import { logDebug, logError } from "@/lib/utils/log";
 
 export const runtime = "nodejs";
@@ -13,6 +14,7 @@ type RecallRouteTestOverrides = {
 
 type SpectatorRecallRequestBody = {
   token?: unknown;
+  clientVersion?: unknown;
 };
 
 let testOverrides: RecallRouteTestOverrides | null = null;
@@ -54,14 +56,33 @@ export async function POST(
   }
 
   let token: string | null = null;
+  let clientVersion: string | null = null;
   if (typeof body === "object" && body !== null) {
     const maybeToken = (body as SpectatorRecallRequestBody).token;
     if (typeof maybeToken === "string") {
       token = maybeToken;
     }
+    const maybeClientVersion = (body as SpectatorRecallRequestBody).clientVersion;
+    if (typeof maybeClientVersion === "string") {
+      clientVersion = maybeClientVersion;
+    }
   }
   if (!token) {
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
+  }
+
+  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  if (!guard.ok) {
+    return NextResponse.json(
+      {
+        error: guard.error,
+        roomVersion: guard.roomVersion,
+        clientVersion: guard.clientVersion,
+        serverVersion: guard.serverVersion,
+        mismatchType: guard.mismatchType,
+      },
+      { status: guard.status }
+    );
   }
 
   let requesterUid: string | null = null;
