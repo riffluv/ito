@@ -50,6 +50,7 @@ export type QuickStartRequest = {
 export type QuickStartResult =
   | {
       ok: true;
+      requestId: string;
       topicType: string;
       topic: string | null;
       assignedCount?: number;
@@ -59,6 +60,7 @@ export type QuickStartResult =
     }
   | {
       ok: false;
+      requestId: string;
       reason:
         | "presence-not-ready"
         | "host-mismatch"
@@ -75,6 +77,10 @@ export type QuickStartResult =
       onlineCount?: number;
       playerCount?: number;
       roomStatus?: string | null;
+      status?: number;
+      url?: string;
+      method?: string;
+      details?: unknown;
       errorCode?: string;
       errorMessage?: string;
     };
@@ -202,6 +208,7 @@ export function createHostActionsController(
         traceError("ui.host.quickStart.authRefresh", error, { roomId });
         return {
           ok: false,
+          requestId: startRequestId,
           reason: "auth-error",
           activeCount,
           onlineCount,
@@ -217,6 +224,7 @@ export function createHostActionsController(
     if (shouldEnforcePresence && !presenceReady) {
       return {
         ok: false,
+        requestId: startRequestId,
         reason: "presence-not-ready",
         activeCount,
         onlineCount,
@@ -259,6 +267,7 @@ export function createHostActionsController(
         if (typeof data?.status === "string" && !validStatuses.includes(data.status)) {
           return {
             ok: false,
+            requestId: startRequestId,
             reason: "not-waiting",
             roomStatus: data.status,
             topicType: effectiveType,
@@ -277,6 +286,7 @@ export function createHostActionsController(
     if (hostId && authUid && hostId !== authUid) {
       return {
         ok: false,
+        requestId: startRequestId,
         reason: "host-mismatch",
         hostId,
         topicType: effectiveType,
@@ -292,6 +302,7 @@ export function createHostActionsController(
     ) {
       return {
         ok: false,
+        requestId: startRequestId,
         reason: "needs-custom-topic",
         topicType: effectiveType,
         topic,
@@ -307,6 +318,7 @@ export function createHostActionsController(
       const allowFromClue = req.allowFromClue ?? false;
       traceAction("ui.host.quickStart.api", {
         roomId,
+        requestId: startRequestId,
         type: effectiveType,
         skipPresence: skipPresence ? "1" : "0",
         allowFromFinished: allowFromFinished ? "1" : "0",
@@ -336,6 +348,7 @@ export function createHostActionsController(
       success = true;
       return {
         ok: true,
+        requestId: startRequestId,
         topicType: effectiveType,
         topic: topic ?? null,
         assignedCount: undefined,
@@ -344,18 +357,29 @@ export function createHostActionsController(
         skipPresence,
       };
     } catch (error) {
-      const code = (error as ApiError)?.code ?? null;
-      const message = (error as { message?: string })?.message ?? "";
+      const apiError = error as ApiError;
+      const code = apiError?.code ?? null;
+      const status = typeof apiError?.status === "number" ? apiError.status : undefined;
+      const url = typeof apiError?.url === "string" ? apiError.url : undefined;
+      const method =
+        typeof apiError?.method === "string" ? apiError.method : undefined;
+      const details = apiError?.details;
+      const message = error instanceof Error ? error.message : String(error ?? "");
       traceError("ui.host.quickStart.error", error, { roomId, code });
       if (code === "rate_limited") {
         return {
           ok: false,
+          requestId: startRequestId,
           reason: "rate-limited",
           topicType: effectiveType,
           topic,
           activeCount,
           onlineCount,
           playerCount,
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
@@ -363,6 +387,7 @@ export function createHostActionsController(
       if (code === "invalid_status") {
         return {
           ok: false,
+          requestId: startRequestId,
           reason: "not-waiting",
           roomStatus: req.roomStatus ?? null,
           topicType: effectiveType,
@@ -370,6 +395,10 @@ export function createHostActionsController(
           activeCount,
           onlineCount,
           playerCount,
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
@@ -377,6 +406,7 @@ export function createHostActionsController(
       if (code === "forbidden") {
         return {
           ok: false,
+          requestId: startRequestId,
           reason: "host-mismatch",
           hostId,
           topicType: effectiveType,
@@ -384,18 +414,27 @@ export function createHostActionsController(
           activeCount,
           onlineCount,
           playerCount,
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
       }
       return {
         ok: false,
+        requestId: startRequestId,
         reason: "callable-error",
         topicType: effectiveType,
         topic,
         activeCount,
         onlineCount,
         playerCount,
+        status,
+        url,
+        method,
+        details,
         errorCode: code ?? undefined,
         errorMessage: message,
       };

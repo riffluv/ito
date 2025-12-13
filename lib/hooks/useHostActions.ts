@@ -1,5 +1,6 @@
 import { notify, muteNotifications } from "@/components/ui/notify";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { db } from "@/lib/firebase/client";
 import { useHostSession } from "@/lib/hooks/useHostSession";
 import {
   createHostActionsController,
@@ -22,6 +23,7 @@ import type {
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
 import { getAuth } from "firebase/auth";
+import { doc, getDoc, getDocFromServer } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 declare global {
@@ -107,6 +109,8 @@ export function useHostActions({
   const [presenceWaitedMs, setPresenceWaitedMs] = useState(0);
   const resetUiTimerRef = useRef<number | null>(null);
   const lastActionAtRef = useRef<Record<string, number>>({});
+  const latestRoomStatusRef = useRef<string | undefined>(roomStatus);
+  const quickStartStuckTimerRef = useRef<number | null>(null);
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -120,6 +124,27 @@ export function useHostActions({
       }),
     [ensureSession, sessionId]
   );
+
+  useEffect(() => {
+    latestRoomStatusRef.current = roomStatus;
+  }, [roomStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && quickStartStuckTimerRef.current !== null) {
+        window.clearTimeout(quickStartStuckTimerRef.current);
+        quickStartStuckTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (roomStatus && roomStatus !== "waiting" && quickStartStuckTimerRef.current !== null) {
+      window.clearTimeout(quickStartStuckTimerRef.current);
+      quickStartStuckTimerRef.current = null;
+    }
+  }, [roomStatus]);
 
   const markActionStart = useCallback((action: string) => {
     if (typeof performance !== "undefined") {
@@ -501,20 +526,72 @@ export function useHostActions({
           });
         }
 
+        traceAction("ui.host.quickStart.result", {
+          roomId,
+          ok: result.ok ? "1" : "0",
+          requestId: result.requestId,
+          reason: result.ok ? "ok" : result.reason,
+          status: result.ok ? undefined : String(result.status ?? -1),
+          errorCode: result.ok ? undefined : result.errorCode ?? undefined,
+          attempts: String(attempts),
+        });
+        setMetric(
+          "hostAction",
+          "quickStart.lastResult",
+          result.ok
+            ? `ok:${result.requestId}`
+            : `fail:${result.reason}:${result.status ?? "-"}:${result.errorCode ?? "-"}:${result.requestId}`
+        );
+
         if (!result.ok) {
+          const failureCategory = (() => {
+            if (result.reason === "auth-error") return "auth";
+            if (result.reason === "rate-limited") return "rate_limited";
+            if (result.reason === "presence-not-ready") return "presence";
+            if (result.reason === "not-waiting") return "invalid_status";
+            if (result.reason === "host-mismatch") return "forbidden";
+            if (result.reason === "needs-custom-topic") return "needs_custom_topic";
+            if (result.reason === "callable-error") {
+              const code = result.errorCode ?? "";
+              if (
+                code === "room/join/version-mismatch" ||
+                code === "client_version_required" ||
+                code === "room/create/update-required" ||
+                code === "room/create/version-mismatch"
+              ) {
+                return "version-mismatch";
+              }
+              if (typeof result.status !== "number") {
+                const msg = (result.errorMessage ?? "").toLowerCase();
+                if (msg.includes("failed to fetch") || msg.includes("network")) {
+                  return "network";
+                }
+              }
+              if (result.status === 401) return "auth";
+              return "api";
+            }
+            return "unknown";
+          })();
           // 失敗理由を明示的にログ出力（デバッグ用）
           traceAction("ui.host.quickStart.failed", {
             roomId,
+            requestId: result.requestId,
             reason: result.reason,
+            category: failureCategory,
             roomStatus: result.roomStatus ?? undefined,
+            status: typeof result.status === "number" ? String(result.status) : undefined,
             errorCode: result.errorCode ?? undefined,
             attempts: String(attempts),
           });
           console.warn("[quickStart] failed:", result.reason, {
             roomId,
+            requestId: result.requestId,
             roomStatus: result.roomStatus,
+            status: result.status,
+            url: result.url,
             errorCode: result.errorCode,
             errorMessage: result.errorMessage,
+            details: result.details,
           });
 
           if (result.reason === "presence-not-ready") {
@@ -557,6 +634,81 @@ export function useHostActions({
               type: "warning",
               duration: 2600,
             });
+          } else if (result.reason === "callable-error") {
+            const status =
+              typeof result.status === "number" ? result.status : undefined;
+            const code = result.errorCode ?? "unknown";
+            const isNetworkError =
+              status === undefined &&
+              Boolean((result.errorMessage ?? "").match(/failed to fetch|network/i));
+            const isVersionMismatch =
+              code === "room/join/version-mismatch" ||
+              code === "client_version_required" ||
+              code === "room/create/update-required" ||
+              code === "room/create/version-mismatch";
+
+            const mismatchType =
+              typeof (result.details as { mismatchType?: unknown } | null)?.mismatchType === "string"
+                ? (result.details as { mismatchType: string }).mismatchType
+                : null;
+            const mismatchHint =
+              mismatchType === "client_outdated"
+                ? "（この端末の更新が古い可能性があります）"
+                : mismatchType === "room_outdated"
+                  ? "（作成直後に更新が入った可能性があります）"
+                  : "";
+
+            const debugBits = [
+              typeof status === "number" ? `status:${status}` : null,
+              code ? `code:${code}` : null,
+              `reason:${result.reason}`,
+            ].filter((x): x is string => typeof x === "string" && x.length > 0);
+
+            if (isVersionMismatch) {
+              notify({
+                id: toastIds.genericInfo(roomId, "quickstart-version-mismatch"),
+                title: "更新が必要です",
+                description: `メインメニューで「更新を適用」後に再読み込みしてください。${mismatchHint}（${debugBits.join(", ")}）`,
+                type: "error",
+                duration: 4200,
+              });
+            } else if (status === 401 || code === "unauthorized") {
+              notify({
+                id: toastIds.genericInfo(roomId, "quickstart-unauthorized"),
+                title: "認証が必要です",
+                description: `再読み込みしてから再試行してください。（${debugBits.join(", ")}）`,
+                type: "error",
+                duration: 3600,
+              });
+            } else if (isNetworkError) {
+              notify({
+                id: toastIds.genericInfo(roomId, "quickstart-network"),
+                title: "通信に失敗しました",
+                description: `通信状態を確認して再試行してください。（${debugBits.join(", ")}）`,
+                type: "error",
+                duration: 3400,
+              });
+            } else {
+              const hint =
+                status === 409
+                  ? "状態が更新中の可能性があります。数秒待って再試行してください。"
+                  : "しばらく待って再試行してください。";
+              notify({
+                id: toastIds.genericInfo(roomId, "quickstart-callable-error"),
+                title: "ゲーム開始に失敗しました",
+                description: `${hint}（${debugBits.join(", ")}）`,
+                type: "error",
+                duration: 3600,
+              });
+            }
+          } else {
+            notify({
+              id: toastIds.genericInfo(roomId, "quickstart-unknown"),
+              title: "ゲーム開始に失敗しました",
+              description: `reason: ${result.reason}`,
+              type: "error",
+              duration: 3200,
+            });
           }
           abortAction("quickStart");
           return false;
@@ -576,6 +728,58 @@ export function useHostActions({
         success = true;
         onStageEvent?.("round:start");
         onStageEvent?.("round:end");
+
+        if (typeof window !== "undefined") {
+          if (quickStartStuckTimerRef.current !== null) {
+            window.clearTimeout(quickStartStuckTimerRef.current);
+          }
+          const requestId = result.requestId;
+          quickStartStuckTimerRef.current = window.setTimeout(() => {
+            void (async () => {
+              try {
+                if (latestRoomStatusRef.current !== "waiting") {
+                  return;
+                }
+                if (!db) {
+                  return;
+                }
+                const ref = doc(db, "rooms", roomId);
+                const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+                const data = snap.data() as { status?: unknown } | undefined;
+                const serverStatus =
+                  typeof data?.status === "string" ? data.status : null;
+                if (serverStatus && serverStatus !== "waiting") {
+                  traceAction("ui.host.quickStart.stuck", {
+                    roomId,
+                    requestId,
+                    localStatus: latestRoomStatusRef.current ?? "unknown",
+                    serverStatus,
+                  });
+                  notify({
+                    id: toastIds.genericInfo(roomId, "quickstart-stuck"),
+                    title: "ゲームは開始されています",
+                    description: `画面が更新されません。ページを再読み込みしてください。（server:${serverStatus}）`,
+                    type: "warning",
+                    duration: 4200,
+                  });
+                } else {
+                  traceAction("ui.host.quickStart.stuck", {
+                    roomId,
+                    requestId,
+                    localStatus: latestRoomStatusRef.current ?? "unknown",
+                    serverStatus: serverStatus ?? "unknown",
+                  });
+                }
+              } catch (error) {
+                traceError("ui.host.quickStart.stuckRead", error, {
+                  roomId,
+                  requestId: result.requestId,
+                });
+              }
+            })();
+          }, 3200);
+        }
+
         return true;
       } catch (error) {
         clearAutoStartLock();
