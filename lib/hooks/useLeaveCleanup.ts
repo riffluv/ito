@@ -1,14 +1,10 @@
 "use client"
 import { useCallback, useEffect, useRef } from "react"
 import { getAuth, onIdTokenChanged, type User } from "firebase/auth"
-import { forceDetachAll } from "@/lib/firebase/presence"
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms"
 
 const TOKEN_KEY_PREFIX = "leaveToken:"
 const REJOIN_KEY_PREFIX = "pendingRejoin:"
-const FORCE_DETACH_ON_LEAVE =
-  typeof process !== "undefined" &&
-  process.env.NEXT_PUBLIC_FORCE_DETACH_ON_LEAVE !== "0"
 
 type UserWithTokenManager = User & {
   stsTokenManager?: {
@@ -36,6 +32,9 @@ type WindowWithNavigation = typeof window & {
 type PageHideEvent = Event & {
   persisted?: boolean
 }
+
+type CleanupSource = "unmount" | "beforeunload" | "pagehide"
+
 function setSessionValue(key: string | null, value: string | null) {
   if (!key || typeof window === "undefined") return
   try {
@@ -145,20 +144,20 @@ export function useLeaveCleanup({
     return null
   }, [tokenKey, uid])
 
-  const sendLeaveBeacon = useCallback(() => {
-    if (!uid) return
+  const sendLeaveBeacon = useCallback((): boolean => {
+    if (!uid) return false
     const token = readToken()
-    if (!token) return
+    if (!token) return false
     const payload = JSON.stringify({ uid, displayName: displayName ?? null, token })
     const url = `/api/rooms/${roomId}/leave`
-    let handled = false
+    let beaconOk = false
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
       try {
         const blob = new Blob([payload], { type: "application/json" })
-        handled = navigator.sendBeacon(url, blob)
+        beaconOk = navigator.sendBeacon(url, blob)
       } catch {}
     }
-    if (!handled && typeof fetch === "function") {
+    if (!beaconOk && typeof fetch === "function") {
       try {
         fetch(url, {
           method: "POST",
@@ -166,8 +165,10 @@ export function useLeaveCleanup({
           body: payload,
           keepalive: true,
         }).catch(() => {})
+        return true
       } catch {}
     }
+    return beaconOk
   }, [uid, roomId, readToken, displayName])
 
 
@@ -266,7 +267,7 @@ export function useLeaveCleanup({
     }
   }, [enabled])
 
-  const performCleanup = useCallback(() => {
+  const performCleanup = useCallback((source: CleanupSource) => {
     if (!uid) return
     if (leavingRef.current) return
     const isReloadIntent = reloadIntentRef.current
@@ -277,20 +278,17 @@ export function useLeaveCleanup({
     try {
       Promise.resolve(detachNow()).catch(() => {})
     } catch {}
-    if (!isReloadIntent && FORCE_DETACH_ON_LEAVE) {
-      try {
-        forceDetachAll(roomId, uid).catch(() => {})
-      } catch {}
+    if (isReloadIntent) return
+
+    // page lifecycle での「退室」は、可能なら beacon を優先（重い処理や二重送信を避ける）。
+    if (source !== "unmount") {
+      const requested = sendLeaveBeacon()
+      if (requested) return
     }
-    const shouldSendLeave = !isReloadIntent
-    if (shouldSendLeave) {
-      if (!isReloadIntent) {
-        sendLeaveBeacon()
-      }
-      try {
-        Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
-      } catch {}
-    }
+
+    try {
+      Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
+    } catch {}
   }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey])
 
   const performCleanupRef = useRef(performCleanup)
@@ -328,7 +326,7 @@ export function useLeaveCleanup({
         return
       }
       try {
-        performCleanupRef.current?.()
+        performCleanupRef.current?.("unmount")
       } catch {}
     }
   }, [enabled])
@@ -336,11 +334,11 @@ export function useLeaveCleanup({
   useEffect(() => {
     if (!enabled) return undefined
     const handleBeforeUnload = () => {
-      performCleanup()
+      performCleanup("beforeunload")
     }
     const handlePageHide = (event: PageHideEvent) => {
       if (event.persisted) return
-      performCleanup()
+      performCleanup("pagehide")
     }
     window.addEventListener("beforeunload", handleBeforeUnload)
     window.addEventListener("pagehide", handlePageHide)

@@ -283,6 +283,8 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 
 #### 入室/退室/ホスト権限
 - **正常動作確認済み**: 入室 (`apiJoinRoom`)、退室 (`apiLeaveRoom`)、ホスト権限移譲 (`claim-host`, `transfer-host`) は全て API 経由。
+  - 退室 API: `POST /api/rooms/[roomId]/leave`（`{ uid, token, displayName? }`）。本人の token と uid が一致しない場合は拒否。
+  - タブ閉じ/ページ離脱: `useLeaveCleanup` が `sendBeacon` / `keepalive fetch` で退室 API を叩く（重い処理・二重送信は避ける）。
 - **フォールバック**: `lib/firebase/rooms.ts` の `applyClientSideLeaveFallback` は API 失敗時のみ実行される非常用処理。通常フローでは通らない。
 - **注意**: ゲーム進行中（`clue` / `reveal` / `finished`）でのホスト退室時、自動的にホスト権限が移譲されない場合がある。その場合は残りのプレイヤーが `claim-host` を呼ぶ必要あり。
 

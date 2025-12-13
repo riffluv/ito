@@ -1,7 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from "react";
 import { notify } from "@/components/ui/notify";
 import { leaveRoom as leaveRoomAction } from "@/lib/firebase/rooms";
-import { forceDetachAll } from "@/lib/firebase/presence";
 import { logSpectatorForceExitDetected, logSpectatorForceExitCleanup, logSpectatorForceExitRecovered } from "@/lib/spectator/telemetry";
 import { logDebug, logError } from "@/lib/utils/log";
 import { bumpMetric } from "@/lib/utils/metrics";
@@ -183,11 +182,6 @@ export function useForcedExit({
             await detachNow();
           } catch (error) {
             logDebug("useForcedExit", "auto-detach-failed", error);
-          }
-          try {
-            await forceDetachAll(roomId, uid);
-          } catch (error) {
-            logDebug("useForcedExit", "auto-force-detach-failed", error);
           }
           await leaveRoomAction(roomId, uid, displayName ?? null);
         };

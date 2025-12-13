@@ -30,7 +30,6 @@ import {
 import {
   PRESENCE_STALE_MS,
 } from "@/lib/constants/presence";
-import { forceDetachAll } from "@/lib/firebase/presence";
 import {
   leaveRoom as leaveRoomAction,
   requestSpectatorRecall,
@@ -1317,12 +1316,6 @@ export function RoomLayout(props: RoomLayoutProps) {
       }
 
       try {
-        await forceDetachAll(roomId, uid);
-      } catch (error) {
-        logError("room-page", "version-mismatch-force-detach-all", error);
-      }
-
-      try {
         await leaveRoomAction(roomId, uid, displayName);
       } catch (error) {
         logError("room-page", "version-mismatch-leave-room-action", error);
@@ -1362,12 +1355,6 @@ export function RoomLayout(props: RoomLayoutProps) {
         await detachNow();
       } catch (error) {
         logError("room-page", "forced-exit-detach-now", error);
-      }
-
-      try {
-        await forceDetachAll(roomId, uid);
-      } catch (error) {
-        logError("room-page", "forced-exit-force-detach-all", error);
       }
 
       try {
@@ -2406,73 +2393,22 @@ export function RoomLayout(props: RoomLayoutProps) {
   const leaveRoom = useCallback(async () => {
     if (!uid) return;
     leavingRef.current = true;
-
-    const getToken = async () => {
+    const performLeave = async () => {
       try {
-        if (!user) return null;
-        return await user.getIdToken();
-      } catch {
-        return null;
-      }
-    };
-
-    const clearSessionFlags = () => {
-      // V3: sessionStorage は不要になったため空実装
-    };
-
-    const performLeave = async (token: string | null) => {
-
-      try {
-
         await Promise.all([
           Promise.resolve(detachNow()).catch((error: unknown) => {
             logError("room-page", "leave-detach-now", error);
           }),
-          Promise.resolve(forceDetachAll(roomId, uid)).catch((error: unknown) => {
-            logError("room-page", "leave-force-detach", error);
-          })
+          Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(
+            (error: unknown) => {
+              logError("room-page", "leave-room-action", error);
+            }
+          ),
         ]);
       } catch (error) {
         logError("room-page", "leave-parallel-cleanup", error);
       }
-
-
-      let viaApi = false;
-      if (token) {
-        try {
-          const res = await fetch(`/api/rooms/${roomId}/leave`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              uid,
-              token,
-              displayName: displayName ?? null,
-            } satisfies { uid: string; token: string; displayName: string | null }),
-            keepalive: true,
-          });
-          viaApi = res.ok;
-          if (!res.ok) {
-            logError("room-page", "leave-api-non-ok", { status: res.status });
-          }
-        } catch (error) {
-          logError("room-page", "leave-api-call", error);
-        }
-      }
-
-
-      if (!viaApi) {
-        try {
-          await leaveRoomAction(roomId, uid, displayName);
-        } catch (error) {
-          logError("room-page", "leave-room-action", error);
-        }
-      }
-
-
-      clearSessionFlags();
     };
-
-    const token = await getToken();
 
     try {
       if (transition) {
@@ -2489,11 +2425,11 @@ export function RoomLayout(props: RoomLayoutProps) {
             ],
           },
           async () => {
-            await performLeave(token);
+            await performLeave();
           }
         );
       } else {
-        await performLeave(token);
+        await performLeave();
         router.push("/");
       }
     } catch (error) {
@@ -2516,8 +2452,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   }, [
     uid,
     leavingRef,
-    user,
-    
     roomId,
     detachNow,
     displayName,
