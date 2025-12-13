@@ -73,8 +73,16 @@ export async function apiJoinRoom(params: { roomId: string; displayName: string 
 }
 
 export async function apiLeaveRoom(roomId: string): Promise<void> {
+  const user = auth?.currentUser;
+  if (!user) {
+    throw toApiError("unauthorized", 401, { reason: "leave-room" });
+  }
   const token = await getIdTokenOrThrow("leave-room");
-  await postJson(`/api/rooms/${roomId}/leave`, { token });
+  await postJson(`/api/rooms/${roomId}/leave`, {
+    uid: user.uid,
+    token,
+    displayName: user.displayName ?? null,
+  });
 }
 
 export async function apiReady(roomId: string, ready: boolean): Promise<void> {
