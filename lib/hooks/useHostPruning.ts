@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { User } from "firebase/auth";
 import type { PlayerDoc } from "@/lib/types";
 import { logInfo, logError } from "@/lib/utils/log";
-import { PRESENCE_STALE_MS } from "@/lib/constants/presence";
+import { PRESENCE_HEARTBEAT_MS } from "@/lib/constants/presence";
 
 interface UseHostPruningParams {
   isHost: boolean;
@@ -42,8 +42,9 @@ export function useHostPruning({
     if (onlineUids.length === 0) return;
     if (!players.length) return;
 
-    const OFFLINE_GRACE_MS = Math.max(20_000, PRESENCE_STALE_MS);
-    const STALE_THRESHOLD_MS = Math.max(PRESENCE_STALE_MS * 2, 40_000);
+    // Tab close / network loss で残りプレイヤーが詰まらないよう、一定時間で自動プルーニングする。
+    // 短すぎると一時的な回線切替で誤削除しうるため、心拍 + α（既定30s）を下限にする。
+    const PRUNE_AFTER_MS = Math.max(30_000, PRESENCE_HEARTBEAT_MS + 10_000);
     const now = Date.now();
     const onlineSet = new Set(onlineUids);
 
@@ -75,8 +76,7 @@ export function useHostPruning({
         continue;
       }
       const offlineDuration = now - existing;
-      if (offlineDuration < OFFLINE_GRACE_MS) continue;
-      if (offlineDuration < STALE_THRESHOLD_MS) continue;
+      if (offlineDuration < PRUNE_AFTER_MS) continue;
       readyIds.push(p.id);
     }
 
