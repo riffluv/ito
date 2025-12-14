@@ -127,6 +127,7 @@ export type NextRoundRequest = {
 export type NextRoundApiResult =
   | {
       ok: true;
+      requestId: string;
       round: number;
       playerCount: number;
       topic: string | null;
@@ -134,7 +135,12 @@ export type NextRoundApiResult =
     }
   | {
       ok: false;
+      requestId: string;
       reason: "forbidden" | "invalid_status" | "no_players" | "rate-limited" | "api-error";
+      status?: number;
+      url?: string;
+      method?: string;
+      details?: unknown;
       errorCode?: string;
       errorMessage?: string;
     };
@@ -586,6 +592,7 @@ export function createHostActionsController(
 
     traceAction("ui.host.nextRound.api", {
       roomId,
+      requestId,
       topicType: topicType ?? "default",
       hasCustomTopic: customTopic ? "1" : "0",
     });
@@ -614,20 +621,31 @@ export function createHostActionsController(
 
       return {
         ok: true,
+        requestId,
         round: result.round,
         playerCount: result.playerCount,
         topic: result.topic,
         topicType: result.topicType,
       };
     } catch (error) {
-      const code = (error as ApiError)?.code ?? null;
-      const message = (error as { message?: string })?.message ?? "";
+      const apiError = error as ApiError;
+      const code = apiError?.code ?? null;
+      const status = typeof apiError?.status === "number" ? apiError.status : undefined;
+      const url = typeof apiError?.url === "string" ? apiError.url : undefined;
+      const method = typeof apiError?.method === "string" ? apiError.method : undefined;
+      const details = apiError?.details;
+      const message = error instanceof Error ? error.message : String(error ?? "");
       traceError("ui.host.nextRound.error", error, { roomId, code });
 
       if (code === "forbidden") {
         return {
           ok: false,
+          requestId,
           reason: "forbidden",
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
@@ -635,7 +653,12 @@ export function createHostActionsController(
       if (code === "rate_limited") {
         return {
           ok: false,
+          requestId,
           reason: "rate-limited",
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
@@ -643,7 +666,12 @@ export function createHostActionsController(
       if (code === "invalid_status") {
         return {
           ok: false,
+          requestId,
           reason: "invalid_status",
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
@@ -651,14 +679,24 @@ export function createHostActionsController(
       if (code === "no_players") {
         return {
           ok: false,
+          requestId,
           reason: "no_players",
+          status,
+          url,
+          method,
+          details,
           errorCode: code,
           errorMessage: message,
         };
       }
       return {
         ok: false,
+        requestId,
         reason: "api-error",
+        status,
+        url,
+        method,
+        details,
         errorCode: code ?? undefined,
         errorMessage: message,
       };

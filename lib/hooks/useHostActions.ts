@@ -114,6 +114,7 @@ export function useHostActions({
   const lastActionAtRef = useRef<Record<string, number>>({});
   const latestRoomStatusRef = useRef<string | undefined>(roomStatus);
   const quickStartStuckTimerRef = useRef<number | null>(null);
+  const nextGameStuckTimerRef = useRef<number | null>(null);
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -145,6 +146,10 @@ export function useHostActions({
         window.clearTimeout(quickStartStuckTimerRef.current);
         quickStartStuckTimerRef.current = null;
       }
+      if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
+        window.clearTimeout(nextGameStuckTimerRef.current);
+        nextGameStuckTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -153,6 +158,10 @@ export function useHostActions({
     if (roomStatus && roomStatus !== "waiting" && quickStartStuckTimerRef.current !== null) {
       window.clearTimeout(quickStartStuckTimerRef.current);
       quickStartStuckTimerRef.current = null;
+    }
+    if (roomStatus === "clue" && nextGameStuckTimerRef.current !== null) {
+      window.clearTimeout(nextGameStuckTimerRef.current);
+      nextGameStuckTimerRef.current = null;
     }
   }, [roomStatus]);
 
@@ -1025,11 +1034,17 @@ export function useHostActions({
     if (autoStartLocked || quickStartPending) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
 
+    if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
+      window.clearTimeout(nextGameStuckTimerRef.current);
+      nextGameStuckTimerRef.current = null;
+    }
+
     const startedAt =
       typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
     onStageEvent?.("round:prepare");
     if (!canProceed("nextGame")) {
+      onStageEvent?.("round:abort");
       setIsRestarting(false);
       return;
     }
@@ -1045,9 +1060,28 @@ export function useHostActions({
         roomId,
         topicType: defaultTopicType,
         customTopic: currentTopic,
+        presenceInfo: {
+          presenceReady,
+          onlineUids,
+          playerCount,
+        },
       });
 
       if (!result.ok) {
+        traceAction("ui.host.nextGame.result", {
+          roomId,
+          ok: "0",
+          requestId: result.requestId,
+          reason: result.reason,
+          status: typeof result.status === "number" ? String(result.status) : undefined,
+          errorCode: result.errorCode ?? undefined,
+        });
+        setMetric(
+          "hostAction",
+          "nextGame.lastResult",
+          `fail:${result.reason}:${result.status ?? "-"}:${result.errorCode ?? "-"}:${result.requestId}`
+        );
+
         // 失敗時のログとトースト
         finalizeAction("nextGame", "error");
         traceAction("ui.host.nextGame.failed", {
@@ -1056,6 +1090,69 @@ export function useHostActions({
           errorCode: result.errorCode,
         });
         console.warn("[nextGame] nextRound API failed:", result.reason, result.errorMessage);
+
+        const status =
+          typeof result.status === "number" ? result.status : undefined;
+        const code = result.errorCode ?? "unknown";
+        const isNetworkError =
+          status === undefined &&
+          Boolean((result.errorMessage ?? "").match(/failed to fetch|network/i));
+        const isVersionMismatch =
+          code === "room/join/version-mismatch" ||
+          code === "client_version_required" ||
+          code === "room/create/update-required" ||
+          code === "room/create/version-mismatch";
+
+        const mismatchType =
+          typeof (result.details as { mismatchType?: unknown } | null)?.mismatchType === "string"
+            ? (result.details as { mismatchType: string }).mismatchType
+            : null;
+        const mismatchHint =
+          mismatchType === "client_outdated"
+            ? "（この端末の更新が古い可能性があります）"
+            : mismatchType === "room_outdated"
+              ? "（作成直後に更新が入った可能性があります）"
+              : "";
+
+        const debugBits = [
+          typeof status === "number" ? `status:${status}` : null,
+          code ? `code:${code}` : null,
+          `reason:${result.reason}`,
+        ].filter((x): x is string => typeof x === "string" && x.length > 0);
+
+        if (isVersionMismatch) {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-version-mismatch"),
+            title: "更新が必要です",
+            description: `メインメニューで「更新を適用」後に再読み込みしてください。${mismatchHint}（${debugBits.join(", ")}）`,
+            type: "error",
+            duration: 4200,
+          });
+          clearAutoStartLock();
+          return;
+        }
+        if (status === 401 || code === "unauthorized") {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-unauthorized"),
+            title: "認証が必要です",
+            description: `再読み込みしてから再試行してください。（${debugBits.join(", ")}）`,
+            type: "error",
+            duration: 3600,
+          });
+          clearAutoStartLock();
+          return;
+        }
+        if (isNetworkError) {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-network"),
+            title: "通信に失敗しました",
+            description: `通信状態を確認して再試行してください。（${debugBits.join(", ")}）`,
+            type: "error",
+            duration: 3400,
+          });
+          clearAutoStartLock();
+          return;
+        }
 
         if (result.reason === "forbidden") {
           notify({
@@ -1081,11 +1178,19 @@ export function useHostActions({
             type: "info",
             duration: 1600,
           });
+        } else if (result.reason === "invalid_status") {
+          notify({
+            id: toastIds.genericInfo(roomId, "nextgame-invalid-status"),
+            title: "次のゲームを開始できませんでした",
+            description: `状態が更新中の可能性があります。数秒後に再試行してください。（${debugBits.join(", ")}）`,
+            type: "warning",
+            duration: 2600,
+          });
         } else {
           notify({
             id: toastIds.genericInfo(roomId, "nextgame-failed"),
             title: "次のゲームを開始できませんでした",
-            description: "もう一度お試しください。",
+            description: debugBits.length > 0 ? debugBits.join(" / ") : "もう一度お試しください。",
             type: "warning",
             duration: 2600,
           });
@@ -1093,6 +1198,15 @@ export function useHostActions({
         clearAutoStartLock();
         return;
       }
+
+      traceAction("ui.host.nextGame.result", {
+        roomId,
+        ok: "1",
+        requestId: result.requestId,
+        round: String(result.round),
+        playerCount: String(result.playerCount),
+      });
+      setMetric("hostAction", "nextGame.lastResult", `ok:${result.requestId}`);
 
       finalizeAction("nextGame", "success");
       // 成功時のトースト
@@ -1105,6 +1219,54 @@ export function useHostActions({
 
       onStageEvent?.("round:start");
       onStageEvent?.("round:end");
+
+      if (typeof window !== "undefined") {
+        const requestId = result.requestId;
+        nextGameStuckTimerRef.current = window.setTimeout(() => {
+          void (async () => {
+            try {
+              if (latestRoomStatusRef.current === "clue") {
+                return;
+              }
+              if (!db) {
+                return;
+              }
+              const ref = doc(db, "rooms", roomId);
+              const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+              const data = snap.data() as { status?: unknown } | undefined;
+              const serverStatus =
+                typeof data?.status === "string" ? data.status : null;
+              if (serverStatus === "clue" && latestRoomStatusRef.current !== "clue") {
+                traceAction("ui.host.nextGame.stuck", {
+                  roomId,
+                  requestId,
+                  localStatus: latestRoomStatusRef.current ?? "unknown",
+                  serverStatus,
+                });
+                notify({
+                  id: toastIds.genericInfo(roomId, "nextgame-stuck"),
+                  title: "次のラウンドは開始されています",
+                  description: "画面が更新されません。ページを再読み込みしてください。",
+                  type: "warning",
+                  duration: 4200,
+                });
+              } else if (serverStatus) {
+                traceAction("ui.host.nextGame.stuck", {
+                  roomId,
+                  requestId,
+                  localStatus: latestRoomStatusRef.current ?? "unknown",
+                  serverStatus,
+                });
+              }
+            } catch (error) {
+              traceError("ui.host.nextGame.stuckRead", error, {
+                roomId,
+                requestId,
+              });
+            }
+          })();
+        }, 3200);
+      }
     } catch (error) {
       clearAutoStartLock();
       finalizeAction("nextGame", "error");
@@ -1140,6 +1302,9 @@ export function useHostActions({
     roomId,
     defaultTopicType,
     currentTopic,
+    presenceReady,
+    onlineUids,
+    playerCount,
     clearAutoStartLock,
     onStageEvent,
     canProceed,
