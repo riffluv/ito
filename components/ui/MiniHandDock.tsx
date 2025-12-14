@@ -416,6 +416,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     resetGame,
     handleNextGame,
     evalSorted,
+    evalSortedPending,
     customOpen,
     setCustomOpen,
     customText,
@@ -566,6 +567,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isSortMode && placed ? "カードを待機エリアに戻す" : "カードを場に出す";
   const preparing = !!(
     showSpinner ||
+    evalSortedPending ||
     autoStartLocked ||
     quickStartPending ||
     isRestarting ||
@@ -646,11 +648,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {shouldShowSeinoButton && !hideHandUI && (
         <SeinoButton
           isVisible
-          disabled={!allSubmitted}
+          disabled={preparing || isRevealAnimating}
           onClick={async () => {
             try {
-              await evalSorted();
-              beginReveal();
+              const ok = await evalSorted();
+              if (ok) {
+                beginReveal();
+              }
             } catch {
               endReveal();
             }

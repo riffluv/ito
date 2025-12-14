@@ -103,7 +103,10 @@ export function useHostActions({
   const [customOpen, setCustomOpen] = useState(false);
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
+  const [evalSortedPending, setEvalSortedPending] = useState(false);
   const actionLatencyRef = useRef<Record<string, number>>({});
+  const evalSortedPendingRef = useRef(false);
+  const mountedRef = useRef(true);
   const presenceWarningShownRef = useRef(false);
   const presenceWaitSinceRef = useRef<number | null>(null);
   const [presenceWaitedMs, setPresenceWaitedMs] = useState(0);
@@ -124,6 +127,13 @@ export function useHostActions({
       }),
     [ensureSession, sessionId]
   );
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     latestRoomStatusRef.current = roomStatus;
@@ -1139,12 +1149,20 @@ export function useHostActions({
 
   const REVEAL_DELAY_MS = 500;
 
-  const evalSorted = useCallback(async () => {
-    if (!proposal || proposal.length === 0) return;
+  const evalSorted = useCallback(async (): Promise<boolean> => {
+    // 連打やダブルクリックで二重送信しない
+    if (evalSortedPendingRef.current) return false;
+
+    if (!proposal || proposal.length === 0) return false;
     const list = proposal.filter(
       (value): value is string => typeof value === "string" && value.length > 0
     );
-    if (list.length === 0) return;
+    if (list.length === 0) return false;
+
+    evalSortedPendingRef.current = true;
+    if (mountedRef.current) {
+      setEvalSortedPending(true);
+    }
 
     showtimeIntents?.markRevealIntent?.({
       action: "evalSorted",
@@ -1168,6 +1186,7 @@ export function useHostActions({
           Math.round(performance.now() - startedAt)
         );
       }
+      return true;
     } catch (error: unknown) {
       if (startedAt !== null) {
         setMetric(
@@ -1188,6 +1207,11 @@ export function useHostActions({
         type: "error",
       });
       throw error;
+    } finally {
+      evalSortedPendingRef.current = false;
+      if (mountedRef.current) {
+        setEvalSortedPending(false);
+      }
     }
   }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions]);
 
@@ -1304,6 +1328,7 @@ export function useHostActions({
     restartGame,
     handleNextGame,
     evalSorted,
+    evalSortedPending,
     customOpen,
     setCustomOpen,
     customText,

@@ -57,7 +57,11 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
             ? 404
           : code === "invalid_payload"
             ? 400
-            : 500;
+            : code === "invalid_status"
+              ? 409
+              : code === "rate_limited"
+                ? 429
+                : 500;
     return NextResponse.json({ error: code ?? "internal_error" }, { status });
   }
 }
