@@ -528,6 +528,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (!topicBox && effectiveDefaultTopicType === "カスタム");
   const shouldShowSeinoButton =
     !!isHost && isSortMode && phaseStatus === "clue" && allSubmitted;
+  const seinoVisible = shouldShowSeinoButton && !hideHandUI && !evalSortedPending && !isRevealAnimating;
 
   React.useEffect(() => {
     if (!ready) return;
@@ -645,22 +646,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   return (
     <>
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
-      {shouldShowSeinoButton && !hideHandUI && (
-        <SeinoButton
-          isVisible
-          disabled={preparing || isRevealAnimating}
-          onClick={async () => {
-            try {
-              const ok = await evalSorted();
-              if (ok) {
-                beginReveal();
-              }
-            } catch {
-              endReveal();
+      <SeinoButton
+        isVisible={seinoVisible}
+        disabled={preparing || isRevealAnimating}
+        onClick={async () => {
+          try {
+            const ok = await evalSorted();
+            if (ok) {
+              beginReveal();
             }
-          }}
-        />
-      )}
+          } catch {
+            endReveal();
+          }
+        }}
+      />
 
       {/* ========================================
           🌙 カード配布中インジケータ

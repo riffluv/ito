@@ -42,7 +42,6 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
       if (isVisible) {
         gsap.set(el, {
           display: "block",
-          pointerEvents: disabled ? "none" : "auto",
         });
         gsap.fromTo(
           el,
@@ -90,7 +89,19 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
     return () => {
       ctx.revert();
     };
-  }, [isVisible, disabled]);
+  }, [isVisible]);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) {
+      return;
+    }
+    try {
+      gsap.set(el, { pointerEvents: !isVisible || disabled ? "none" : "auto" });
+    } catch {
+      // ignore gsap failures
+    }
+  }, [disabled, isVisible]);
 
   return (
     <Box
