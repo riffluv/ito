@@ -774,10 +774,22 @@ export function useHostActions({
                     localStatus: latestRoomStatusRef.current ?? "unknown",
                     serverStatus,
                   });
+                  try {
+                    window.dispatchEvent(
+                      new CustomEvent("ito:room-force-refresh", {
+                        detail: {
+                          roomId,
+                          reason: `host.quickStart.stuck:${requestId}`,
+                        },
+                      })
+                    );
+                  } catch {}
                   notify({
                     id: toastIds.genericInfo(roomId, "quickstart-stuck"),
                     title: "ゲームは開始されています",
-                    description: `画面が更新されません。ページを再読み込みしてください。（server:${serverStatus}）`,
+                    description:
+                      `画面の同期が遅れています。ルーム情報を再取得します。` +
+                      `改善しない場合はページを再読み込みしてください。（server:${serverStatus}）`,
                     type: "warning",
                     duration: 4200,
                   });
@@ -1243,10 +1255,21 @@ export function useHostActions({
                   localStatus: latestRoomStatusRef.current ?? "unknown",
                   serverStatus,
                 });
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("ito:room-force-refresh", {
+                      detail: {
+                        roomId,
+                        reason: `host.nextGame.stuck:${requestId}`,
+                      },
+                    })
+                  );
+                } catch {}
                 notify({
                   id: toastIds.genericInfo(roomId, "nextgame-stuck"),
                   title: "次のラウンドは開始されています",
-                  description: "画面が更新されません。ページを再読み込みしてください。",
+                  description:
+                    "画面の同期が遅れています。ルーム情報を再取得します。改善しない場合はページを再読み込みしてください。",
                   type: "warning",
                   duration: 4200,
                 });

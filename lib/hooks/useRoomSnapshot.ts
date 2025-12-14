@@ -23,6 +23,7 @@ import deepEqual from "fast-deep-equal/es6";
 import {
   doc,
   getDoc,
+  getDocFromServer,
   onSnapshot,
   type FirestoreError,
 } from "firebase/firestore";
@@ -117,6 +118,7 @@ export function useRoomSnapshot(
   const joinLimitNotifiedRef = useRef(false);
   const ensureMemberHeartbeatRef = useRef<EnsureMemberHeartbeat | null>(null);
   const statusVersionRef = useRef<number>(0);
+  const forceRefreshInFlightRef = useRef<Promise<void> | null>(null);
 
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED;
@@ -438,6 +440,100 @@ export function useRoomSnapshot(
       if (backoffTimer) {
         clearTimeout(backoffTimer);
       }
+    };
+  }, [roomId, enqueueCommit]);
+
+  // Force-refresh room snapshot on demand (e.g. when host action succeeded but listener is stale)
+  useEffect(() => {
+    if (typeof window === "undefined") return () => undefined;
+    if (!roomId || !db) return () => undefined;
+    const firestore = db;
+
+    const handler = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{ roomId?: string; reason?: string }>
+      ).detail;
+      if (!detail || detail.roomId !== roomId) return;
+
+      if (forceRefreshInFlightRef.current) {
+        return;
+      }
+
+      const reason =
+        typeof detail.reason === "string" && detail.reason.trim().length > 0
+          ? detail.reason.trim().slice(0, 120)
+          : "unknown";
+      const startedAt =
+        typeof performance !== "undefined" ? performance.now() : null;
+
+      const task = (async () => {
+        traceAction("room.snapshot.forceRefresh", { roomId, reason });
+        try {
+          const roomRef = doc(firestore, "rooms", roomId);
+          const snap = await getDocFromServer(roomRef).catch(() => getDoc(roomRef));
+          if (!snap.exists()) {
+            traceAction("room.snapshot.forceRefresh.miss", { roomId, reason });
+            return;
+          }
+          const rawData = snap.data();
+          const sanitized = sanitizeRoom(rawData);
+          const incomingVersion =
+            typeof sanitized.statusVersion === "number"
+              ? sanitized.statusVersion
+              : 0;
+          const currentVersion =
+            typeof statusVersionRef.current === "number"
+              ? statusVersionRef.current
+              : 0;
+          if (incomingVersion < currentVersion) {
+            traceAction("room.snapshot.forceRefresh.ignored", {
+              roomId,
+              reason,
+              incomingVersion: String(incomingVersion),
+              currentVersion: String(currentVersion),
+            });
+            return;
+          }
+
+          enqueueCommit(() => {
+            statusVersionRef.current = incomingVersion;
+            setRoom({ id: snap.id, ...sanitized });
+            setRoomLoaded(true);
+            storePrefetchedRoom(
+              roomId,
+              sanitized as unknown as Record<string, unknown>
+            );
+            prefetchedAppliedRef.current = false;
+          }, startedAt, "forceRefreshCommitMs");
+        } catch (error) {
+          traceError("room.snapshot.forceRefresh", error, { roomId, reason });
+        } finally {
+          if (
+            startedAt !== null &&
+            typeof performance !== "undefined" &&
+            Number.isFinite(startedAt)
+          ) {
+            setMetric(
+              "roomSnapshot",
+              "forceRefreshMs",
+              Math.round(performance.now() - startedAt)
+            );
+          }
+        }
+      })();
+
+      forceRefreshInFlightRef.current = task;
+      task.finally(() => {
+        forceRefreshInFlightRef.current = null;
+      });
+    };
+
+    window.addEventListener("ito:room-force-refresh", handler as EventListener);
+    return () => {
+      window.removeEventListener(
+        "ito:room-force-refresh",
+        handler as EventListener
+      );
     };
   }, [roomId, enqueueCommit]);
 
