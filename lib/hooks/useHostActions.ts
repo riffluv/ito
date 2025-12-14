@@ -114,7 +114,11 @@ export function useHostActions({
   const lastActionAtRef = useRef<Record<string, number>>({});
   const latestRoomStatusRef = useRef<string | undefined>(roomStatus);
   const quickStartStuckTimerRef = useRef<number | null>(null);
+  const quickStartEarlySyncTimerRef = useRef<number | null>(null);
+  const quickStartOkAtRef = useRef<number | null>(null);
   const nextGameStuckTimerRef = useRef<number | null>(null);
+  const nextGameEarlySyncTimerRef = useRef<number | null>(null);
+  const nextGameOkAtRef = useRef<number | null>(null);
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -146,9 +150,17 @@ export function useHostActions({
         window.clearTimeout(quickStartStuckTimerRef.current);
         quickStartStuckTimerRef.current = null;
       }
+      if (typeof window !== "undefined" && quickStartEarlySyncTimerRef.current !== null) {
+        window.clearTimeout(quickStartEarlySyncTimerRef.current);
+        quickStartEarlySyncTimerRef.current = null;
+      }
       if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
         window.clearTimeout(nextGameStuckTimerRef.current);
         nextGameStuckTimerRef.current = null;
+      }
+      if (typeof window !== "undefined" && nextGameEarlySyncTimerRef.current !== null) {
+        window.clearTimeout(nextGameEarlySyncTimerRef.current);
+        nextGameEarlySyncTimerRef.current = null;
       }
     };
   }, []);
@@ -159,9 +171,39 @@ export function useHostActions({
       window.clearTimeout(quickStartStuckTimerRef.current);
       quickStartStuckTimerRef.current = null;
     }
+    if (roomStatus && roomStatus !== "waiting" && quickStartEarlySyncTimerRef.current !== null) {
+      window.clearTimeout(quickStartEarlySyncTimerRef.current);
+      quickStartEarlySyncTimerRef.current = null;
+    }
     if (roomStatus === "clue" && nextGameStuckTimerRef.current !== null) {
       window.clearTimeout(nextGameStuckTimerRef.current);
       nextGameStuckTimerRef.current = null;
+    }
+    if (roomStatus === "clue" && nextGameEarlySyncTimerRef.current !== null) {
+      window.clearTimeout(nextGameEarlySyncTimerRef.current);
+      nextGameEarlySyncTimerRef.current = null;
+    }
+    if (roomStatus === "clue") {
+      if (typeof performance !== "undefined") {
+        if (quickStartOkAtRef.current !== null) {
+          setMetric(
+            "hostAction",
+            "quickStart.statusSyncMs",
+            Math.max(0, Math.round(performance.now() - quickStartOkAtRef.current))
+          );
+        }
+        if (nextGameOkAtRef.current !== null) {
+          setMetric(
+            "hostAction",
+            "nextGame.statusSyncMs",
+            Math.max(0, Math.round(performance.now() - nextGameOkAtRef.current))
+          );
+        }
+      }
+      quickStartOkAtRef.current = null;
+      nextGameOkAtRef.current = null;
+      setQuickStartPending(false);
+      setIsRestarting(false);
     }
   }, [roomStatus]);
 
@@ -749,10 +791,31 @@ export function useHostActions({
         onStageEvent?.("round:end");
 
         if (typeof window !== "undefined") {
+          if (typeof performance !== "undefined" && latestRoomStatusRef.current !== "clue") {
+            quickStartOkAtRef.current = performance.now();
+          }
+          if (quickStartEarlySyncTimerRef.current !== null) {
+            window.clearTimeout(quickStartEarlySyncTimerRef.current);
+          }
+          const requestId = result.requestId;
+          quickStartEarlySyncTimerRef.current = window.setTimeout(() => {
+            try {
+              if (latestRoomStatusRef.current === "clue") {
+                return;
+              }
+              window.dispatchEvent(
+                new CustomEvent("ito:room-force-refresh", {
+                  detail: {
+                    roomId,
+                    reason: `host.quickStart.earlySync:${requestId}`,
+                  },
+                })
+              );
+            } catch {}
+          }, 520);
           if (quickStartStuckTimerRef.current !== null) {
             window.clearTimeout(quickStartStuckTimerRef.current);
           }
-          const requestId = result.requestId;
           quickStartStuckTimerRef.current = window.setTimeout(() => {
             void (async () => {
               try {
@@ -868,7 +931,9 @@ export function useHostActions({
         }
         return false;
       } finally {
-        setQuickStartPending(false);
+        if (!success || latestRoomStatusRef.current === "clue") {
+          setQuickStartPending(false);
+        }
         if (!success) {
           onStageEvent?.("round:abort");
         }
@@ -1042,9 +1107,21 @@ export function useHostActions({
   // 単一の API 呼び出しで reset + start + topic選択 + deal をアトミックに実行。
   // ============================================================================
   const handleNextGame = useCallback(async () => {
-    if (!isHost) return;
-    if (autoStartLocked || quickStartPending) return;
+    if (!isHost || autoStartLocked || quickStartPending || isRestarting) return;
     if (roomStatus === "reveal" && isRevealAnimating) return;
+
+    const now = Date.now();
+    const last = lastActionAtRef.current["nextGame"] ?? 0;
+    const elapsed = now - last;
+    const NEXT_GAME_DEBOUNCE_MS = 800;
+    if (elapsed >= 0 && elapsed < NEXT_GAME_DEBOUNCE_MS) {
+      traceAction("ui.host.nextGame.debounced", {
+        roomId,
+        elapsed,
+      });
+      return;
+    }
+    lastActionAtRef.current["nextGame"] = now;
 
     if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
       window.clearTimeout(nextGameStuckTimerRef.current);
@@ -1055,13 +1132,9 @@ export function useHostActions({
       typeof performance !== "undefined" ? performance.now() : null;
     setIsRestarting(true);
     onStageEvent?.("round:prepare");
-    if (!canProceed("nextGame")) {
-      onStageEvent?.("round:abort");
-      setIsRestarting(false);
-      return;
-    }
 
     markActionStart("nextGame");
+    let success = false;
     try {
       traceAction("ui.host.nextGame", { roomId, method: "nextRound-api" });
       beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
@@ -1221,6 +1294,10 @@ export function useHostActions({
       setMetric("hostAction", "nextGame.lastResult", `ok:${result.requestId}`);
 
       finalizeAction("nextGame", "success");
+      if (typeof performance !== "undefined" && latestRoomStatusRef.current !== "clue") {
+        nextGameOkAtRef.current = performance.now();
+      }
+      success = true;
       // 成功時のトースト
       notify({
         id: toastIds.gameStart(roomId),
@@ -1233,7 +1310,25 @@ export function useHostActions({
       onStageEvent?.("round:end");
 
       if (typeof window !== "undefined") {
+        if (nextGameEarlySyncTimerRef.current !== null) {
+          window.clearTimeout(nextGameEarlySyncTimerRef.current);
+        }
         const requestId = result.requestId;
+        nextGameEarlySyncTimerRef.current = window.setTimeout(() => {
+          try {
+            if (latestRoomStatusRef.current === "clue") {
+              return;
+            }
+            window.dispatchEvent(
+              new CustomEvent("ito:room-force-refresh", {
+                detail: {
+                  roomId,
+                  reason: `host.nextGame.earlySync:${requestId}`,
+                },
+              })
+            );
+          } catch {}
+        }, 520);
         nextGameStuckTimerRef.current = window.setTimeout(() => {
           void (async () => {
             try {
@@ -1304,7 +1399,9 @@ export function useHostActions({
       });
       onStageEvent?.("round:abort");
     } finally {
-      setIsRestarting(false);
+      if (!success || latestRoomStatusRef.current === "clue") {
+        setIsRestarting(false);
+      }
       if (startedAt !== null) {
         setMetric(
           "hostAction",
@@ -1317,6 +1414,7 @@ export function useHostActions({
     isHost,
     autoStartLocked,
     quickStartPending,
+    isRestarting,
     roomStatus,
     isRevealAnimating,
     beginAutoStartLock,
@@ -1330,7 +1428,6 @@ export function useHostActions({
     playerCount,
     clearAutoStartLock,
     onStageEvent,
-    canProceed,
     finalizeAction,
     markActionStart,
   ]);

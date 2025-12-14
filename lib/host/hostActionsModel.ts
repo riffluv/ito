@@ -17,7 +17,10 @@ export type HostIntent = {
   key: HostIntentKey;
   label: string;
   disabled?: boolean;
+  /** trace-friendly reason code (e.g. "ui.preparing", "players.insufficient.1") */
   reason?: string;
+  /** optional human-friendly hint (tooltip etc.) */
+  hint?: string;
   payload?: Record<string, unknown>;
   palette?: "brand" | "orange" | "gray" | "teal";
   variant?: "solid" | "outline" | "ghost" | "subtle" | "soft" | "link";
@@ -80,17 +83,24 @@ export function buildHostActionModel(
   // waiting: シンプルな「開始」「詳細」のみ
   if (status === "waiting") {
     // 初期UI要望: 「クイック開始」より単純な「開始」ラベルに変更
+    const quickStartReason = uiPreparing
+      ? "ui.preparing"
+      : enoughPlayers
+        ? undefined
+        : `players.insufficient.${effectiveActive}`;
+    const quickStartHint = uiPreparing
+      ? "準備中です"
+      : enoughPlayers
+        ? undefined
+        : `2人必要: 現在${effectiveActive}人`;
     intents.push({
       key: "quickStart",
       label: "開始",
       palette: "orange",
       variant: "solid",
       disabled: uiPreparing || !enoughPlayers,
-      reason: uiPreparing
-        ? "準備中です"
-        : enoughPlayers
-          ? undefined
-          : `2人必要: 現在${effectiveActive}人`,
+      reason: quickStartReason,
+      hint: quickStartHint,
     });
     intents.push({
       key: "advancedMode",
@@ -98,7 +108,8 @@ export function buildHostActionModel(
       palette: "gray",
       variant: "outline",
       disabled: uiPreparing,
-      reason: uiPreparing ? "準備中です" : undefined,
+      reason: uiPreparing ? "ui.preparing" : undefined,
+      hint: uiPreparing ? "準備中です" : undefined,
     });
   }
   // finished: show primary (もう一度)
@@ -108,7 +119,8 @@ export function buildHostActionModel(
       label: hostPrimary.label,
       palette: "orange",
       disabled: uiPreparing,
-      reason: uiPreparing ? "準備中です" : undefined,
+      reason: uiPreparing ? "ui.preparing" : undefined,
+      hint: uiPreparing ? "準備中です" : undefined,
     });
   }
 
@@ -120,7 +132,8 @@ export function buildHostActionModel(
       palette: "gray",
       variant: "outline",
       disabled: uiPreparing,
-      reason: uiPreparing ? "準備中です" : undefined,
+      reason: uiPreparing ? "ui.preparing" : undefined,
+      hint: uiPreparing ? "準備中です" : undefined,
     });
 
     // ゲーム中断・リセットボタン
@@ -130,7 +143,8 @@ export function buildHostActionModel(
       palette: "gray",
       variant: "ghost",
       disabled: uiPreparing,
-      reason: uiPreparing ? "準備中です" : undefined,
+      reason: uiPreparing ? "ui.preparing" : undefined,
+      hint: uiPreparing ? "準備中です" : undefined,
       confirm: {
         title: "ゲームを中断しますか?",
         body: "現在の進行状況は失われ、待機状態に戻ります。よろしいですか?",
@@ -143,19 +157,29 @@ export function buildHostActionModel(
         proposal.length > 0 ? proposal.length : orderList.length;
       // evaluate 有効条件: 2人以上が場に出し、全アクティブ（effectiveActive）分が揃っている
       const canEval = placedCount >= 2 && placedCount === effectiveActive;
-      let reason: string | undefined;
+      let hint: string | undefined;
+      let disabledReason: string | undefined;
       if (!canEval) {
-        if (placedCount === 0) reason = "カードがまだ場に出ていません";
-        else if (placedCount < effectiveActive)
-          reason = `残り${effectiveActive - placedCount}人`; // 進捗表示
-        else if (placedCount < 2) reason = "2人以上必要です";
+        if (placedCount === 0) {
+          disabledReason = "evaluate.empty";
+          hint = "カードがまだ場に出ていません";
+        } else if (placedCount < effectiveActive) {
+          disabledReason = `evaluate.remaining.${effectiveActive - placedCount}`;
+          hint = `残り${effectiveActive - placedCount}人`; // 進捗表示
+        } else if (placedCount < 2) {
+          disabledReason = "evaluate.insufficient";
+          hint = "2人以上必要です";
+        } else {
+          disabledReason = "evaluate.incomplete";
+        }
       }
       intents.push({
         key: "evaluate",
         label: "並びを確定",
         palette: "teal",
         disabled: uiPreparing || !canEval,
-        reason: uiPreparing ? "準備中です" : reason,
+        reason: uiPreparing ? "ui.preparing" : disabledReason,
+        hint: uiPreparing ? "準備中です" : hint,
       });
     }
   }

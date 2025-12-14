@@ -78,7 +78,9 @@ export function useHostActions({
   const roundPreparingWatchdogRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      return () => {};
+    }
     const isPreparing = Boolean(room.ui?.roundPreparing);
     const clearTimer = () => {
       if (roundPreparingWatchdogRef.current !== null) {
@@ -399,7 +401,7 @@ export function useHostActions({
       key: uniqueKey,
       label: i.label,
       disabled: overrides?.disabled ?? i.disabled,
-      title: i.reason,
+      title: i.hint ?? i.reason,
       palette: i.palette,
       variant: i.variant,
       onClick,

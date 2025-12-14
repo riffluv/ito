@@ -104,6 +104,33 @@ const releaseLockSafely = async (roomId: string, holder: string) => {
   }
 };
 
+const waitMs = (durationMs: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, durationMs));
+
+const clearRoundPreparingWithRetry = async (params: {
+  roomRef: FirebaseFirestore.DocumentReference;
+  roomId: string;
+  context: string;
+}): Promise<boolean> => {
+  const { roomRef, roomId, context } = params;
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await roomRef.update({
+        "ui.roundPreparing": false,
+        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+      });
+      return true;
+    } catch (error) {
+      traceError("ui.roundPreparing.clear.retry", error, { roomId, attempt, context });
+      if (attempt < MAX_ATTEMPTS) {
+        await waitMs(100);
+      }
+    }
+  }
+  return false;
+};
+
 const fetchPresenceUids = async (roomId: string): Promise<string[] | null> => {
   const rtdb = getAdminRtdb();
   if (!rtdb) return null;
@@ -695,18 +722,6 @@ export async function startGameCommand(params: {
       note: doAutoDeal ? "autoDeal" : undefined,
     });
   } catch (error) {
-    // roundPreparing が残るとUIが固着するため、失敗時も必ず解除を試みる。
-    if (roundPreparingActivated) {
-      try {
-        await roomRef.update({
-          "ui.roundPreparing": false,
-          lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-        });
-        roundPreparingActivated = false;
-      } catch (clearError) {
-        traceError("ui.roundPreparing.start.clear", clearError, { roomId: params.roomId });
-      }
-    }
     try {
       const failureSnap = await roomRef.get();
       const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
@@ -725,13 +740,13 @@ export async function startGameCommand(params: {
     throw error;
   } finally {
     if (roundPreparingActivated) {
-      try {
-        await roomRef.update({
-          "ui.roundPreparing": false,
-          lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-        });
-      } catch (error) {
-        traceError("ui.roundPreparing.start.clear", error, { roomId: params.roomId });
+      const cleared = await clearRoundPreparingWithRetry({
+        roomRef,
+        roomId: params.roomId,
+        context: "startGameCommand",
+      });
+      if (cleared) {
+        roundPreparingActivated = false;
       }
     }
     await releaseLockSafely(params.roomId, lockHolder);
@@ -901,6 +916,8 @@ export async function submitOrder(params: SubmitOrderParams) {
         decidedAt: serverNow,
       },
       status: "reveal",
+      "ui.revealPending": true,
+      "ui.revealBeginAt": serverNow,
       result: { success: revealOutcome.success, revealedAt: serverNow },
       stats: revealOutcome.stats,
       lastActiveAt: serverNow,
@@ -1897,16 +1914,6 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       topicType: topicBox,
     };
   } catch (error) {
-    if (roundPreparingActivated) {
-      try {
-        await roomRef.update({
-          "ui.roundPreparing": false,
-          lastActiveAt: FieldValue.serverTimestamp(),
-        });
-      } catch (clearError) {
-        traceError("ui.roundPreparing.next.clear", clearError, { roomId: params.roomId });
-      }
-    }
     try {
       const failureSnap = await roomRef.get();
       const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
@@ -1927,6 +1934,16 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     }
     throw error;
   } finally {
+    if (roundPreparingActivated) {
+      const cleared = await clearRoundPreparingWithRetry({
+        roomRef,
+        roomId: params.roomId,
+        context: "nextRoundCommand",
+      });
+      if (cleared) {
+        roundPreparingActivated = false;
+      }
+    }
     await releaseLockSafely(params.roomId, lockHolder);
   }
 }

@@ -1,6 +1,5 @@
 import { db } from "@/lib/firebase/client";
 import {
-  beginRevealPending,
   resetRoomWithPrune,
   submitSortedOrder,
   topicControls,
@@ -228,6 +227,12 @@ export function createHostActionsController(
     const shouldEnforcePresence = !skipPresence;
 
     if (shouldEnforcePresence && !presenceReady) {
+      traceAction("ui.host.quickStart.presenceNotReady", {
+        roomId,
+        activeCount,
+        onlineCount,
+        playerCount,
+      });
       return {
         ok: false,
         requestId: startRequestId,
@@ -271,6 +276,10 @@ export function createHostActionsController(
           validStatuses.push("clue");
         }
         if (typeof data?.status === "string" && !validStatuses.includes(data.status)) {
+          traceAction("ui.host.quickStart.notWaiting.precheck", {
+            roomId,
+            status: data.status,
+          });
           return {
             ok: false,
             requestId: startRequestId,
@@ -562,7 +571,6 @@ export function createHostActionsController(
     if (delay > 0) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
-    await beginRevealPending(req.roomId);
   };
 
   const submitCustomTopicAndStartIfNeeded = async (
