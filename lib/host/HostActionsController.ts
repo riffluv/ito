@@ -318,10 +318,12 @@ export function createHostActionsController(
 
     let success = false;
     try {
+      const relaxForNonWaiting =
+        typeof req.roomStatus === "string" && req.roomStatus !== "waiting";
       // 一本化後のレースを極力減らすため、デフォルトで寛容に進行中ステータスも許可する。
       const allowFromFinished = req.allowFromFinished ?? true;
-      // デフォルトでは clue 中の再開始を許可しない（リトライ時のみ true）
-      const allowFromClue = req.allowFromClue ?? false;
+      // clue 状態の再開始は、waiting 以外の状態のときだけ緩和。
+      const allowFromClue = req.allowFromClue ?? relaxForNonWaiting;
       traceAction("ui.host.quickStart.api", {
         roomId,
         requestId: startRequestId,
@@ -329,6 +331,8 @@ export function createHostActionsController(
         skipPresence: skipPresence ? "1" : "0",
         allowFromFinished: allowFromFinished ? "1" : "0",
         allowFromClue: allowFromClue ? "1" : "0",
+        roomStatus: req.roomStatus ?? undefined,
+        relaxForNonWaiting: relaxForNonWaiting ? "1" : "0",
       });
 
       await apiStartGame(roomId, {

@@ -5,7 +5,9 @@ import { buildHostActionModel, HostIntent } from "@/lib/host/hostActionsModel";
 import { topicTypeLabels } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { handleGameError } from "@/lib/utils/errorHandling";
-import { useCallback, useMemo, useState } from "react";
+import { doc, getDoc, getDocFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   createHostActionsController,
@@ -73,6 +75,70 @@ export function useHostActions({
     () => createHostActionsController(),
     []
   );
+  const roundPreparingWatchdogRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isPreparing = Boolean(room.ui?.roundPreparing);
+    const clearTimer = () => {
+      if (roundPreparingWatchdogRef.current !== null) {
+        window.clearTimeout(roundPreparingWatchdogRef.current);
+        roundPreparingWatchdogRef.current = null;
+      }
+    };
+
+    if (isPreparing) {
+      if (roundPreparingWatchdogRef.current === null) {
+        const localStatus = room.status ?? null;
+        roundPreparingWatchdogRef.current = window.setTimeout(() => {
+          roundPreparingWatchdogRef.current = null;
+          void (async () => {
+            if (!db) return;
+            try {
+              const ref = doc(db, "rooms", roomId);
+              const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+              const data = snap.data() as { status?: unknown; ui?: { roundPreparing?: unknown } } | undefined;
+              const serverStatus =
+                typeof data?.status === "string" ? data.status : null;
+              const serverPreparing = Boolean(data?.ui?.roundPreparing);
+              traceAction("ui.host.roundPreparing.stuck", {
+                roomId,
+                localStatus,
+                serverStatus,
+                serverPreparing,
+              });
+              if (serverStatus === "clue" && localStatus !== "clue") {
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("ito:room-force-refresh", {
+                      detail: {
+                        roomId,
+                        reason: "roundPreparing.watchdog",
+                      },
+                    })
+                  );
+                } catch {}
+              }
+              notify({
+                id: toastIds.genericInfo(roomId, "roundpreparing-stuck"),
+                title: "状態を再同期しています",
+                description:
+                  "ラウンド準備が完了しないようなので最新の状態を取得します。改善しない場合は再読み込みしてください。",
+                type: "warning",
+                duration: 4200,
+              });
+            } catch (error) {
+              traceError("ui.host.roundPreparing.watchdog", error, { roomId });
+            }
+          })();
+        }, 7000);
+      }
+    } else {
+      clearTimer();
+    }
+
+    return clearTimer;
+  }, [room.ui?.roundPreparing, room.status, roomId]);
   // buildHostActionModelをメモ化して不必要な再計算を防ぐ
   const intents = useMemo(
     () => buildHostActionModel(

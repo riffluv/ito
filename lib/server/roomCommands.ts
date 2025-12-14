@@ -449,6 +449,11 @@ export async function startGameCommand(params: {
   const lockHolder = `start:${requestId}`;
   const locked = await acquireRoomLock(params.roomId, lockHolder);
   if (!locked) {
+    traceAction("room.start.locked", {
+      roomId: params.roomId,
+      requestId,
+      holder: lockHolder,
+    });
     throw codedError("rate_limited", "rate_limited");
   }
 
@@ -701,6 +706,21 @@ export async function startGameCommand(params: {
       } catch (clearError) {
         traceError("ui.roundPreparing.start.clear", clearError, { roomId: params.roomId });
       }
+    }
+    try {
+      const failureSnap = await roomRef.get();
+      const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
+      traceError("room.start.server.failure", error, {
+        roomId: params.roomId,
+        requestId,
+        prevStatus,
+        status: failureRoom?.status ?? null,
+        roundPreparing: failureRoom?.ui?.roundPreparing ?? null,
+        startRequestId: failureRoom?.startRequestId ?? null,
+        locked: locked ? "1" : "0",
+      });
+    } catch (detailError) {
+      traceError("room.start.server.failure.detail", detailError, { roomId: params.roomId, requestId });
     }
     throw error;
   } finally {
@@ -1630,16 +1650,22 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   const lockHolder = `next:${params.requestId}`;
   const locked = await acquireRoomLock(params.roomId, lockHolder);
   if (!locked) {
+    traceAction("room.next.locked", {
+      roomId: params.roomId,
+      requestId: params.requestId,
+      holder: lockHolder,
+    });
     throw codedError("rate_limited", "rate_limited");
   }
   let roundPreparingActivated = false;
+  let room: RoomDoc | undefined;
   try {
     // 1. room 取得 & 権限チェック
     const roomSnap = await roomRef.get();
     if (!roomSnap.exists) {
       throw codedError("room_not_found", "room_not_found");
     }
-    const room = roomSnap.data() as RoomDoc | undefined;
+    room = roomSnap.data() as RoomDoc | undefined;
     const uid = await verifyHostIdentity(room, params.token, params.roomId, params.sessionId ?? undefined);
 
     // ホストまたは作成者のみ実行可能
@@ -1880,6 +1906,24 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       } catch (clearError) {
         traceError("ui.roundPreparing.next.clear", clearError, { roomId: params.roomId });
       }
+    }
+    try {
+      const failureSnap = await roomRef.get();
+      const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
+      traceError("room.next.server.failure", error, {
+        roomId: params.roomId,
+        requestId: params.requestId,
+        prevStatus: room?.status ?? null,
+        status: failureRoom?.status ?? null,
+        roundPreparing: failureRoom?.ui?.roundPreparing ?? null,
+        nextRequestId: failureRoom?.nextRequestId ?? null,
+        locked: locked ? "1" : "0",
+      });
+    } catch (detailError) {
+      traceError("room.next.server.failure.detail", detailError, {
+        roomId: params.roomId,
+        requestId: params.requestId,
+      });
     }
     throw error;
   } finally {
