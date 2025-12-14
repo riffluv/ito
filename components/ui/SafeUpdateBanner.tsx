@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Box, Text } from "@chakra-ui/react";
 import { AppButton } from "@/components/ui/AppButton";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
-import { releaseInGameAutoApply } from "@/lib/serviceWorker/updateChannel";
 
 type SafeUpdateBannerProps = {
   offsetTop?: number;
@@ -53,15 +52,21 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
     return "新バージョン待機中";
   }, [autoApplySuppressed, hasError, isApplying, phase]);
 
+  // ゲーム中（suppressed / autoApplySuppressed）はボタンを表示しない
+  // ゲーム進行中にユーザーが誤って更新を適用してしまうリスクを防ぐ
+  const isInGameHold = phase === "suppressed" || autoApplySuppressed;
+
   const actionType = useMemo(() => {
     if (isApplying || phase === "applying") {
       return null;
     }
+    // ゲーム中は手動適用ボタンも再試行ボタンも表示しない
+    // ゲーム進行中の事故適用を防止するため
+    if (isInGameHold) {
+      return null;
+    }
     if (hasError || phase === "failed") {
       return "retry" as const;
-    }
-    if (phase === "suppressed" || autoApplySuppressed) {
-      return "apply" as const;
     }
     if (
       phase === "auto_pending" ||
@@ -72,7 +77,7 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
       return "apply" as const;
     }
     return null;
-  }, [autoApplySuppressed, hasError, isApplying, isUpdateReady, phase]);
+  }, [hasError, isApplying, isInGameHold, isUpdateReady, phase]);
 
   const description = useMemo(() => {
     if (isApplying || phase === "applying") {
@@ -93,7 +98,7 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
       }
     }
     if (phase === "suppressed" || autoApplySuppressed) {
-      return "プレイ中またはループガードで自動適用を停止中。安全なタイミングで適用できます。";
+      return "プレイ中のため自動更新を保留中です。メインメニューに戻ると更新されます。";
     }
     if (phase === "auto_pending") {
       return "進行中のゲームに影響がないタイミングで自動適用します。";
@@ -136,8 +141,6 @@ export default function SafeUpdateBanner({ offsetTop = 12 }: SafeUpdateBannerPro
           size="sm"
           palette="brand"
           onClick={() => {
-            // 明示的に押したら in-game hold を解除して適用を進める
-            releaseInGameAutoApply();
             if (actionType === "retry") {
               retryUpdate();
             } else {

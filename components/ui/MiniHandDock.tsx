@@ -620,6 +620,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     autoStartLocked ||
     roundPreparing ||
     isRestarting;
+  const effectiveSpinnerText = showSpinner
+    ? spinnerText
+    : roundPreparing
+      ? "次のラウンドを準備しています…"
+      : quickStartPending || isRestarting
+        ? "状態を同期しています…"
+        : spinnerText;
 
   React.useEffect(() => {
     if (
@@ -711,7 +718,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               },
             }}
           >
-            {spinnerText}
+            {effectiveSpinnerText}
           </Text>
         </Box>
       )}

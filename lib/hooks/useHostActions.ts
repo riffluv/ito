@@ -105,6 +105,9 @@ export function useHostActions({
   const [customText, setCustomText] = useState("");
   const [evalSortedPending, setEvalSortedPending] = useState(false);
   const actionLatencyRef = useRef<Record<string, number>>({});
+  const quickStartPendingRef = useRef(quickStartPending);
+  const isRestartingRef = useRef(isRestarting);
+  const pendingVisibilityKickAtRef = useRef<number>(0);
   const evalSortedPendingRef = useRef(false);
   const mountedRef = useRef(true);
   const presenceWarningShownRef = useRef(false);
@@ -119,6 +122,7 @@ export function useHostActions({
   const nextGameStuckTimerRef = useRef<number | null>(null);
   const nextGameEarlySyncTimerRef = useRef<number | null>(null);
   const nextGameOkAtRef = useRef<number | null>(null);
+  const resetOkAtRef = useRef<number | null>(null);
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -141,8 +145,38 @@ export function useHostActions({
   }, []);
 
   useEffect(() => {
+    quickStartPendingRef.current = quickStartPending;
+  }, [quickStartPending]);
+
+  useEffect(() => {
+    isRestartingRef.current = isRestarting;
+  }, [isRestarting]);
+
+  useEffect(() => {
     latestRoomStatusRef.current = roomStatus;
   }, [roomStatus]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return () => {};
+    const handler = () => {
+      try {
+        if (document.visibilityState !== "visible") return;
+        if (!db) return;
+        if (latestRoomStatusRef.current === "clue") return;
+        if (!quickStartPendingRef.current && !isRestartingRef.current) return;
+        const now = Date.now();
+        if (now - pendingVisibilityKickAtRef.current < 1200) return;
+        pendingVisibilityKickAtRef.current = now;
+        window.dispatchEvent(
+          new CustomEvent("ito:room-force-refresh", {
+            detail: { roomId, reason: "host.pending.visibility" },
+          })
+        );
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, [roomId]);
 
   useEffect(() => {
     return () => {
@@ -182,6 +216,16 @@ export function useHostActions({
     if (roomStatus === "clue" && nextGameEarlySyncTimerRef.current !== null) {
       window.clearTimeout(nextGameEarlySyncTimerRef.current);
       nextGameEarlySyncTimerRef.current = null;
+    }
+    if (roomStatus === "waiting") {
+      if (typeof performance !== "undefined" && resetOkAtRef.current !== null) {
+        setMetric(
+          "hostAction",
+          "reset.statusSyncMs",
+          Math.max(0, Math.round(performance.now() - resetOkAtRef.current))
+        );
+      }
+      resetOkAtRef.current = null;
     }
     if (roomStatus === "clue") {
       if (typeof performance !== "undefined") {
@@ -973,13 +1017,13 @@ export function useHostActions({
       const includeOnline = options?.includeOnline ?? true;
       const recallSpectators =
         options?.recallSpectators ?? true;
-      markActionStart("reset");
-      setIsResetting(true);
-      if (!canProceed("reset")) {
-        finalizeAction("reset", "error");
-        setIsResetting(false);
-        return;
-      }
+    markActionStart("reset");
+    setIsResetting(true);
+    if (!canProceed("reset")) {
+      finalizeAction("reset", "error");
+      setIsResetting(false);
+      return;
+    }
       beginResetUiHold(3400);
       onStageEvent?.("reset:start");
       if (shouldPlaySound) {
@@ -1005,6 +1049,12 @@ export function useHostActions({
           includeOnline,
           recallSpectators,
         });
+        if (
+          typeof performance !== "undefined" &&
+          latestRoomStatusRef.current !== "waiting"
+        ) {
+          resetOkAtRef.current = performance.now();
+        }
         // Hold the UI in a waiting-like state until Firestore/FSM catches up.
         beginResetUiHold(2400);
         if (showFeedback) {

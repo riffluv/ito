@@ -299,4 +299,4 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 - **正常動作確認済み**: XState ベースの状態機械 (`updateChannel.ts`) が堅牢に実装。
 - **潜在リスク**: 旧 SW が残ったままデプロイが行われた場合、`version-check` で弾かれて入室できない可能性がある。
   - 対策: `room.appVersion` が未設定の古いルームは一旦許可する設計になっている。新しいルームを作り直してもらう運用で対処。
-- **部屋滞在中の自動更新抑制**: `useRoomMachineController` でページ単位で管理。部屋にいる間（waiting 含む全フェーズ）は `holdInGameAutoApply()` で抑止し、部屋退出時に `releaseInGameAutoApply()` で解除。`window.__ITO_METRICS__.safeUpdate` で確認可能。
+- **部屋滞在中の自動更新抑制**: `useRoomMachineController` でページ単位で管理。部屋にいる間（waiting 含む全フェーズ）は `holdInGameAutoApply()` で抑止し、部屋退出時に `releaseInGameAutoApply()` で解除。**ゲーム中は手動適用ボタンも表示しない**（誤操作によるゲーム中断を防止）。`window.__ITO_METRICS__.safeUpdate` で確認可能。
