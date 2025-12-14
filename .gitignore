@@ -11,3 +11,21 @@ yarn.lock
 
 .vercel
 service-account-key.json
+online-ito-firebase-adminsdk-*.json
+*.Zone.Identifier
+functions/lib/
+functions/assets/
+tsconfig.tsbuildinfo
+public/workers/pixi-background-worker.js
+自己紹介メモ（序の紋章用).md
+
+.vercel
+.env*.local
+
+# Sensitive local artifacts (keep out of repo)
+.env.production
+.env.local.bak
+.env.local.*
+env.local
+*.har
+downloaded-logs-*.json
