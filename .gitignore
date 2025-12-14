@@ -20,3 +20,11 @@ public/workers/pixi-background-worker.js
 
 .vercel
 .env*.local
+
+# Sensitive local artifacts (keep out of repo)
+.env.production
+.env.local.bak
+.env.local.*
+env.local
+*.har
+downloaded-logs-*.json
