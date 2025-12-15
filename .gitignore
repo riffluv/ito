@@ -28,3 +28,6 @@ public/workers/pixi-background-worker.js
 env.local
 *.har
 downloaded-logs-*.json
+
+# Local task sync artifacts
+tasksync/

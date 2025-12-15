@@ -77,7 +77,24 @@
     --content-max-width: 1400px;
     --content-narrow: 800px;
     --content-article: 1200px;
-    --board-max-width: min(100%, 90rem);
+    /* ボード幅（FHD=1920 の比率を維持しつつ、広い画面では伸ばす） */
+    --board-max-width: min(100%, max(90rem, calc(100vw * 1440 / 1920)));
+
+    /* カードサイズ（設計基準: FHD=1920px / DPI100%）
+       - 高解像度(2.5k/3k/4k)でも「画面に対する占有率」を維持するため、vw基準でスケール
+       - 調整したいときは、まず --card-w-base / --card-h-base / --card-w-md-at-1920 を触ればOK
+       - 上限は --card-scale-max（例: 2なら 4K=3840px まで比率通りに拡大） */
+    /* モバイルは「見やすさ」と「盤面に収まる」の両立のため、幅だけをclampして比率は固定 */
+    --card-w-base: clamp(88px, 24vw, 100px);
+    --card-h-base: calc(var(--card-w-base) * 7 / 5);
+    --card-w-md-at-1920: 120;
+    --card-scale-max: 2;
+    --card-w-md: clamp(
+      calc(var(--card-w-md-at-1920) * 1px),
+      calc(100vw * var(--card-w-md-at-1920) / 1920),
+      calc(var(--card-w-md-at-1920) * var(--card-scale-max) * 1px)
+    );
+    --card-h-md: calc(var(--card-w-md) * 7 / 5);
 
     /* ゲームカード関連（コンテナクエリ単位に対応） */
     --card-gap:     clamp(0.375rem, 1.5cqi, 1rem);

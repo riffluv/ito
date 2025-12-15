@@ -1,7 +1,8 @@
 import { Box, Text } from "@chakra-ui/react";
-import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
+import { UI_TOKENS } from "@/theme/layout";
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
+import { cardSizeCss } from "./cardSize";
 
 /**
  * 空のカードスロットコンポーネント
@@ -72,7 +73,7 @@ export function EmptySlot({ index, totalSlots = 5 }: EmptySlotProps) {
       data-slot
       css={{
         aspectRatio: "5 / 7",
-        width: UNIFIED_LAYOUT.CARD.WIDTH,
+        ...cardSizeCss(),
         placeSelf: "start",
         display: "flex",
         flexDirection: "column",
