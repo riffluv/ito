@@ -1,6 +1,6 @@
 "use client";
 import { FLIP_DURATION_MS, HOVER_EASING } from "@/lib/ui/motion";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
+import { UI_TOKENS } from "@/theme/layout";
 import { Box } from "@chakra-ui/react";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { memo, type MouseEventHandler } from "react";
@@ -127,11 +127,7 @@ export function GameCard({
           transform: "translateZ(0)",
           willChange: isResultPreset ? undefined : "transform",
         }}
-        width={UNIFIED_LAYOUT.CARD.WIDTH}
-        height={UNIFIED_LAYOUT.CARD.HEIGHT}
         css={cardSizeCss()}
-        minW={UNIFIED_LAYOUT.CARD.WIDTH}
-        minH={UNIFIED_LAYOUT.CARD.HEIGHT}
         onClick={clickHandler}
         cursor={isInteractive ? "pointer" : undefined}
         role={isInteractive ? "button" : undefined}
@@ -201,10 +197,6 @@ export function GameCard({
   return (
     <Box
       className={styles.root}
-      width={UNIFIED_LAYOUT.CARD.WIDTH}
-      height={UNIFIED_LAYOUT.CARD.HEIGHT}
-      minW={UNIFIED_LAYOUT.CARD.WIDTH}
-      minH={UNIFIED_LAYOUT.CARD.HEIGHT}
       css={cardSizeCss()}
       p={{ base: 3, md: "13px" }}
       borderRadius="lg"
