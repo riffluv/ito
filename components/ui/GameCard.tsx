@@ -117,8 +117,6 @@ export function GameCard({
   });
 
   if (allow3d) {
-    const flipTransform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
-
     return (
       <Box
         className={styles.root}
@@ -126,25 +124,26 @@ export function GameCard({
         position="relative"
         style={{
           perspective: "1000px",
+          transform: "translateZ(0)",
+          willChange: isResultPreset ? undefined : "transform",
         }}
         width={UNIFIED_LAYOUT.CARD.WIDTH}
         height={UNIFIED_LAYOUT.CARD.HEIGHT}
-        css={{
-          ...cardSizeCss(),
-          ...(isResultPreset
-            ? {}
-            : {
-                "&:hover .gc3d": {
-                  transform: `${flipTransform} translateY(-4px) translateZ(0)`,
-                },
-              }),
-        }}
+        css={cardSizeCss()}
         minW={UNIFIED_LAYOUT.CARD.WIDTH}
         minH={UNIFIED_LAYOUT.CARD.HEIGHT}
         onClick={clickHandler}
         cursor={isInteractive ? "pointer" : undefined}
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
+        transition={isResultPreset ? undefined : `transform 0.28s ${HOVER_EASING}`}
+        _hover={
+          isResultPreset
+            ? undefined
+            : {
+                transform: "translateY(-4px) translateZ(0)",
+              }
+        }
       >
         <div
           className="gc3d"
@@ -154,7 +153,7 @@ export function GameCard({
             width: "100%",
             height: "100%",
             transformStyle: "preserve-3d",
-            transform: `${flipped ? "rotateY(180deg)" : "rotateY(0deg)"} translateZ(0)`,
+            transform: "translateZ(0)",
             willChange: "transform",
           }}
         >

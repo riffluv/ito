@@ -1,5 +1,5 @@
 import { gsap } from "gsap";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 type FlipPreset = "reveal" | "result";
 
@@ -23,20 +23,38 @@ export function useCardFlipAnimation({
   onFlip,
 }: UseCardFlipAnimationOptions) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastAttachedRef = useRef<HTMLDivElement | null>(null);
   const previousFlipRef = useRef<boolean>(flipped);
   const gsapInitialisedRef = useRef(false);
   const flipTweenRef = useRef<gsap.core.Tween | null>(null);
+  const previousRotationRef = useRef<number | null>(null);
+
+  const attachRef = useCallback((node: HTMLDivElement | null) => {
+    const prev = lastAttachedRef.current;
+    if (prev && prev !== node) {
+      gsap.killTweensOf(prev);
+    }
+    if (node === null && prev) {
+      gsap.killTweensOf(prev);
+    }
+    lastAttachedRef.current = node;
+    containerRef.current = node;
+    gsapInitialisedRef.current = false;
+    previousRotationRef.current = null;
+    if (flipTweenRef.current) {
+      flipTweenRef.current.kill();
+      flipTweenRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
-    const el = containerRef.current;
     return () => {
       if (flipTweenRef.current) {
         flipTweenRef.current.kill();
         flipTweenRef.current = null;
       }
-      if (el) {
-        gsap.killTweensOf(el);
-      }
+      const el = lastAttachedRef.current;
+      if (el) gsap.killTweensOf(el);
     };
   }, []);
 
@@ -52,36 +70,45 @@ export function useCardFlipAnimation({
   }, [allow3d, flipped, onFlip]);
 
   useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return undefined;
-
-    const resetTween = () => {
+    if (!allow3d) {
+      gsapInitialisedRef.current = false;
+      previousRotationRef.current = null;
       if (flipTweenRef.current) {
         flipTweenRef.current.kill();
         flipTweenRef.current = null;
       }
-    };
-
-    if (!allow3d) {
-      resetTween();
-      el.style.transform = "";
-      el.style.transition = "";
-      gsapInitialisedRef.current = false;
       return undefined;
     }
 
+    const el = containerRef.current;
+    if (!el) return undefined;
+
     el.style.transition = "";
+
+    const targetRotation = flipped ? 180 : 0;
 
     if (!gsapInitialisedRef.current) {
       gsap.set(el, {
-        rotateY: flipped ? 180 : 0,
+        rotateY: targetRotation,
         transformPerspective: 1000,
         transformOrigin: "center center",
       });
       gsapInitialisedRef.current = true;
+      previousRotationRef.current = targetRotation;
+      return undefined;
     }
 
-    resetTween();
+    const previousRotation = previousRotationRef.current;
+    if (previousRotation === targetRotation) {
+      return undefined;
+    }
+
+    previousRotationRef.current = targetRotation;
+
+    if (flipTweenRef.current) {
+      flipTweenRef.current.kill();
+      flipTweenRef.current = null;
+    }
 
     const duration = preset === "result" ? durations.result : durations.default;
     // back.out(1.5) でオーバーシュートを入れ「生き生き感」を演出（参考: カード回転.md）
@@ -90,7 +117,7 @@ export function useCardFlipAnimation({
 
     flipTweenRef.current = gsap.to(el, {
       duration,
-      rotateY: flipped ? 180 : 0,
+      rotateY: targetRotation,
       ease,
       overwrite: "auto",
       transformPerspective: 1000,
@@ -98,9 +125,12 @@ export function useCardFlipAnimation({
     });
 
     return () => {
-      resetTween();
+      if (flipTweenRef.current) {
+        flipTweenRef.current.kill();
+        flipTweenRef.current = null;
+      }
     };
   }, [allow3d, flipped, preset, durations.default, durations.result]);
 
-  return containerRef;
+  return attachRef;
 }
