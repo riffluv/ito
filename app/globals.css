@@ -213,48 +213,6 @@
   /* stylelint-enable declaration-no-important */
 }
 
-/* ============ dpi-responsive ============ */
-@layer dpi-responsive {
-  /* DPIスケール対応の体系的管理 - 2025年ベストプラクティス */
-  
-  /* 125% DPI - Windows標準スケーリング */
-  @media (resolution >= 1.25dppx), (resolution >= 120dpi) {
-    .dpi-125-card-optimized {
-      width: 95px;
-      height: 133px;
-      min-width: 95px;
-      min-height: 133px;
-    }
-    
-    .dpi-125-spacing-optimized {
-      gap: var(--spacing-md); /* 14px */
-      padding: var(--spacing-sm) var(--spacing-md); /* 8px 12px */
-    }
-  }
-  
-  /* 150% DPI - 高DPI環境の完全対応 */
-  @media (resolution >= 1.5dppx), (resolution >= 144dpi) {
-    .dpi-150-card-optimized {
-      width: 88px;
-      height: 123px;
-      min-width: 88px;
-      min-height: 123px;
-    }
-    
-    .dpi-150-spacing-optimized {
-      gap: var(--spacing-lg); /* 16px */
-      row-gap: var(--spacing-xl); /* 20px */
-      padding: var(--spacing-md); /* 12px */
-    }
-    
-    .dpi-150-compact {
-      font-size: 0.875rem;
-      line-height: 1.25;
-      padding: var(--spacing-xs) var(--spacing-sm); /* 4px 8px */
-    }
-  }
-}
-
 /* ============ utilities ============ */
 @layer utilities {
   /* アクセシビリティ用（画面外に視覚的に隠す） */
