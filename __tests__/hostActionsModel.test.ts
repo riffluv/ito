@@ -48,7 +48,9 @@ describe("buildHostActionModel", () => {
     });
     const qs = intents.find((i) => i.key === "quickStart")!;
     expect(qs.disabled).toBe(true);
-    expect(qs.reason).toBe("2人必要: 現在1人");
+    // reason は trace-friendly code、表示用は hint を使う
+    expect(qs.reason).toBe("players.insufficient.1");
+    expect(qs.hint).toBe("2人必要: 現在1人");
   });
 
   test("sort-submit mode with partial cards → evaluate disabled with reason", () => {
@@ -76,7 +78,8 @@ describe("buildHostActionModel", () => {
     );
     const evalIntent = intents.find((i) => i.key === "evaluate")!;
     expect(evalIntent.disabled).toBe(true);
-    expect(evalIntent.reason).toBe("残り2人");
+    expect(evalIntent.reason).toBe("evaluate.remaining.2");
+    expect(evalIntent.hint).toBe("残り2人");
   });
 
   test("sort-submit mode with no cards → evaluate disabled with appropriate reason", () => {
@@ -104,7 +107,8 @@ describe("buildHostActionModel", () => {
     );
     const evalIntent = intents.find((i) => i.key === "evaluate")!;
     expect(evalIntent.disabled).toBe(true);
-    expect(evalIntent.reason).toBe("カードがまだ場に出ていません");
+    expect(evalIntent.reason).toBe("evaluate.empty");
+    expect(evalIntent.hint).toBe("カードがまだ場に出ていません");
   });
 
   test("online count fallback behavior", () => {

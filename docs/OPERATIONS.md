@@ -265,7 +265,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
   - 進行系: `/api/rooms/[roomId]/join|ready|deal|submit-clue|submit-order|commit-play|continue|finalize|reset|topic|mvp|players/*|reveal-pending|round-preparing|prune-proposal` など。
   - 例外は `lib/firebase/rooms.leaveRoom` などに残っている「API 失敗時のみ実行されるフォールバック」のみ（通常フローでは通らない）。
 - UI / hooks から Firestore に直接 `setDoc` / `updateDoc` / `runTransaction` するコードは撤廃済み（Presence/RTDB 系を除く）。
-- **追加例外（2025-12-09）**: `components/hooks/useRevealAnimation.ts` の `runRealtimeEvaluation` 内で `room.result` を先行保存する処理が残存。これはリビール演出中の UX 最適化のための例外として許容。冪等な `runTransaction` + 既存 result チェックで安全性を担保しており、最終確定は `finalizeReveal` API が行う。
+- **（2025-12-15）**: 上記の `useRevealAnimation.ts` に残していた `room.result` 先行保存（Firestore 直書き）の例外は撤廃。`submit-order` API が `result` を保存するため、クライアント直書きは不要。
 
 ### 15.2 jsdom / isomorphic-dompurify 由来の本番クラッシュ（再発防止メモ）
 - 2025-12-05〜07 にかけて、Vercel 本番環境で `/api/rooms/create` など一部 API が **静的 500 HTML**（`x-matched-path: /500`, `nextExport: true`）を返す事象が発生した。

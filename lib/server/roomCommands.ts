@@ -918,7 +918,12 @@ export async function submitOrder(params: SubmitOrderParams) {
       status: "reveal",
       "ui.revealPending": true,
       "ui.revealBeginAt": serverNow,
-      result: { success: revealOutcome.success, revealedAt: serverNow },
+      result: {
+        success: revealOutcome.success,
+        failedAt: revealOutcome.order.failedAt ?? null,
+        lastNumber: revealOutcome.order.lastNumber ?? null,
+        revealedAt: serverNow,
+      },
       stats: revealOutcome.stats,
       lastActiveAt: serverNow,
       statusVersion: FieldValue.increment(1) as unknown as number,
@@ -1100,7 +1105,12 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
       tx.update(roomRef, {
         status: "reveal",
         order: playResult.payload.order,
-        result: { success: playResult.payload.success, revealedAt: FieldValue.serverTimestamp() },
+        result: {
+          success: playResult.payload.success,
+          failedAt: playResult.payload.order.failedAt ?? null,
+          lastNumber: playResult.payload.order.lastNumber ?? null,
+          revealedAt: FieldValue.serverTimestamp(),
+        },
         stats: playResult.payload.stats,
         lastActiveAt: FieldValue.serverTimestamp(),
         statusVersion: FieldValue.increment(1) as unknown as number,

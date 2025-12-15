@@ -166,6 +166,18 @@ function applyCluePhaseAdjustments({
     updates.status = "reveal";
     updates.result = {
       success: revealSuccess,
+      failedAt:
+        typeof updates["order.failedAt"] === "number"
+          ? updates["order.failedAt"]
+          : typeof room?.order?.failedAt === "number"
+            ? room.order.failedAt
+            : null,
+      lastNumber:
+        typeof updates["order.lastNumber"] === "number"
+          ? updates["order.lastNumber"]
+          : typeof room?.order?.lastNumber === "number"
+            ? room.order.lastNumber
+            : null,
       revealedAt: serverNow,
     };
     updates.stats = applyOutcomeToRoomStats(

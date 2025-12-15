@@ -7,7 +7,6 @@ import {
 } from "@/lib/game/resultPrefetch";
 import { finalizeReveal } from "@/lib/game/room";
 import { evaluateSorted } from "@/lib/game/rules";
-import type { RoomDoc } from "@/lib/types";
 import {
   FINAL_TWO_BONUS_DELAY,
   FLIP_DURATION_MS,
@@ -46,59 +45,10 @@ type FlipPlan = {
   evalAt: number;
 };
 
-type RevealPersistenceDeps = {
-  requireDb: typeof import("@/lib/firebase/require").requireDb;
-  doc: typeof import("firebase/firestore").doc;
-  runTransaction: typeof import("firebase/firestore").runTransaction;
-  serverTimestamp: typeof import("firebase/firestore").serverTimestamp;
-};
-
-let revealPersistenceDepsPromise: Promise<RevealPersistenceDeps> | null = null;
-
-async function preloadRevealPersistenceDeps(): Promise<RevealPersistenceDeps> {
-  if (!revealPersistenceDepsPromise) {
-    revealPersistenceDepsPromise = (async () => {
-      const [firebaseRequire, firestore] = await Promise.all([
-        import("@/lib/firebase/require"),
-        import("firebase/firestore"),
-      ]);
-      return {
-        requireDb: firebaseRequire.requireDb,
-        doc: firestore.doc,
-        runTransaction: firestore.runTransaction,
-        serverTimestamp: firestore.serverTimestamp,
-      };
-    })().catch((error) => {
-      revealPersistenceDepsPromise = null;
-      throw error;
-    });
-  }
-  return revealPersistenceDepsPromise;
-}
-
 type SimpleIdleCallback = (
   callback: () => void,
   options?: { timeout?: number }
 ) => number;
-
-const scheduleRevealPersistenceTask = (task: () => void) => {
-  if (typeof window === "undefined") {
-    task();
-    return;
-  }
-  const idle = (window as Window & { requestIdleCallback?: SimpleIdleCallback })
-    .requestIdleCallback;
-  if (typeof idle === "function") {
-    idle(
-      () => {
-        task();
-      },
-      { timeout: 1500 }
-    );
-    return;
-  }
-  window.setTimeout(task, 0);
-};
 
 const scheduleIdleRevealTask = (task: () => void, timeout = 1200) => {
   if (typeof window === "undefined") {
@@ -163,14 +113,6 @@ export function useRevealAnimation({
     ready: boolean;
     promise: Promise<void> | null;
   }>({ ready: false, promise: null });
-
-  useEffect(() => {
-    if (resolveMode === "sort-submit" && orderListLength > 0) {
-      void preloadRevealPersistenceDeps().catch((error) => {
-        logWarn("reveal", "preload-result-modules-failed", error);
-      });
-    }
-  }, [resolveMode, orderListLength]);
 
   useEffect(() => {
     if (
@@ -394,39 +336,7 @@ export function useRevealAnimation({
           }
 
           // 成功時で最後のカードの場合は成功結果を保存（完全非同期）
-          // NOTE(API1本化例外): この直接書き込みは API1本化ポリシーの例外として許容されている。
-          // 理由: リビールアニメーション完了直後に result を先行保存することで、
-          //       finalizeReveal API の呼び出し前にユーザー体験を向上させる最適化。
-          // 安全性: runTransaction + 既存 result チェックにより冪等性を担保。
-          //         最終的な確定は finalizeReveal API が行う。
-          if (result.success && nextIndex === orderListLengthRef.current) {
-            scheduleRevealPersistenceTask(() => {
-              void (async () => {
-                try {
-                  const { requireDb, doc, runTransaction, serverTimestamp } =
-                    await preloadRevealPersistenceDeps();
-                  const _db = requireDb();
-                  const roomRef = doc(_db, "rooms", roomId);
-                  await runTransaction(_db, async (tx) => {
-                    const currentSnap = await tx.get(roomRef);
-                    if (!currentSnap.exists()) return;
-                    const currentRoom = currentSnap.data() as RoomDoc;
-                    if (currentRoom.result) return; // 既存結果がある場合はスキップ
-                    tx.update(roomRef, {
-                      result: {
-                        success: true,
-                        failedAt: null,
-                        lastNumber: result.last,
-                        revealedAt: serverTimestamp(),
-                      },
-                    });
-                  });
-                } catch (e) {
-                  logWarn("reveal", "result-save-error", e);
-                }
-              })();
-            });
-          }
+          // result は submit-order API が保存する（クライアント直書きは行わない）
         }
       } catch (e) {
         logWarn("reveal", "realtime-eval-error", e);

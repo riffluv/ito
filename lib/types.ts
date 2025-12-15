@@ -78,6 +78,8 @@ export type RoomDoc = {
   result?: {
     success: boolean;
     revealedAt: Timestamp | FieldValue;
+    failedAt?: number | null;
+    lastNumber?: number | null;
   } | null;
   stats: RoomStats;
   deal?: {

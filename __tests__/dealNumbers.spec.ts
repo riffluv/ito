@@ -9,13 +9,13 @@ describe("selectDealTargetPlayers", () => {
     lastSeen: now - lastSeenOffsetMs,
   });
 
-  test("prefers presence-listed players when available", () => {
+  test("uses presence-listed players as truth when available", () => {
     const candidates = [
       makeCandidate("alice", 1_000),
       makeCandidate("bob", 1_000),
     ];
     const result = selectDealTargetPlayers(candidates, ["alice"], now);
-    expect(result.map((p) => p.id)).toEqual(["alice", "bob"]);
+    expect(result.map((p) => p.id)).toEqual(["alice"]);
   });
 
   test("falls back to recent activity when presence is empty", () => {
