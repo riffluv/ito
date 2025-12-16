@@ -107,6 +107,8 @@ export default function PerformanceMetricsInitializer() {
       const audio = metrics.audio ?? {};
       const hostAction = metrics.hostAction ?? {};
       const presence = metrics.presence ?? {};
+      const roomSnapshot = metrics.roomSnapshot ?? {};
+      const api = metrics.api ?? {};
       const dropRecords = Object.fromEntries(
         Object.entries(metrics).filter(([key]) => key.startsWith("client.drop"))
       );
@@ -118,6 +120,8 @@ export default function PerformanceMetricsInitializer() {
         perf,
         hostAction,
         presence,
+        roomSnapshot,
+        api,
         audio,
         dropRecords: Object.keys(dropRecords).length > 0 ? dropRecords : null,
         traces,

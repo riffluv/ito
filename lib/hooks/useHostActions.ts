@@ -53,6 +53,7 @@ type HostActionFeedback =
 type UseHostActionsOptions = {
   roomId: string;
   roomStatus?: string;
+  statusVersion?: number | null;
   isHost: boolean;
   isRevealAnimating: boolean;
   autoStartLocked: boolean;
@@ -78,6 +79,7 @@ type UseHostActionsOptions = {
 export function useHostActions({
   roomId,
   roomStatus,
+  statusVersion,
   isHost,
   isRevealAnimating,
   autoStartLocked,
@@ -123,6 +125,16 @@ export function useHostActions({
   const nextGameEarlySyncTimerRef = useRef<number | null>(null);
   const nextGameOkAtRef = useRef<number | null>(null);
   const resetOkAtRef = useRef<number | null>(null);
+  const resetStuckTimerRef = useRef<number | null>(null);
+  const resetEarlySyncTimerRef = useRef<number | null>(null);
+  const latestStatusVersionRef = useRef<number>(
+    typeof statusVersion === "number" && Number.isFinite(statusVersion) ? statusVersion : 0
+  );
+  const expectedStatusVersionRef = useRef<{
+    quickStart: number | null;
+    nextGame: number | null;
+    reset: number | null;
+  }>({ quickStart: null, nextGame: null, reset: null });
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(roomId, async () => {
     const idToken = await auth?.currentUser?.getIdToken();
@@ -155,6 +167,56 @@ export function useHostActions({
   useEffect(() => {
     latestRoomStatusRef.current = roomStatus;
   }, [roomStatus]);
+
+  useEffect(() => {
+    if (typeof statusVersion === "number" && Number.isFinite(statusVersion)) {
+      latestStatusVersionRef.current = statusVersion;
+    }
+  }, [statusVersion]);
+
+  useEffect(() => {
+    if (typeof statusVersion !== "number" || typeof performance === "undefined") {
+      return;
+    }
+    const now = performance.now();
+    const expected = expectedStatusVersionRef.current;
+
+    if (expected.reset !== null && statusVersion >= expected.reset) {
+      if (resetOkAtRef.current !== null) {
+        setMetric(
+          "hostAction",
+          "reset.statusVersionSyncMs",
+          Math.max(0, Math.round(now - resetOkAtRef.current))
+        );
+      }
+      expected.reset = null;
+      setMetric("hostAction", "reset.expectedStatusVersion", null);
+    }
+
+    if (expected.quickStart !== null && statusVersion >= expected.quickStart) {
+      if (quickStartOkAtRef.current !== null) {
+        setMetric(
+          "hostAction",
+          "quickStart.statusVersionSyncMs",
+          Math.max(0, Math.round(now - quickStartOkAtRef.current))
+        );
+      }
+      expected.quickStart = null;
+      setMetric("hostAction", "quickStart.expectedStatusVersion", null);
+    }
+
+    if (expected.nextGame !== null && statusVersion >= expected.nextGame) {
+      if (nextGameOkAtRef.current !== null) {
+        setMetric(
+          "hostAction",
+          "nextGame.statusVersionSyncMs",
+          Math.max(0, Math.round(now - nextGameOkAtRef.current))
+        );
+      }
+      expected.nextGame = null;
+      setMetric("hostAction", "nextGame.expectedStatusVersion", null);
+    }
+  }, [statusVersion]);
 
   useEffect(() => {
     if (typeof window === "undefined") return () => {};
@@ -196,6 +258,14 @@ export function useHostActions({
         window.clearTimeout(nextGameEarlySyncTimerRef.current);
         nextGameEarlySyncTimerRef.current = null;
       }
+      if (typeof window !== "undefined" && resetStuckTimerRef.current !== null) {
+        window.clearTimeout(resetStuckTimerRef.current);
+        resetStuckTimerRef.current = null;
+      }
+      if (typeof window !== "undefined" && resetEarlySyncTimerRef.current !== null) {
+        window.clearTimeout(resetEarlySyncTimerRef.current);
+        resetEarlySyncTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -218,6 +288,16 @@ export function useHostActions({
       nextGameEarlySyncTimerRef.current = null;
     }
     if (roomStatus === "waiting") {
+      if (typeof window !== "undefined" && resetStuckTimerRef.current !== null) {
+        window.clearTimeout(resetStuckTimerRef.current);
+        resetStuckTimerRef.current = null;
+      }
+      if (typeof window !== "undefined" && resetEarlySyncTimerRef.current !== null) {
+        window.clearTimeout(resetEarlySyncTimerRef.current);
+        resetEarlySyncTimerRef.current = null;
+      }
+      expectedStatusVersionRef.current.reset = null;
+      setMetric("hostAction", "reset.expectedStatusVersion", null);
       if (typeof performance !== "undefined" && resetOkAtRef.current !== null) {
         setMetric(
           "hostAction",
@@ -246,6 +326,10 @@ export function useHostActions({
       }
       quickStartOkAtRef.current = null;
       nextGameOkAtRef.current = null;
+      expectedStatusVersionRef.current.quickStart = null;
+      expectedStatusVersionRef.current.nextGame = null;
+      setMetric("hostAction", "quickStart.expectedStatusVersion", null);
+      setMetric("hostAction", "nextGame.expectedStatusVersion", null);
       setQuickStartPending(false);
       setIsRestarting(false);
     }
@@ -372,6 +456,10 @@ export function useHostActions({
 
   useEffect(() => {
     presenceWarningShownRef.current = false;
+    expectedStatusVersionRef.current = { quickStart: null, nextGame: null, reset: null };
+    setMetric("hostAction", "quickStart.expectedStatusVersion", null);
+    setMetric("hostAction", "nextGame.expectedStatusVersion", null);
+    setMetric("hostAction", "reset.expectedStatusVersion", null);
   }, [roomId]);
 
   const clearResetUiHold = useCallback(() => {
@@ -837,6 +925,9 @@ export function useHostActions({
         if (typeof window !== "undefined") {
           if (typeof performance !== "undefined" && latestRoomStatusRef.current !== "clue") {
             quickStartOkAtRef.current = performance.now();
+            const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
+            expectedStatusVersionRef.current.quickStart = expectedVersion;
+            setMetric("hostAction", "quickStart.expectedStatusVersion", expectedVersion);
           }
           if (quickStartEarlySyncTimerRef.current !== null) {
             window.clearTimeout(quickStartEarlySyncTimerRef.current);
@@ -863,7 +954,7 @@ export function useHostActions({
           quickStartStuckTimerRef.current = window.setTimeout(() => {
             void (async () => {
               try {
-                if (latestRoomStatusRef.current !== "waiting") {
+                if (latestRoomStatusRef.current === "clue") {
                   return;
                 }
                 if (!db) {
@@ -874,11 +965,12 @@ export function useHostActions({
                 const data = snap.data() as { status?: unknown } | undefined;
                 const serverStatus =
                   typeof data?.status === "string" ? data.status : null;
-                if (serverStatus && serverStatus !== "waiting") {
+                const localStatus = latestRoomStatusRef.current ?? "unknown";
+                if (serverStatus === "clue" && localStatus !== "clue") {
                   traceAction("ui.host.quickStart.stuck", {
                     roomId,
                     requestId,
-                    localStatus: latestRoomStatusRef.current ?? "unknown",
+                    localStatus,
                     serverStatus,
                   });
                   try {
@@ -904,7 +996,7 @@ export function useHostActions({
                   traceAction("ui.host.quickStart.stuck", {
                     roomId,
                     requestId,
-                    localStatus: latestRoomStatusRef.current ?? "unknown",
+                    localStatus,
                     serverStatus: serverStatus ?? "unknown",
                   });
                 }
@@ -1054,6 +1146,84 @@ export function useHostActions({
           latestRoomStatusRef.current !== "waiting"
         ) {
           resetOkAtRef.current = performance.now();
+          const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
+          expectedStatusVersionRef.current.reset = expectedVersion;
+          setMetric("hostAction", "reset.expectedStatusVersion", expectedVersion);
+          if (typeof window !== "undefined") {
+            if (resetEarlySyncTimerRef.current !== null) {
+              window.clearTimeout(resetEarlySyncTimerRef.current);
+            }
+            resetEarlySyncTimerRef.current = window.setTimeout(() => {
+              try {
+                if (latestRoomStatusRef.current === "waiting") {
+                  return;
+                }
+                window.dispatchEvent(
+                  new CustomEvent("ito:room-force-refresh", {
+                    detail: {
+                      roomId,
+                      reason: "host.reset.earlySync",
+                    },
+                  })
+                );
+              } catch {}
+            }, 520);
+
+            if (resetStuckTimerRef.current !== null) {
+              window.clearTimeout(resetStuckTimerRef.current);
+            }
+            resetStuckTimerRef.current = window.setTimeout(() => {
+              void (async () => {
+                try {
+                  if (latestRoomStatusRef.current === "waiting") {
+                    return;
+                  }
+                  if (!db) {
+                    return;
+                  }
+                  const ref = doc(db, "rooms", roomId);
+                  const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+                  const data = snap.data() as { status?: unknown } | undefined;
+                  const serverStatus =
+                    typeof data?.status === "string" ? data.status : null;
+                  const localStatus = latestRoomStatusRef.current ?? "unknown";
+                  if (serverStatus === "waiting" && localStatus !== "waiting") {
+                    traceAction("ui.room.reset.stuck", {
+                      roomId,
+                      localStatus,
+                      serverStatus,
+                    });
+                    try {
+                      window.dispatchEvent(
+                        new CustomEvent("ito:room-force-refresh", {
+                          detail: {
+                            roomId,
+                            reason: "host.reset.stuck",
+                          },
+                        })
+                      );
+                    } catch {}
+                    notify({
+                      id: toastIds.genericInfo(roomId, "reset-stuck"),
+                      title: "画面の同期が遅れています",
+                      description:
+                        "最新の状態を取得します。改善しない場合はページを再読み込みしてください。",
+                      type: "warning",
+                      duration: 4200,
+                    });
+                  } else if (serverStatus) {
+                    traceAction("ui.room.reset.stuck", {
+                      roomId,
+                      localStatus,
+                      serverStatus,
+                    });
+                  }
+                } catch (error) {
+                  traceError("ui.room.reset.stuckRead", error, { roomId });
+                }
+              })();
+            }, 3200);
+          }
         }
         // Hold the UI in a waiting-like state until Firestore/FSM catches up.
         beginResetUiHold(2400);
@@ -1346,6 +1516,9 @@ export function useHostActions({
       finalizeAction("nextGame", "success");
       if (typeof performance !== "undefined" && latestRoomStatusRef.current !== "clue") {
         nextGameOkAtRef.current = performance.now();
+        const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
+        expectedStatusVersionRef.current.nextGame = expectedVersion;
+        setMetric("hostAction", "nextGame.expectedStatusVersion", expectedVersion);
       }
       success = true;
       // 成功時のトースト

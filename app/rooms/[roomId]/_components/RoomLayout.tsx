@@ -2459,6 +2459,7 @@ export function RoomLayout(props: RoomLayoutProps) {
       cluesReady={allCluesReady}
       isHost={isHost}
       roomStatus={room.status}
+      statusVersion={room.statusVersion ?? 0}
       defaultTopicType={room.options?.defaultTopicType || "\u901a\u5e38\u7248"}
       topicBox={room.topicBox ?? null}
       allowContinueAfterFail={!!room.options?.allowContinueAfterFail}

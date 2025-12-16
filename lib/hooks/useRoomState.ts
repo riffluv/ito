@@ -30,6 +30,7 @@ export type RoomState = {
   spectatorNode: ReturnType<typeof useRoomMachineController>["spectatorState"]["spectatorNode"];
   roomAccessError: string | null;
   roomAccessErrorDetail: ReturnType<typeof useRoomSnapshot>["roomAccessErrorDetail"];
+  sync: ReturnType<typeof useRoomSnapshot>["sync"];
   detachNow: () => void;
   reattachPresence: () => void;
   leavingRef: React.MutableRefObject<boolean>;
@@ -80,6 +81,7 @@ export function useRoomState(
       spectatorNode: spectatorState.spectatorNode,
       roomAccessError: snapshot.roomAccessError,
       roomAccessErrorDetail: snapshot.roomAccessErrorDetail,
+      sync: snapshot.sync,
       detachNow: snapshot.detachNow ?? (() => {}),
       reattachPresence: snapshot.reattachPresence ?? (() => {}),
       leavingRef: snapshot.leavingRef,

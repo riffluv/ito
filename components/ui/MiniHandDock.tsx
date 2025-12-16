@@ -260,6 +260,7 @@ interface MiniHandDockProps {
   cluesReady?: boolean;
   isHost?: boolean;
   roomStatus?: string;
+  statusVersion?: number | null;
   defaultTopicType?: string;
   topicBox?: string | null;
   allowContinueAfterFail?: boolean;
@@ -295,6 +296,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     cluesReady,
     isHost,
     roomStatus,
+    statusVersion,
     defaultTopicType = "通常版",
     allowContinueAfterFail,
     topicBox = null,
@@ -433,6 +435,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   } = useHostActionsCore({
     roomId,
     roomStatus,
+    statusVersion,
     isHost: !!isHost,
     isRevealAnimating,
     autoStartLocked,
