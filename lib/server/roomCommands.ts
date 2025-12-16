@@ -1137,7 +1137,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     throw codedError("forbidden", "forbidden", "host_only");
   }
 
-  // 状態チェック: clue または waiting（初回配札のみに限定）
+  // 状態チェック: clue または waiting（配り直しもここで扱う）
   const currentStatus = room?.status ?? "waiting";
   if (currentStatus !== "clue" && currentStatus !== "waiting") {
     throw codedError("invalid_status", "invalid_status");
@@ -1145,6 +1145,13 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
 
   const rateLimitMs = 700;
   const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
+  // Idempotent: 同じ requestId で既に配札済みなら成功扱い
+  const existingDealCount =
+    room?.deal?.players && Array.isArray(room.deal.players) ? room.deal.players.length : null;
+  if (room?.dealRequestId && room.dealRequestId === params.requestId && existingDealCount !== null) {
+    return existingDealCount;
+  }
+
   // allow the very first deal right after start without waiting,
   // so quickStart/start -> deal のシーケンスが 700ms 未満でも失敗しない
   const existingNumbers =
@@ -1152,17 +1159,8 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
       ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
       : undefined;
   const isFirstDeal = !existingNumbers || Object.keys(existingNumbers).length === 0;
-  if (!isFirstDeal && (!room?.dealRequestId || room.dealRequestId !== params.requestId)) {
-    throw codedError("invalid_status", "invalid_status", "deal_already_assigned");
-  }
   const canBypassRateLimit =
     isFirstDeal && (room?.status === "clue" || room?.status === "waiting");
-  // Idempotent: 直前と同じ requestId で既に配札済みなら成功扱い
-  const existingDealCount =
-    room?.deal?.players && Array.isArray(room.deal.players) ? room.deal.players.length : null;
-  if (room?.dealRequestId && room.dealRequestId === params.requestId && existingDealCount !== null) {
-    return existingDealCount;
-  }
 
   if (!canBypassRateLimit && lastMs !== null && Date.now() - lastMs < rateLimitMs) {
     throw codedError("rate_limited", "rate_limited");
@@ -1258,6 +1256,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
       count: ordered.length,
       eligibleCount,
       requestId: params.requestId,
+      redeal: isFirstDeal ? "0" : "1",
       prevStatus: room?.status ?? null,
       nextStatus: room?.status ?? null,
     });
@@ -1268,7 +1267,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
       command: "deal",
       prevStatus: room?.status ?? null,
       nextStatus: room?.status ?? null,
-      note: `count:${ordered.length}`,
+      note: `count:${ordered.length},redeal:${isFirstDeal ? "0" : "1"}`,
     });
 
     return ordered.length;
