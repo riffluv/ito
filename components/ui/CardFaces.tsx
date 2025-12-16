@@ -32,6 +32,37 @@ const getUnifiedTextStyle = (): React.CSSProperties => ({
 
 });
 
+// HD-2D風カードの共通スタイル（指示書v2準拠）
+// ::before = 内側の二重線ハイライト
+// ::after = 上部の月光グラデーション
+const HD2D_CARD_PSEUDO_STYLES = {
+  _before: {
+    content: '""',
+    position: "absolute" as const,
+    inset: "2px",
+    borderRadius: "5px",
+    border: "var(--card-border-width-inner) solid var(--card-border-inner)",
+    borderTopColor: "var(--card-border-highlight)",
+    pointerEvents: "none" as const,
+    // Watermark用フック
+    backgroundImage: "var(--card-watermark-image)",
+    backgroundPosition: "var(--card-watermark-position)",
+    backgroundSize: "var(--card-watermark-size)",
+    backgroundRepeat: "no-repeat",
+  },
+  _after: {
+    content: '""',
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "45%",
+    background: `linear-gradient(178deg, var(--card-light-moon) 0%, transparent 70%)`,
+    borderRadius: "6px 6px 0 0",
+    pointerEvents: "none" as const,
+  },
+};
+
 const CARD_META_FONT_SIZE = "calc(var(--chakra-fontSizes-2xs) * var(--card-text-scale))";
 
 
@@ -96,7 +127,8 @@ export function CardFaceFront({
 
       p={{ base: 3, md: "13px" }}
 
-      borderRadius="8px"
+      // HD-2D風: 角丸を微差で調整（7px = 8pxより少し小さく、手触り感）
+      borderRadius="7px"
 
       border={border}
 
@@ -114,9 +146,15 @@ export function CardFaceFront({
 
       boxShadow={boxShadow}
 
-      transition="background-color 0.31s ease, border-color 0.31s ease, box-shadow 0.31s ease" // AI感除去: 0.3s → 0.31s
+      // AI感除去: 0.3s → 0.28s、イージングも微調整
+      transition="background-color 0.28s cubic-bezier(0.3, 0.7, 0.4, 1), border-color 0.28s cubic-bezier(0.3, 0.7, 0.4, 1), box-shadow 0.28s cubic-bezier(0.3, 0.7, 0.4, 1)"
 
       overflow="hidden"
+
+      position="relative"
+
+      // HD-2D風の疑似要素（二重枠＋月光グラデ）
+      {...HD2D_CARD_PSEUDO_STYLES}
 
     >
 
@@ -275,7 +313,8 @@ export function CardFaceBack({
 
       p={{ base: 3, md: "13px" }}
 
-      borderRadius="8px"
+      // HD-2D風: 角丸を微差で調整（7px = 8pxより少し小さく、手触り感）
+      borderRadius="7px"
 
       border={border}
 
@@ -293,9 +332,15 @@ export function CardFaceBack({
 
       boxShadow={boxShadow}
 
-      transition="background-color 0.31s ease, border-color 0.31s ease, box-shadow 0.31s ease" // AI感除去: 0.3s → 0.31s
+      // AI感除去: 0.3s → 0.28s、イージングも微調整
+      transition="background-color 0.28s cubic-bezier(0.3, 0.7, 0.4, 1), border-color 0.28s cubic-bezier(0.3, 0.7, 0.4, 1), box-shadow 0.28s cubic-bezier(0.3, 0.7, 0.4, 1)"
 
       overflow="hidden"
+
+      position="relative"
+
+      // HD-2D風の疑似要素（二重枠＋月光グラデ）
+      {...HD2D_CARD_PSEUDO_STYLES}
 
     >
 

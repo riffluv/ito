@@ -52,6 +52,52 @@
     --stars-strong: rgba(255, 255, 255, 0.08);
     --stars-mid: rgba(255, 255, 255, 0.06);
     --stars-light: rgba(255, 255, 255, 0.06);
+
+    /* ===========================================
+       HD-2D Card System - 世界観に溶け込むカード
+       デザイン指示書v2準拠: 月光×焚き火の二重光源
+    =========================================== */
+
+    /* 光源色（上=月光/冷、下=焚き火/暖）- 控えめに */
+    --card-light-moon: rgba(180, 200, 230, 0.07);
+    --card-light-moon-edge: rgba(160, 185, 220, 0.12);
+    --card-light-fire: rgba(255, 160, 80, 0.05);
+    --card-light-fire-edge: rgba(240, 130, 60, 0.09);
+
+    /* カード面の基調色（灰色寄りで連想ワードが映える明るさ）*/
+    --card-surface-base: #1a1d24;
+    --card-surface-mid: #1e2129;
+    --card-surface-deep: #15181e;
+
+    /* 枠線システム（二重線＋内側ハイライト用）
+       waitingでも“枠が見える”ことを優先して、ブロンズ寄り→シルバー寄りに調整 */
+    --card-border-outer: rgba(235, 240, 250, 0.38);
+    --card-border-inner: rgba(235, 240, 250, 0.18);
+    --card-border-highlight: rgba(255, 255, 255, 0.16);
+    --card-border-width-outer: 1px;
+    --card-border-width-inner: 1px;
+
+    /* 影の多層化（奥行き表現）*/
+    --card-shadow-ambient: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --card-shadow-drop: 0 4px 12px -3px rgba(0, 0, 0, 0.55);
+    --card-shadow-deep: 0 8px 20px -6px rgba(0, 0, 0, 0.45);
+    --card-shadow-inset-top: inset 0 1px 0 var(--card-light-moon-edge);
+    --card-shadow-inset-bottom: inset 0 -1px 0 var(--card-light-fire-edge);
+
+    /* 状態色（世界観に合わせた落ち着いた色）*/
+    --card-state-success-border: rgba(180, 160, 90, 0.7);
+    --card-state-success-glow: rgba(212, 175, 55, 0.15);
+    --card-state-fail-border: rgba(180, 70, 60, 0.65);
+    --card-state-fail-glow: rgba(200, 60, 50, 0.12);
+    --card-state-ready-border: rgba(192, 192, 192, 0.65);
+    --card-state-ready-glow: rgba(180, 185, 195, 0.08);
+
+    /* Watermark用フック（将来SVG透かし用）*/
+    --card-watermark-image: none;
+    --card-watermark-opacity: 0.03;
+    --card-watermark-blend: overlay;
+    --card-watermark-position: center center;
+    --card-watermark-size: 70% auto;
   }
 }
 

@@ -199,7 +199,8 @@ export function GameCard({
       className={styles.root}
       css={cardSizeCss()}
       p={{ base: 3, md: "13px" }}
-      borderRadius="lg"
+      // flip状態(CardFaces)と見た目を揃える
+      borderRadius="7px"
       border={`${styleOverrides.borderWidth} solid`}
       borderColor={borderColorFallback}
       bg={cardBg}
@@ -211,6 +212,31 @@ export function GameCard({
       role={isInteractive ? "button" : undefined}
       transform={baseTransform}
       position="relative"
+      // waiting/clue(=flat)でも枠が寂しくならないよう、CardFacesと同じ二重枠を付ける
+      _before={{
+        content: '""',
+        position: "absolute",
+        inset: "2px",
+        borderRadius: "5px",
+        border: "var(--card-border-width-inner) solid var(--card-border-inner)",
+        borderTopColor: "var(--card-border-highlight)",
+        pointerEvents: "none",
+        backgroundImage: "var(--card-watermark-image)",
+        backgroundPosition: "var(--card-watermark-position)",
+        backgroundSize: "var(--card-watermark-size)",
+        backgroundRepeat: "no-repeat",
+      }}
+      _after={{
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "45%",
+        background: "linear-gradient(178deg, var(--card-light-moon) 0%, transparent 70%)",
+        borderRadius: "6px 6px 0 0",
+        pointerEvents: "none",
+      }}
       style={{
         transformStyle: "preserve-3d",
         willChange: "transform",

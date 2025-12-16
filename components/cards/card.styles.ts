@@ -105,54 +105,92 @@ export const CARD_STYLES = {
   },
 
   // ドラクエ風ゲームカード用スタイル（GameCard統合用 - HD-2D風）
+  // 指示書v2準拠: 月光×焚き火の二重光源、二重枠線、微差運用
   dragonQuest: {
-    // シンプルなグラデーション背景（控えめな立体感）
-    background: "linear-gradient(152deg, rgba(18, 22, 38, 0.96) 0%, rgba(10, 13, 25, 0.98) 100%)",
-    borderWidth: "1px",
+    // 背景: 上から下へ微妙なグラデ（月光→焚き火の光源を暗示）
+    // 非対称な3色グラデでAI感を消す
+    background: `linear-gradient(
+      177deg,
+      var(--card-surface-mid) 0%,
+      var(--card-surface-base) 38%,
+      var(--card-surface-deep) 100%
+    )`,
+    // 外枠: 金属フレームの気配（暗い真鍮色）
+    borderWidth: "var(--card-border-width-outer)",
     borderStyle: "solid" as const,
-    borderColor: UI_TOKENS.COLORS.whiteAlpha60,
-    borderRadius: "1rem",
+    borderColor: "var(--card-border-outer)",
+    // 角丸: 完全な均一を避けた微差（8px相当だが7pxで手触り感）
+    borderRadius: "7px",
     color: UI_TOKENS.COLORS.textBase,
-    // 控えめな3層シャドウ
+    // 多層シャドウ: 奥行きと光源の両立
+    // 1. 環境影（接地感）
+    // 2. ドロップシャドウ（浮遊感）
+    // 3. 深い影（奥行き）
+    // 4. 上部インセット（月光ハイライト）
+    // 5. 下部インセット（焚き火の照り返し）
     boxShadow: `
-      0 4px 12px rgba(0, 0, 0, 0.6),
-      0 8px 24px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12)
+      var(--card-shadow-ambient),
+      var(--card-shadow-drop),
+      var(--card-shadow-deep),
+      var(--card-shadow-inset-top),
+      var(--card-shadow-inset-bottom)
     `,
     display: "flex" as const,
     flexDirection: "column" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
     aspectRatio: "5/7",
-    fontFamily: "monospace",
     fontWeight: "bold" as const,
-    textShadow: "0 2px 8px rgba(0, 0, 0, 0.9), 1px 1px 0 rgba(0, 0, 0, 0.8)",
-    letterSpacing: "0.5px",
+    textShadow: "0 1px 3px rgba(0, 0, 0, 0.7)",
+    letterSpacing: "0.3px",
     userSelect: "none" as const,
     cursor: "pointer",
     position: "relative" as const,
     overflow: "hidden" as const,
-    transition: `background 0.3s ${UI_TOKENS.EASING.standard}, border-color 0.3s ${UI_TOKENS.EASING.standard}, box-shadow 0.3s ${UI_TOKENS.EASING.standard}, transform 0.3s ${UI_TOKENS.EASING.standard}`,
-    // 微妙な光沢（控えめに）
+    // AI感除去: 0.3s → 0.28s、イージングも微調整
+    transition: `background 0.28s ${UI_TOKENS.EASING.standard}, border-color 0.28s ${UI_TOKENS.EASING.standard}, box-shadow 0.28s ${UI_TOKENS.EASING.standard}`,
+    // ::before = 内側のハイライト線（二重枠の内側）
     _before: {
+      content: '""',
+      position: "absolute",
+      inset: "2px",
+      borderRadius: "5px",
+      border: "var(--card-border-width-inner) solid var(--card-border-inner)",
+      // 上辺だけ明るく（月光のエッジ）
+      borderTopColor: "var(--card-border-highlight)",
+      pointerEvents: "none",
+      // Watermark用フック: 将来SVG透かしを入れる場合はここに
+      backgroundImage: "var(--card-watermark-image)",
+      backgroundPosition: "var(--card-watermark-position)",
+      backgroundSize: "var(--card-watermark-size)",
+      backgroundRepeat: "no-repeat",
+    },
+    // ::after = 上部の月光グラデ（控えめに）
+    _after: {
       content: '""',
       position: "absolute",
       top: 0,
       left: 0,
       right: 0,
-      height: "42%",
-      background: "linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 100%)",
-      borderRadius: "1rem 1rem 0 0",
+      height: "45%",
+      background: `linear-gradient(
+        178deg,
+        var(--card-light-moon) 0%,
+        transparent 70%
+      )`,
+      borderRadius: "6px 6px 0 0",
       pointerEvents: "none",
     },
     _hover: {
-      transform: "translateY(-3px) scale(1.02)",
+      // ホバー時: わずかな浮き上がり（transformはGSAPに任せるので影のみ）
       boxShadow: `
-        0 6px 18px rgba(0, 0, 0, 0.7),
-        0 12px 36px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15)
+        var(--card-shadow-ambient),
+        0 6px 16px -3px rgba(0, 0, 0, 0.6),
+        0 12px 28px -6px rgba(0, 0, 0, 0.5),
+        var(--card-shadow-inset-top),
+        var(--card-shadow-inset-bottom)
       `,
-      borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+      borderColor: "var(--card-border-inner)",
     },
   },
 } as const;
@@ -176,60 +214,73 @@ export const getLetterSpacing = (number: number | null | undefined): string => {
 };
 
 // ドラクエ風ゲームカードの状態別スタイル生成関数
+// 指示書v2準拠: 派手すぎない上品な状態表現、光源との整合性
 export const getDragonQuestStyleOverrides = (
   state?: "default" | "success" | "fail" | "ready",
-  waitingInCentral?: boolean
+  _waitingInCentral?: boolean
 ): SystemStyleObject => {
-  // 基本色設定
-  const baseColors = {
-    bg: waitingInCentral ? "#1a1d23" : "#0f0f23",
-    border: waitingInCentral ? UI_TOKENS.COLORS.whiteAlpha30 : UI_TOKENS.COLORS.whiteAlpha20,
-  };
+  // 基本背景: CSS変数を使用してグラデーション
+  // どちらも同じCSS変数を使用（灰色寄りで連想ワードが映える）
+  const baseBg = `linear-gradient(177deg, var(--card-surface-mid) 0%, var(--card-surface-base) 38%, var(--card-surface-deep) 100%)`;
 
-  // 状態別のスタイルオーバーライド（シンプル版）
+  // 基本枠線色
+  // waitingでも“枠が見える”基準フレーム（merihariはstate側で付ける）
+  const baseBorderColor = "var(--card-border-outer)";
+
+  // 基本シャドウ（多層構造を維持）
+  const baseBoxShadow = `var(--card-shadow-ambient), var(--card-shadow-drop), var(--card-shadow-deep), var(--card-shadow-inset-top), var(--card-shadow-inset-bottom)`;
+
+  // 枠線太さは状態で変えず、色/影でメリハリを出す（文字の折返しが揺れるのを避ける）
+  const borderWidth = "1.5px";
+
+  // 状態別のスタイルオーバーライド
+  // 派手すぎないように、グローは控えめ、枠線で状態を伝える
   const stateOverrides: Record<"success" | "fail" | "ready" | "default", SystemStyleObject> = {
     success: {
-      borderColor: UI_TOKENS.COLORS.dqGold,
-      borderWidth: "2px",
+      // 成功: 黄金の枠（焚き火に照らされた金貨のイメージ）
+      borderColor: "var(--card-state-success-border)",
       boxShadow: `
-        0 6px 18px rgba(255, 215, 0, 0.25),
-        0 12px 36px rgba(0, 0, 0, 0.5),
-        0 0 24px rgba(255, 215, 0, 0.2)
+        var(--card-shadow-ambient),
+        var(--card-shadow-drop),
+        var(--card-shadow-deep),
+        0 0 12px var(--card-state-success-glow),
+        inset 0 1px 0 rgba(212, 175, 55, 0.15),
+        inset 0 -1px 0 var(--card-light-fire-edge)
       `,
     },
     fail: {
-      borderColor: UI_TOKENS.COLORS.dqRed,
-      borderWidth: "2px",
+      // 失敗: 消えかけた炎の赤（焦げた炭のイメージ）
+      borderColor: "var(--card-state-fail-border)",
       boxShadow: `
-        0 6px 18px rgba(220, 38, 38, 0.25),
-        0 12px 36px rgba(0, 0, 0, 0.5),
-        0 0 24px rgba(220, 38, 38, 0.2)
+        var(--card-shadow-ambient),
+        var(--card-shadow-drop),
+        var(--card-shadow-deep),
+        0 0 10px var(--card-state-fail-glow),
+        inset 0 1px 0 rgba(180, 70, 60, 0.1),
+        inset 0 -1px 0 rgba(140, 50, 40, 0.15)
       `,
     },
     ready: {
-      borderColor: UI_TOKENS.COLORS.dqSilver,
-      borderWidth: "2px",
+      // 準備完了: 月光のシルバー（控えめな輝き）
+      borderColor: "var(--card-state-ready-border)",
       boxShadow: `
-        0 6px 18px rgba(192, 192, 192, 0.25),
-        0 12px 36px rgba(0, 0, 0, 0.5),
-        0 0 24px rgba(192, 192, 192, 0.15)
+        var(--card-shadow-ambient),
+        var(--card-shadow-drop),
+        var(--card-shadow-deep),
+        0 0 8px var(--card-state-ready-glow),
+        inset 0 1px 0 rgba(180, 185, 195, 0.1),
+        var(--card-shadow-inset-bottom)
       `,
     },
     default: {
-      borderColor: baseColors.border,
-      boxShadow: waitingInCentral
-        ? `inset 0 1px 0 rgba(255, 255, 255, 0.1)`
-        : `
-          0 4px 12px rgba(0, 0, 0, 0.6),
-          0 8px 24px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.12)
-        `,
+      borderColor: baseBorderColor,
+      boxShadow: baseBoxShadow,
     },
   };
 
   return {
-    bg: baseColors.bg,
-    borderWidth: waitingInCentral ? "2px" : "1px",
+    bg: baseBg,
+    borderWidth,
     ...stateOverrides[state ?? "default"],
   };
 };
