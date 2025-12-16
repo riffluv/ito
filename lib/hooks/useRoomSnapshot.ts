@@ -347,6 +347,8 @@ export function useRoomSnapshot(
         unsubRef.current = onSnapshot(
           doc(db!, "rooms", roomId),
           (snap) => {
+            // Expose a lightweight heartbeat for debugging "snapshot stalled" reports.
+            setMetric("roomSnapshot", "lastSnapshotTs", Date.now());
             const receivedAt =
               typeof performance !== "undefined" ? performance.now() : null;
             if (!snap.exists()) {
@@ -406,6 +408,10 @@ export function useRoomSnapshot(
           },
           (error) => {
             const code = (error as FirestoreError)?.code ?? null;
+            setMetric("roomSnapshot", "lastListenErrorTs", Date.now());
+            setMetric("roomSnapshot", "lastListenErrorCode", code ?? "unknown");
+            // Listener errors terminate the stream; clear local unsubscribe ref so backoff restart can reattach.
+            stop();
             if (code === "permission-denied") {
               setRoomAccessError("permission-denied");
               ensureAuthSession("room-snapshot").catch(() => void 0);
@@ -475,6 +481,7 @@ export function useRoomSnapshot(
             traceAction("room.snapshot.forceRefresh.miss", { roomId, reason });
             return;
           }
+          setMetric("roomSnapshot", "lastSnapshotTs", Date.now());
           const rawData = snap.data();
           const sanitized = sanitizeRoom(rawData);
           const incomingVersion =

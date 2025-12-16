@@ -11,6 +11,15 @@ export type ApiError = Error & {
   method?: string;
 };
 
+const DEFAULT_API_TIMEOUT_MS = 12_000;
+const parsedApiTimeout = Number(
+  process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? DEFAULT_API_TIMEOUT_MS
+);
+const API_TIMEOUT_MS =
+  Number.isFinite(parsedApiTimeout) && parsedApiTimeout > 0
+    ? parsedApiTimeout
+    : DEFAULT_API_TIMEOUT_MS;
+
 const toApiError = (
   code: string | undefined,
   status: number,
@@ -48,12 +57,49 @@ async function getIdTokenOrThrow(reason?: string): Promise<string> {
 }
 
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    keepalive: true,
-  });
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  if (controller && API_TIMEOUT_MS > 0) {
+    timeoutHandle = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {
+        // noop
+      }
+    }, API_TIMEOUT_MS);
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+      signal: controller?.signal,
+    });
+  } catch (error) {
+    if ((error as { name?: string }).name === "AbortError") {
+      traceAction("api.timeout", { url, timeoutMs: String(API_TIMEOUT_MS) });
+      setMetric("api", "lastTimeout", `${API_TIMEOUT_MS}@${url}`);
+      const err = new Error("network timeout") as ApiError;
+      err.code = "timeout";
+      err.details = { timeoutMs: API_TIMEOUT_MS };
+      err.url = url;
+      err.method = "POST";
+      throw err;
+    }
+    throw error;
+  } finally {
+    if (timeoutHandle !== null) {
+      try {
+        clearTimeout(timeoutHandle);
+      } catch {
+        // noop
+      }
+    }
+  }
 
   let json: unknown = null;
   try {
