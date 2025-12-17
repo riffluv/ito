@@ -386,6 +386,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const [isRevealAnimating, setIsRevealAnimating] = React.useState(
     roomStatus === "reveal"
   );
+  const [seinoTransitionBlocked, setSeinoTransitionBlocked] = React.useState(false);
+  const seinoTransitionTimerRef = React.useRef<number | null>(null);
+  const seinoLastPhaseStatusRef = React.useRef<string | null>(null);
   const [inlineFeedback, setInlineFeedback] = React.useState<{
     message: string;
     tone: "info" | "success";
@@ -464,6 +467,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   // 以降のフェーズ分岐は optimisticResetting を反映した値を使う
   const phaseStatus = effectiveRoomStatus;
 
+  // Prevent SeinoButton "ghost slide" on room phase transitions (next-round/start/reset):
+  // Tier1/Tier2 can apply room status quickly while proposal updates lag behind for a moment.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return noopCleanup;
+    const current = typeof phaseStatus === "string" ? phaseStatus : null;
+    const prev = seinoLastPhaseStatusRef.current;
+    seinoLastPhaseStatusRef.current = current;
+    if (!current || !prev) return noopCleanup;
+    if (current === prev) return noopCleanup;
+
+    setSeinoTransitionBlocked(true);
+    if (seinoTransitionTimerRef.current !== null) {
+      window.clearTimeout(seinoTransitionTimerRef.current);
+      seinoTransitionTimerRef.current = null;
+    }
+    seinoTransitionTimerRef.current = window.setTimeout(() => {
+      seinoTransitionTimerRef.current = null;
+      setSeinoTransitionBlocked(false);
+    }, 900);
+
+    return () => {
+      if (seinoTransitionTimerRef.current !== null) {
+        window.clearTimeout(seinoTransitionTimerRef.current);
+        seinoTransitionTimerRef.current = null;
+      }
+    };
+  }, [phaseStatus]);
+
   const {
     text,
     setText,
@@ -535,7 +566,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     (!topicBox && effectiveDefaultTopicType === "カスタム");
   const shouldShowSeinoButton =
     !!isHost && isSortMode && phaseStatus === "clue" && allSubmitted;
-  const seinoVisible = shouldShowSeinoButton && !hideHandUI && !evalSortedPending && !isRevealAnimating;
 
   React.useEffect(() => {
     if (!ready) return;
@@ -583,6 +613,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     resetUiPending ||
     roundPreparing
   );
+  const seinoVisible =
+    shouldShowSeinoButton &&
+    !seinoTransitionBlocked &&
+    !preparing &&
+    !hideHandUI &&
+    !isRevealAnimating;
   const clearButtonDisabled = preparing || !clueEditable || !hasText || placed;
   const clearTooltip = preparing
     ? "準備中は操作できません"
