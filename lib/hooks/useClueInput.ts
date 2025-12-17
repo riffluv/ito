@@ -13,12 +13,35 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type RefObject,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
 type FocusShortcutEvent = Pick<KeyboardEvent, "key" | "target">;
+
+type PlayerOptimisticPatchEventDetail = {
+  roomId: string;
+  playerId: string;
+  op: "apply" | "rollback";
+  seq: number;
+  reason: string;
+  ts?: number;
+  patch?: Partial<Pick<PlayerDoc, "clue1" | "ready">>;
+  prev?: Partial<Pick<PlayerDoc, "clue1" | "ready">>;
+};
+
+const PLAYER_OPTIMISTIC_PATCH_EVENT = "ito:player-optimistic-patch";
+
+function dispatchPlayerOptimisticPatch(detail: PlayerOptimisticPatchEventDetail) {
+  if (typeof window === "undefined") return;
+  try {
+    window.dispatchEvent(new CustomEvent(PLAYER_OPTIMISTIC_PATCH_EVENT, { detail }));
+  } catch {
+    // ignore
+  }
+}
 
 export function shouldFocusClueInput(
   event: FocusShortcutEvent,
@@ -58,6 +81,7 @@ export function useClueInput({
   onFeedback,
 }: UseClueInputOptions) {
   const [text, setText] = useState<string>(player?.clue1 || "");
+  const optimisticSeqRef = useRef(0);
   const deferredText = useDeferredValue(text);
   const trimmedText = useMemo(() => text.trim(), [text]);
   const deferredTrimmedText = useMemo(
@@ -127,6 +151,19 @@ export function useClueInput({
 
   const handleDecide = useCallback(async () => {
     if (!canDecide || !player?.id) return;
+    const seq = (optimisticSeqRef.current += 1);
+    const prevClue1 = typeof player.clue1 === "string" ? player.clue1 : "";
+    const prevReady = Boolean(player.ready);
+    dispatchPlayerOptimisticPatch({
+      roomId,
+      playerId: player.id,
+      op: "apply",
+      seq,
+      reason: "clue.decide",
+      ts: Date.now(),
+      patch: { clue1: trimmedText, ready: true },
+      prev: { clue1: prevClue1, ready: prevReady },
+    });
     try {
       playClueDecide();
       await updateClue1(roomId, player.id, trimmedText);
@@ -135,6 +172,14 @@ export function useClueInput({
         tone: "success",
       });
     } catch (error: unknown) {
+      dispatchPlayerOptimisticPatch({
+        roomId,
+        playerId: player.id,
+        op: "rollback",
+        seq,
+        reason: "clue.decide",
+        ts: Date.now(),
+      });
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("連想ワード記録");
         notify({
@@ -155,10 +200,32 @@ export function useClueInput({
         });
       }
     }
-  }, [canDecide, player?.id, playClueDecide, roomId, trimmedText, onFeedback]);
+  }, [
+    canDecide,
+    player?.id,
+    player?.clue1,
+    player?.ready,
+    playClueDecide,
+    roomId,
+    trimmedText,
+    onFeedback,
+  ]);
 
   const handleClear = useCallback(async () => {
     if (!clueEditable || !player?.id) return;
+    const seq = (optimisticSeqRef.current += 1);
+    const prevClue1 = typeof player.clue1 === "string" ? player.clue1 : "";
+    const prevReady = Boolean(player.ready);
+    dispatchPlayerOptimisticPatch({
+      roomId,
+      playerId: player.id,
+      op: "apply",
+      seq,
+      reason: "clue.clear",
+      ts: Date.now(),
+      patch: { clue1: "", ready: true },
+      prev: { clue1: prevClue1, ready: prevReady },
+    });
     try {
       await updateClue1(roomId, player.id, "");
       setText("");
@@ -167,6 +234,14 @@ export function useClueInput({
         tone: "info",
       });
     } catch (error: unknown) {
+      dispatchPlayerOptimisticPatch({
+        roomId,
+        playerId: player.id,
+        op: "rollback",
+        seq,
+        reason: "clue.clear",
+        ts: Date.now(),
+      });
       const message =
         error instanceof Error ? error.message : String(error ?? "unknown");
       notify({
@@ -176,7 +251,7 @@ export function useClueInput({
         type: "error",
       });
     }
-  }, [clueEditable, player?.id, roomId, onFeedback]);
+  }, [clueEditable, player?.id, player?.clue1, player?.ready, roomId, onFeedback]);
 
   const handleInputKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
