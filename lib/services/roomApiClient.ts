@@ -44,6 +44,32 @@ function classifyConflict(code: string | undefined): "room/join/version-mismatch
   return "other";
 }
 
+function tryKickRoomSyncOnConflict(url: string, category: ReturnType<typeof classifyConflict>, code: string | undefined) {
+  if (category !== "invalid_status") return;
+  if (typeof window === "undefined") return;
+  const match = url.match(/^\/api\/rooms\/([^/]+)\//);
+  const roomId = match?.[1] ?? null;
+  if (!roomId) return;
+  const reason = `api409:${code ?? "unknown"}`;
+  try {
+    window.dispatchEvent(
+      new CustomEvent("ito:room-force-refresh", {
+        detail: { roomId, reason },
+      })
+    );
+  } catch {}
+  try {
+    window.dispatchEvent(
+      new CustomEvent("ito:room-restart-listener", {
+        detail: { roomId, reason },
+      })
+    );
+  } catch {}
+  try {
+    traceAction("api.conflict.409.kickRoomSync", { roomId, url, code: code ?? "unknown" });
+  } catch {}
+}
+
 async function getIdTokenOrThrow(reason?: string): Promise<string> {
   const user = auth?.currentUser;
   if (!user) {
@@ -114,6 +140,7 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
       const category = classifyConflict(code);
       traceAction("api.conflict.409", { url, code: code ?? "unknown", category });
       setMetric("api", "last409", `${category}:${code ?? "unknown"}@${url}`);
+      tryKickRoomSyncOnConflict(url, category, code);
     }
     throw toApiError(code, res.status, json, { url, method: "POST" });
   }

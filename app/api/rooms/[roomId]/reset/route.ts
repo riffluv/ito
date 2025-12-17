@@ -66,6 +66,7 @@ export async function POST(
   } catch (error) {
     traceError("room.reset.api", error, { roomId });
     const code = (error as { code?: string }).code;
+    const reason = (error as { reason?: string }).reason;
     const status =
       code === "unauthorized"
         ? 401
@@ -78,6 +79,6 @@ export async function POST(
               : code === "invalid_status"
                 ? 409
               : 500;
-    return NextResponse.json({ error: code ?? "reset_failed" }, { status });
+    return NextResponse.json({ error: code ?? "reset_failed", reason }, { status });
   }
 }

@@ -68,16 +68,21 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   } catch (error) {
     traceError("room.start.api", error, { roomId });
     const code = (error as { code?: string }).code;
+    const reason = (error as { reason?: string }).reason;
     const status =
       code === "unauthorized"
         ? 401
+        : code === "room_not_found"
+          ? 404
         : code === "forbidden"
           ? 403
           : code === "rate_limited"
             ? 429
             : code === "invalid_status"
               ? 409
+              : code === "no_players"
+                ? 400
               : 500;
-    return NextResponse.json({ error: code ?? "internal_error" }, { status });
+    return NextResponse.json({ error: code ?? "internal_error", reason }, { status });
   }
 }

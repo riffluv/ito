@@ -498,6 +498,8 @@ export async function startGameCommand(params: {
       traceError("ui.roundPreparing.start.begin", error, { roomId: params.roomId });
     }
 
+    const playersSnap = await roomRef.collection("players").get();
+
     // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
     let preparedDeal:
       | {
@@ -509,7 +511,6 @@ export async function startGameCommand(params: {
       | null = null;
 
     if (doAutoDeal) {
-      const playersSnap = await roomRef.collection("players").get();
       const now = Date.now();
       const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
       const candidates = playersSnap.docs.map((d) => {
@@ -627,7 +628,7 @@ export async function startGameCommand(params: {
       }
 
       if (!validStatuses.includes(room.status)) {
-        throw codedError("invalid_status", "invalid_status");
+        throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
       }
       if (room.hostId && room.hostId !== uid) {
         throw codedError("forbidden", "forbidden", "host_only");
@@ -663,6 +664,26 @@ export async function startGameCommand(params: {
       }
 
       tx.update(roomRef, payload);
+
+      // Atomic: room + players reset must move together to avoid "room started but players stale".
+      playersSnap.forEach((doc) => {
+        const pid = doc.id;
+        if (doAutoDeal && preparedDeal) {
+          const seatIndex =
+            typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
+              ? preparedDeal.dealPayload.seatHistory[pid]!
+              : 0;
+          tx.update(doc.ref, {
+            number: preparedDeal.dealPayload.numbers[pid] ?? null,
+            clue1: "",
+            ready: false,
+            orderIndex: seatIndex,
+            lastSeen: FieldValue.serverTimestamp(),
+          } satisfies Partial<PlayerDoc>);
+        } else {
+          tx.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+        }
+      });
     });
 
     if (alreadyStarted) {
@@ -678,29 +699,6 @@ export async function startGameCommand(params: {
       });
       return;
     }
-
-    // reset players in a batch (autoDeal 時は配札も同時に反映)
-    const playersSnap = await db.collection("rooms").doc(params.roomId).collection("players").get();
-    const batch = db.batch();
-    playersSnap.forEach((doc) => {
-      const pid = doc.id;
-      if (doAutoDeal && preparedDeal) {
-        const seatIndex =
-          typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
-            ? preparedDeal.dealPayload.seatHistory[pid]!
-            : 0;
-        batch.update(doc.ref, {
-          number: preparedDeal.dealPayload.numbers[pid] ?? null,
-          clue1: "",
-          ready: false,
-          orderIndex: seatIndex,
-          lastSeen: FieldValue.serverTimestamp(),
-        } satisfies Partial<PlayerDoc>);
-      } else {
-        batch.update(doc.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
-      }
-    });
-    await batch.commit();
 
     traceAction("host.start.server", {
       roomId: params.roomId,
@@ -1205,20 +1203,21 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
     const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
     const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
 
-    await roomRef.update({
-      deal: dealPayload,
-      "order.total": ordered.length,
-      "order.numbers": dealPayload.numbers,
-      "order.list": [],
-      "order.proposal": [],
-      dealRequestId: params.requestId,
-      lastActiveAt: FieldValue.serverTimestamp(),
-      lastCommandAt: FieldValue.serverTimestamp(),
-      statusVersion: FieldValue.increment(1) as unknown as number,
-    });
-
+    // Atomic: room + players must be updated together to avoid "dealt on room doc, but players missing numbers".
     try {
       const batch = db.batch();
+      batch.update(roomRef, {
+        deal: dealPayload,
+        "order.total": ordered.length,
+        "order.numbers": dealPayload.numbers,
+        "order.list": [],
+        "order.proposal": [],
+        dealRequestId: params.requestId,
+        lastActiveAt: FieldValue.serverTimestamp(),
+        lastCommandAt: FieldValue.serverTimestamp(),
+        statusVersion: FieldValue.increment(1) as unknown as number,
+      });
+
       playersSnap.forEach((doc) => {
         const pid = doc.id;
         const seatIndex =
@@ -1233,13 +1232,9 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
           lastSeen: FieldValue.serverTimestamp(),
         } satisfies Partial<PlayerDoc>);
       });
-      await batch.commit();
-    } catch (error) {
-      traceError("deal.resetPlayers", error, { roomId: params.roomId });
-    }
 
-    try {
-      await db.collection("roomProposals").doc(params.roomId).set(
+      batch.set(
+        db.collection("roomProposals").doc(params.roomId),
         {
           proposal: [],
           seed,
@@ -1247,8 +1242,11 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
         },
         { merge: true }
       );
+
+      await batch.commit();
     } catch (error) {
-      traceError("proposal.reset", error, { roomId: params.roomId });
+      traceError("deal.batch.commit", error, { roomId: params.roomId, requestId: params.requestId });
+      throw error;
     }
 
     traceAction("deal.end", {
@@ -1848,8 +1846,43 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       "ui.recallOpen": false,
       "ui.revealPending": false,
     };
-    await roomRef.update(roomUpdate);
-    roundPreparingActivated = false;
+    // Atomic: room + players must move together to avoid "new round started, but some players still have old numbers/clues".
+    try {
+      const batch = db.batch();
+      batch.update(roomRef, roomUpdate);
+
+      playersSnap.forEach((doc) => {
+        const pid = doc.id;
+        const seatIndex =
+          typeof dealPayload.seatHistory?.[pid] === "number"
+            ? dealPayload.seatHistory[pid]!
+            : 0;
+        batch.update(doc.ref, {
+          number: dealPayload.numbers[pid] ?? null,
+          clue1: "",
+          ready: false,
+          orderIndex: seatIndex,
+          lastSeen: FieldValue.serverTimestamp(),
+        } satisfies Partial<PlayerDoc>);
+      });
+
+      batch.set(
+        db.collection("roomProposals").doc(params.roomId),
+        {
+          proposal: [],
+          seed,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await batch.commit();
+      roundPreparingActivated = false;
+    } catch (error) {
+      traceError("room.nextRound.batch.commit", error, { roomId: params.roomId, requestId: params.requestId });
+      throw error;
+    }
+
     traceAction("room.nextRound.server", {
       roomId: params.roomId,
       uid,
@@ -1868,42 +1901,6 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       nextStatus: "clue",
       note: `playerCount:${ordered.length}`,
     });
-
-    // 9. players を更新（number, clue1, ready, orderIndex をリセット）
-    try {
-      const batch = db.batch();
-      playersSnap.forEach((doc) => {
-        const pid = doc.id;
-        const seatIndex =
-          typeof dealPayload.seatHistory?.[pid] === "number"
-            ? dealPayload.seatHistory[pid]!
-            : 0;
-        batch.update(doc.ref, {
-          number: dealPayload.numbers[pid] ?? null,
-          clue1: "",
-          ready: false,
-          orderIndex: seatIndex,
-          lastSeen: FieldValue.serverTimestamp(),
-        } satisfies Partial<PlayerDoc>);
-      });
-      await batch.commit();
-    } catch (error) {
-      traceError("nextRound.resetPlayers", error, { roomId: params.roomId });
-    }
-
-    // 10. proposal をリセット
-    try {
-      await db.collection("roomProposals").doc(params.roomId).set(
-        {
-          proposal: [],
-          seed,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      traceError("nextRound.resetProposal", error, { roomId: params.roomId });
-    }
 
     // 11. ログ出力
     safeTraceAction("nextRound.server", {
