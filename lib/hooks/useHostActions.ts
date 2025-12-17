@@ -983,6 +983,16 @@ export function useHostActions({
                       })
                     );
                   } catch {}
+                  try {
+                    window.dispatchEvent(
+                      new CustomEvent("ito:room-restart-listener", {
+                        detail: {
+                          roomId,
+                          reason: `host.quickStart.stuck:${requestId}`,
+                        },
+                      })
+                    );
+                  } catch {}
                   notify({
                     id: toastIds.genericInfo(roomId, "quickstart-stuck"),
                     title: "ゲームは開始されています",
@@ -1196,6 +1206,16 @@ export function useHostActions({
                     try {
                       window.dispatchEvent(
                         new CustomEvent("ito:room-force-refresh", {
+                          detail: {
+                            roomId,
+                            reason: "host.reset.stuck",
+                          },
+                        })
+                      );
+                    } catch {}
+                    try {
+                      window.dispatchEvent(
+                        new CustomEvent("ito:room-restart-listener", {
                           detail: {
                             roomId,
                             reason: "host.reset.stuck",

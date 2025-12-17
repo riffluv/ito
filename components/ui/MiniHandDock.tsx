@@ -703,6 +703,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           })
         );
       } catch {}
+      try {
+        window.dispatchEvent(
+          new CustomEvent("ito:room-restart-listener", {
+            detail: { roomId, reason: "ui.syncSpinner.stuck" },
+          })
+        );
+      } catch {}
 
       notify({
         id: toastIds.genericInfo(roomId, "sync-spinner-stuck"),

@@ -167,6 +167,7 @@ export function useRoomSnapshot(
   const statusVersionRef = useRef<number>(0);
   const forceRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const restartRoomListenerRef = useRef<((reason: string) => void) | null>(null);
+  const resumeKickAtRef = useRef<number>(0);
 
   const syncStartAtRef = useRef<number>(Date.now());
   const lastRoomSnapshotAtRef = useRef<number | null>(null);
@@ -572,6 +573,33 @@ export function useRoomSnapshot(
     };
   }, [roomId, enqueueCommit]);
 
+  // Allow external callers (e.g. host-action watchdogs) to restart the room listener quickly.
+  useEffect(() => {
+    if (typeof window === "undefined") return () => undefined;
+    if (!roomId) return () => undefined;
+
+    const handler = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{ roomId?: string; reason?: string }>
+      ).detail;
+      if (!detail || detail.roomId !== roomId) return;
+      if (leavingRef.current) return;
+      const reason =
+        typeof detail.reason === "string" && detail.reason.trim().length > 0
+          ? detail.reason.trim().slice(0, 160)
+          : "unknown";
+      restartRoomListenerRef.current?.(`external:${reason}`);
+    };
+
+    window.addEventListener("ito:room-restart-listener", handler as EventListener);
+    return () => {
+      window.removeEventListener(
+        "ito:room-restart-listener",
+        handler as EventListener
+      );
+    };
+  }, [roomId]);
+
   // Force-refresh room snapshot on demand (e.g. when host action succeeded but listener is stale)
   useEffect(() => {
     if (typeof window === "undefined") return () => undefined;
@@ -599,22 +627,46 @@ export function useRoomSnapshot(
         traceAction("room.snapshot.forceRefresh", { roomId, reason });
         try {
           const roomRef = doc(firestore, "rooms", roomId);
-          const snap = await getDocFromServer(roomRef).catch(() => getDoc(roomRef));
+          let snap: Awaited<ReturnType<typeof getDoc>>;
+          try {
+            snap = await getDocFromServer(roomRef);
+          } catch (error) {
+            const code =
+              (error as FirestoreError | undefined)?.code ??
+              (error as { code?: string } | undefined)?.code ??
+              null;
+            traceError("room.snapshot.forceRefresh.server", error, {
+              roomId,
+              reason,
+              code: code ?? undefined,
+            });
+            setMetric("roomSnapshot", "forceRefresh.serverErrorTs", Date.now());
+            setMetric("roomSnapshot", "forceRefresh.serverErrorCode", code ?? "unknown");
+            snap = await getDoc(roomRef);
+          }
           if (!snap.exists()) {
             traceAction("room.snapshot.forceRefresh.miss", { roomId, reason });
             return;
           }
+          const fromCache = snap.metadata.fromCache === true;
+          if (fromCache) {
+            traceAction("room.snapshot.forceRefresh.fromCache", { roomId, reason });
+            setMetric("roomSnapshot", "forceRefresh.fromCacheTs", Date.now());
+            setMetric("roomSnapshot", "forceRefresh.fromCacheReason", reason);
+          }
           const nowTs = Date.now();
-          lastRoomSnapshotAtRef.current = nowTs;
-          lastListenErrorAtRef.current = null;
-          lastListenErrorCodeRef.current = null;
-          setMetric("roomSnapshot", "lastSnapshotTs", nowTs);
-          setSyncHealth((prev) => (prev === "ok" ? prev : "ok"));
-          setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
-          syncEpisodeRef.current.active = false;
-          syncEpisodeRef.current.attempts = 0;
-          syncEpisodeRef.current.lastAttemptAt = 0;
-          setSyncRecoveryAttempts((prev) => (prev === 0 ? prev : 0));
+          if (!fromCache) {
+            lastRoomSnapshotAtRef.current = nowTs;
+            lastListenErrorAtRef.current = null;
+            lastListenErrorCodeRef.current = null;
+            setMetric("roomSnapshot", "lastSnapshotTs", nowTs);
+            setSyncHealth((prev) => (prev === "ok" ? prev : "ok"));
+            setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
+            syncEpisodeRef.current.active = false;
+            syncEpisodeRef.current.attempts = 0;
+            syncEpisodeRef.current.lastAttemptAt = 0;
+            setSyncRecoveryAttempts((prev) => (prev === 0 ? prev : 0));
+          }
           const rawData = snap.data();
           const sanitized = sanitizeRoom(rawData);
           const incomingVersion =
@@ -691,7 +743,7 @@ export function useRoomSnapshot(
       return () => {};
     }
 
-    const check = (trigger: "init" | "interval" | "visibility" | "online") => {
+    const check = (trigger: "init" | "interval" | "visibility" | "focus" | "online") => {
       try {
         if (leavingRef.current) return;
         if (roomAccessBlocked) {
@@ -703,6 +755,33 @@ export function useRoomSnapshot(
           setSyncHealth("paused");
           setSyncSnapshotAgeMs(null);
           return;
+        }
+
+        if ((trigger === "visibility" || trigger === "focus") && joinStatus === "joined") {
+          const now = Date.now();
+          if (now - resumeKickAtRef.current >= 1200) {
+            resumeKickAtRef.current = now;
+            try {
+              window.dispatchEvent(
+                new CustomEvent("ito:room-force-refresh", {
+                  detail: {
+                    roomId,
+                    reason: `room.snapshot.resume:${trigger}`,
+                  },
+                })
+              );
+            } catch {}
+            try {
+              window.dispatchEvent(
+                new CustomEvent("ito:room-restart-listener", {
+                  detail: {
+                    roomId,
+                    reason: `room.snapshot.resume:${trigger}`,
+                  },
+                })
+              );
+            } catch {}
+          }
         }
 
         const now = Date.now();
@@ -796,13 +875,16 @@ export function useRoomSnapshot(
     check("init");
     const handle = window.setInterval(() => check("interval"), ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS);
     const onVisibility = () => check("visibility");
+    const onFocus = () => check("focus");
     const onOnline = () => check("online");
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
     window.addEventListener("online", onOnline);
 
     return () => {
       window.clearInterval(handle);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
       window.removeEventListener("online", onOnline);
     };
   }, [roomId, roomAccessBlocked, joinStatus]);
