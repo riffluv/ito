@@ -17,6 +17,11 @@ import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
+import {
+  evaluateRoomSnapshotWatchdog,
+  type RoomSnapshotWatchdogEpisode,
+  type RoomSnapshotWatchdogTrigger,
+} from "@/lib/hooks/roomSnapshotWatchdog";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import deepEqual from "fast-deep-equal/es6";
@@ -114,6 +119,11 @@ const DEFAULT_ROOM_SNAPSHOT_INITIAL_STALE_MS = 20_000;
 const DEFAULT_ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS = 2000;
 const DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS = 4000;
 const DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS = 30_000;
+const DEFAULT_ROOM_SNAPSHOT_POST_STALE_MS = 5 * 60_000;
+const DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS = 12_000;
+const DEFAULT_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS = 6;
+const DEFAULT_ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS = 60_000;
+const DEFAULT_ROOM_SNAPSHOT_TRACE_INTERVAL_MS = 20_000;
 
 const ROOM_SNAPSHOT_INITIAL_STALE_MS = (() => {
   const parsed = Number(
@@ -133,6 +143,46 @@ const ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS = (() => {
   return Number.isFinite(parsed) && parsed > 200
     ? parsed
     : DEFAULT_ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS;
+})();
+
+const ROOM_SNAPSHOT_POST_STALE_MS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_POST_STALE_MS ??
+      DEFAULT_ROOM_SNAPSHOT_POST_STALE_MS
+  );
+  return Number.isFinite(parsed) && parsed > 1000
+    ? parsed
+    : DEFAULT_ROOM_SNAPSHOT_POST_STALE_MS;
+})();
+
+const ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS ??
+      DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS
+  );
+  return Number.isFinite(parsed) && parsed > 500
+    ? parsed
+    : DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS;
+})();
+
+const ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS ??
+      DEFAULT_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS
+  );
+  return Number.isFinite(parsed) && parsed >= 1
+    ? Math.min(20, Math.max(1, Math.floor(parsed)))
+    : DEFAULT_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS;
+})();
+
+const ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS ??
+      DEFAULT_ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS
+  );
+  return Number.isFinite(parsed) && parsed >= 1000
+    ? Math.min(10 * 60_000, Math.max(1000, Math.floor(parsed)))
+    : DEFAULT_ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS;
 })();
 
 type EnsureMemberHeartbeat = {
@@ -170,21 +220,22 @@ export function useRoomSnapshot(
   const resumeKickAtRef = useRef<number>(0);
 
   const syncStartAtRef = useRef<number>(Date.now());
+  // Server-confirmed snapshot heartbeat only (fromCache must not be treated as success).
   const lastRoomSnapshotAtRef = useRef<number | null>(null);
+  // Any room snapshot callback heartbeat (cache/server) for debugging.
+  const lastRoomSnapshotAnyAtRef = useRef<number | null>(null);
+  const lastRoomSnapshotWasFromCacheRef = useRef(false);
+  const roomSnapshotCacheSinceRef = useRef<number | null>(null);
   const lastListenErrorAtRef = useRef<number | null>(null);
   const lastListenErrorCodeRef = useRef<string | null>(null);
-  const syncEpisodeRef = useRef<{
-    active: boolean;
-    startedAt: number;
-    lastAttemptAt: number;
-    attempts: number;
-    lastTraceAt: number;
-  }>({
+  const syncEpisodeRef = useRef<RoomSnapshotWatchdogEpisode>({
     active: false,
+    kind: null,
     startedAt: 0,
     lastAttemptAt: 0,
     attempts: 0,
     lastTraceAt: 0,
+    hardCooldownUntil: 0,
   });
 
   const [syncHealth, setSyncHealth] = useState<RoomSyncHealth>("initial");
@@ -269,14 +320,19 @@ export function useRoomSnapshot(
   useEffect(() => {
     syncStartAtRef.current = Date.now();
     lastRoomSnapshotAtRef.current = null;
+    lastRoomSnapshotAnyAtRef.current = null;
+    lastRoomSnapshotWasFromCacheRef.current = false;
+    roomSnapshotCacheSinceRef.current = null;
     lastListenErrorAtRef.current = null;
     lastListenErrorCodeRef.current = null;
     syncEpisodeRef.current = {
       active: false,
+      kind: null,
       startedAt: 0,
       lastAttemptAt: 0,
       attempts: 0,
       lastTraceAt: 0,
+      hardCooldownUntil: 0,
     };
     setSyncHealth("initial");
     setSyncSnapshotAgeMs(null);
@@ -438,16 +494,32 @@ export function useRoomSnapshot(
           (snap) => {
             // Expose a lightweight heartbeat for debugging "snapshot stalled" reports.
             const nowTs = Date.now();
-            lastRoomSnapshotAtRef.current = nowTs;
-            lastListenErrorAtRef.current = null;
-            lastListenErrorCodeRef.current = null;
-            setMetric("roomSnapshot", "lastSnapshotTs", nowTs);
-            setSyncHealth((prev) => (prev === "ok" ? prev : "ok"));
-            setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
-            syncEpisodeRef.current.active = false;
-            syncEpisodeRef.current.attempts = 0;
-            syncEpisodeRef.current.lastAttemptAt = 0;
-            setSyncRecoveryAttempts((prev) => (prev === 0 ? prev : 0));
+            const fromCache = snap.metadata.fromCache === true;
+            lastRoomSnapshotAnyAtRef.current = nowTs;
+            lastRoomSnapshotWasFromCacheRef.current = fromCache;
+            setMetric("roomSnapshot", "lastAnySnapshotTs", nowTs);
+            setMetric("roomSnapshot", "lastSnapshotSource", fromCache ? "cache" : "server");
+            if (fromCache) {
+              setMetric("roomSnapshot", "lastCacheSnapshotTs", nowTs);
+              if (roomSnapshotCacheSinceRef.current === null) {
+                roomSnapshotCacheSinceRef.current = nowTs;
+              }
+            } else {
+              roomSnapshotCacheSinceRef.current = null;
+              lastRoomSnapshotAtRef.current = nowTs;
+              lastListenErrorAtRef.current = null;
+              lastListenErrorCodeRef.current = null;
+              setMetric("roomSnapshot", "lastSnapshotTs", nowTs);
+              setSyncHealth((prev) => (prev === "ok" ? prev : "ok"));
+              setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
+              syncEpisodeRef.current.active = false;
+              syncEpisodeRef.current.kind = null;
+              syncEpisodeRef.current.attempts = 0;
+              syncEpisodeRef.current.lastAttemptAt = 0;
+              syncEpisodeRef.current.lastTraceAt = 0;
+              syncEpisodeRef.current.hardCooldownUntil = 0;
+              setSyncRecoveryAttempts((prev) => (prev === 0 ? prev : 0));
+            }
             const receivedAt =
               typeof performance !== "undefined" ? performance.now() : null;
             if (!snap.exists()) {
@@ -627,21 +699,53 @@ export function useRoomSnapshot(
         traceAction("room.snapshot.forceRefresh", { roomId, reason });
         try {
           const roomRef = doc(firestore, "rooms", roomId);
-          let snap: Awaited<ReturnType<typeof getDoc>>;
-          try {
-            snap = await getDocFromServer(roomRef);
-          } catch (error) {
-            const code =
-              (error as FirestoreError | undefined)?.code ??
-              (error as { code?: string } | undefined)?.code ??
-              null;
-            traceError("room.snapshot.forceRefresh.server", error, {
-              roomId,
-              reason,
-              code: code ?? undefined,
-            });
-            setMetric("roomSnapshot", "forceRefresh.serverErrorTs", Date.now());
-            setMetric("roomSnapshot", "forceRefresh.serverErrorCode", code ?? "unknown");
+          let snap: Awaited<ReturnType<typeof getDoc>> | null = null;
+          let lastServerError: unknown | null = null;
+          let lastServerErrorCode: string | null = null;
+          const MAX_SERVER_FETCH_ATTEMPTS = 2;
+
+          for (let attempt = 1; attempt <= MAX_SERVER_FETCH_ATTEMPTS; attempt += 1) {
+            try {
+              snap = await getDocFromServer(roomRef);
+              lastServerError = null;
+              lastServerErrorCode = null;
+              break;
+            } catch (error) {
+              lastServerError = error;
+              const code =
+                (error as FirestoreError | undefined)?.code ??
+                (error as { code?: string } | undefined)?.code ??
+                null;
+              lastServerErrorCode = code ?? null;
+              setMetric("roomSnapshot", "forceRefresh.serverErrorTs", Date.now());
+              setMetric("roomSnapshot", "forceRefresh.serverErrorCode", code ?? "unknown");
+              setMetric("roomSnapshot", "forceRefresh.serverErrorAttempt", attempt);
+
+              if (code === "permission-denied" || code === "unauthenticated") {
+                setRoomAccessError("permission-denied");
+                try {
+                  await ensureAuthSession(`room-force-refresh:${reason}`);
+                } catch {}
+                continue;
+              }
+              if (code === "unavailable" || code === "deadline-exceeded") {
+                await new Promise((resolve) =>
+                  setTimeout(resolve, attempt === 1 ? 240 : 520)
+                );
+                continue;
+              }
+              break;
+            }
+          }
+
+          if (!snap) {
+            if (lastServerError) {
+              traceError("room.snapshot.forceRefresh.server", lastServerError, {
+                roomId,
+                reason,
+                code: lastServerErrorCode ?? undefined,
+              });
+            }
             snap = await getDoc(roomRef);
           }
           if (!snap.exists()) {
@@ -655,7 +759,24 @@ export function useRoomSnapshot(
             setMetric("roomSnapshot", "forceRefresh.fromCacheReason", reason);
           }
           const nowTs = Date.now();
+          lastRoomSnapshotAnyAtRef.current = nowTs;
+          lastRoomSnapshotWasFromCacheRef.current = fromCache;
+          setMetric("roomSnapshot", "lastAnySnapshotTs", nowTs);
+          setMetric("roomSnapshot", "lastSnapshotSource", fromCache ? "cache" : "server");
+          if (fromCache) {
+            setMetric("roomSnapshot", "lastCacheSnapshotTs", nowTs);
+            if (roomSnapshotCacheSinceRef.current === null) {
+              roomSnapshotCacheSinceRef.current = nowTs;
+            }
+          } else {
+            roomSnapshotCacheSinceRef.current = null;
+          }
           if (!fromCache) {
+            setRoomAccessError((prev) => {
+              if (prev !== "permission-denied") return prev;
+              setRoomAccessErrorDetail(null);
+              return null;
+            });
             lastRoomSnapshotAtRef.current = nowTs;
             lastListenErrorAtRef.current = null;
             lastListenErrorCodeRef.current = null;
@@ -663,20 +784,19 @@ export function useRoomSnapshot(
             setSyncHealth((prev) => (prev === "ok" ? prev : "ok"));
             setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
             syncEpisodeRef.current.active = false;
+            syncEpisodeRef.current.kind = null;
             syncEpisodeRef.current.attempts = 0;
             syncEpisodeRef.current.lastAttemptAt = 0;
+            syncEpisodeRef.current.lastTraceAt = 0;
+            syncEpisodeRef.current.hardCooldownUntil = 0;
             setSyncRecoveryAttempts((prev) => (prev === 0 ? prev : 0));
           }
           const rawData = snap.data();
           const sanitized = sanitizeRoom(rawData);
           const incomingVersion =
-            typeof sanitized.statusVersion === "number"
-              ? sanitized.statusVersion
-              : 0;
+            typeof sanitized.statusVersion === "number" ? sanitized.statusVersion : 0;
           const currentVersion =
-            typeof statusVersionRef.current === "number"
-              ? statusVersionRef.current
-              : 0;
+            typeof statusVersionRef.current === "number" ? statusVersionRef.current : 0;
           if (incomingVersion < currentVersion) {
             traceAction("room.snapshot.forceRefresh.ignored", {
               roomId,
@@ -691,10 +811,7 @@ export function useRoomSnapshot(
             statusVersionRef.current = incomingVersion;
             setRoom({ id: snap.id, ...sanitized });
             setRoomLoaded(true);
-            storePrefetchedRoom(
-              roomId,
-              sanitized as unknown as Record<string, unknown>
-            );
+            storePrefetchedRoom(roomId, sanitized as unknown as Record<string, unknown>);
             prefetchedAppliedRef.current = false;
           }, startedAt, "forceRefreshCommitMs");
         } catch (error) {
@@ -743,21 +860,15 @@ export function useRoomSnapshot(
       return () => {};
     }
 
-    const check = (trigger: "init" | "interval" | "visibility" | "focus" | "online") => {
+    const check = (trigger: RoomSnapshotWatchdogTrigger) => {
       try {
         if (leavingRef.current) return;
-        if (roomAccessBlocked) {
-          setSyncHealth("blocked");
-          setSyncSnapshotAgeMs(null);
-          return;
-        }
-        if (document.visibilityState !== "visible") {
-          setSyncHealth("paused");
-          setSyncSnapshotAgeMs(null);
-          return;
-        }
 
-        if ((trigger === "visibility" || trigger === "focus") && joinStatus === "joined") {
+        if (
+          (trigger === "visibility" || trigger === "focus") &&
+          joinStatus !== "idle" &&
+          !roomAccessBlocked
+        ) {
           const now = Date.now();
           if (now - resumeKickAtRef.current >= 1200) {
             resumeKickAtRef.current = now;
@@ -785,87 +896,126 @@ export function useRoomSnapshot(
         }
 
         const now = Date.now();
-        const lastSnapshotAt = lastRoomSnapshotAtRef.current;
-        if (typeof lastSnapshotAt === "number") {
-          setSyncHealth("ok");
-          setSyncSnapshotAgeMs(null);
-          return;
-        }
-
-        const baselineAt = syncStartAtRef.current;
-        const ageMs = Math.max(0, now - baselineAt);
-        const thresholdMs = ROOM_SNAPSHOT_INITIAL_STALE_MS;
-
-        if (ageMs < thresholdMs) {
-          setSyncHealth("initial");
-          setSyncSnapshotAgeMs(null);
-          return;
-        }
-
-        const episode = syncEpisodeRef.current;
-        if (!episode.active) {
-          episode.active = true;
-          episode.startedAt = now;
-          episode.lastAttemptAt = 0;
-          episode.attempts = 0;
-          episode.lastTraceAt = 0;
-        }
-
-        setSyncSnapshotAgeMs(Math.round(ageMs));
-
-        const slowMode = episode.attempts >= 2;
-        const cooldownMs = slowMode
-          ? DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS
-          : DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS;
-        if (now - episode.lastAttemptAt < cooldownMs) {
-          setSyncHealth("stale");
-          return;
-        }
-
-        episode.lastAttemptAt = now;
-        episode.attempts += 1;
-        setSyncRecoveryAttempts(episode.attempts);
-        setSyncHealth("recovering");
-
-        setMetric("roomSnapshot", "initialStuckDetectedAt", now);
-        setMetric("roomSnapshot", "initialStuckAgeMs", Math.round(ageMs));
-        setMetric("roomSnapshot", "initialStuckRecoveryAttempt", episode.attempts);
-
-        const shouldTrace = now - episode.lastTraceAt > 20_000;
-        if (shouldTrace) {
-          episode.lastTraceAt = now;
-          traceAction("room.snapshot.initialStuck", {
-            roomId,
+        const decision = evaluateRoomSnapshotWatchdog(
+          {
+            now,
             trigger,
-            ageMs: String(Math.round(ageMs)),
-            thresholdMs: String(thresholdMs),
-            attempt: String(episode.attempts),
             joinStatus,
+            roomAccessBlocked,
+            visible: document.visibilityState === "visible",
             online:
-              typeof navigator !== "undefined"
-                ? navigator.onLine
-                  ? "1"
-                  : "0"
-                : "unknown",
-            lastListenErrorCode: lastListenErrorCodeRef.current ?? undefined,
-          });
+              typeof navigator !== "undefined" ? (navigator.onLine as boolean) : undefined,
+            lastServerSnapshotAt: lastRoomSnapshotAtRef.current,
+            lastSnapshotWasFromCache: lastRoomSnapshotWasFromCacheRef.current,
+            cacheOnlySince: roomSnapshotCacheSinceRef.current,
+            syncStartAt: syncStartAtRef.current,
+            episode: syncEpisodeRef.current,
+          },
+          {
+            initialStaleMs: ROOM_SNAPSHOT_INITIAL_STALE_MS,
+            postStaleMs: ROOM_SNAPSHOT_POST_STALE_MS,
+            cacheOnlyStaleMs: ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS,
+            recoveryCooldownMs: DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS,
+            recoverySlowCooldownMs: DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS,
+            recoveryMaxAttempts: ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS,
+            recoveryHardCooldownMs: ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS,
+            traceIntervalMs: DEFAULT_ROOM_SNAPSHOT_TRACE_INTERVAL_MS,
+          }
+        );
+
+        syncEpisodeRef.current = decision.nextEpisode;
+        setSyncHealth(decision.nextHealth);
+        setSyncRecoveryAttempts(decision.nextRecoveryAttempts);
+        if (decision.nextHealth === "stale" || decision.nextHealth === "recovering") {
+          setSyncSnapshotAgeMs(decision.nextSnapshotAgeMs);
+        } else {
+          setSyncSnapshotAgeMs((prev) => (prev === null ? prev : null));
         }
+
+        const kind = decision.staleKind;
+        if (!kind) return;
+
+        const attempt = decision.nextRecoveryAttempts;
+        const ageMs =
+          typeof decision.staleAgeMs === "number" ? Math.round(decision.staleAgeMs) : null;
+        const thresholdMs =
+          typeof decision.staleThresholdMs === "number"
+            ? Math.round(decision.staleThresholdMs)
+            : null;
+
+        if (decision.exhausted) {
+          setMetric("roomSnapshot", "staleRecoveryExhaustedAt", now);
+          setMetric("roomSnapshot", "staleRecoveryExhaustedKind", kind);
+        }
+
+        if (decision.shouldTrace) {
+          if (kind === "initial") {
+            traceAction("room.snapshot.initialStuck", {
+              roomId,
+              trigger,
+              ageMs: ageMs !== null ? String(ageMs) : undefined,
+              thresholdMs: thresholdMs !== null ? String(thresholdMs) : undefined,
+              attempt: String(attempt),
+              joinStatus,
+              online:
+                typeof navigator !== "undefined"
+                  ? navigator.onLine
+                    ? "1"
+                    : "0"
+                  : "unknown",
+              lastListenErrorCode: lastListenErrorCodeRef.current ?? undefined,
+            });
+          } else {
+            traceAction("room.snapshot.staleDetected", {
+              roomId,
+              kind,
+              trigger,
+              ageMs: ageMs !== null ? String(ageMs) : undefined,
+              thresholdMs: thresholdMs !== null ? String(thresholdMs) : undefined,
+              attempt: String(attempt),
+              joinStatus,
+              online:
+                typeof navigator !== "undefined"
+                  ? navigator.onLine
+                    ? "1"
+                    : "0"
+                  : "unknown",
+              fromCache: lastRoomSnapshotWasFromCacheRef.current ? "1" : "0",
+              lastListenErrorCode: lastListenErrorCodeRef.current ?? undefined,
+            });
+          }
+        }
+
+        if (!decision.shouldForceRefresh) {
+          return;
+        }
+
+        const reason =
+          kind === "initial"
+            ? `room.snapshot.initialStuck:${attempt}`
+            : kind === "cache-only"
+              ? `room.snapshot.cacheOnly:${attempt}`
+              : `room.snapshot.postStale:${attempt}`;
+
+        setMetric("roomSnapshot", "staleDetectedAt", now);
+        setMetric("roomSnapshot", "staleDetectedKind", kind);
+        setMetric("roomSnapshot", "staleDetectedTrigger", trigger);
+        setMetric("roomSnapshot", "staleDetectedAgeMs", ageMs !== null ? ageMs : null);
+        setMetric("roomSnapshot", "staleDetectedThresholdMs", thresholdMs !== null ? thresholdMs : null);
+        setMetric("roomSnapshot", "staleDetectedAttempt", attempt);
 
         if (!forceRefreshInFlightRef.current) {
           try {
             window.dispatchEvent(
               new CustomEvent("ito:room-force-refresh", {
-                detail: {
-                  roomId,
-                  reason: `room.snapshot.initialStuck:${episode.attempts}`,
-                },
+                detail: { roomId, reason },
               })
             );
           } catch {}
         }
 
-        if (episode.attempts >= 2) {
-          restartRoomListenerRef.current?.(`initialStuck:${episode.attempts}`);
+        if (decision.shouldRestartListener) {
+          restartRoomListenerRef.current?.(reason);
         }
       } catch (error) {
         traceError("room.snapshot.watchdog", error, { roomId });

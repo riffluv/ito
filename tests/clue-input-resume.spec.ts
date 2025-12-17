@@ -12,14 +12,17 @@ test("background/resume keeps clue input editable after game start", async ({ pa
   await page.getByRole("button", { name: "新しい部屋を作成" }).first().click();
 
   const nameInput = page.getByPlaceholder("れい: コーヒーやめます");
-  if (await nameInput.count()) {
-    await expect(nameInput).toBeVisible({ timeout: 20_000 });
+  const roomInput = page.getByPlaceholder("れい: 友達とあそぶ");
+
+  // NameDialog が開く場合があるので、どちらかが表示されるまで待つ（初回レンダリングのレース対策）
+  await expect(nameInput.or(roomInput)).toBeVisible({ timeout: 20_000 });
+
+  if (await nameInput.isVisible()) {
     await nameInput.fill(playerName);
     await page.getByRole("button", { name: "きめる" }).click();
+    await expect(roomInput).toBeVisible({ timeout: 20_000 });
   }
 
-  const roomInput = page.getByPlaceholder("れい: 友達とあそぶ");
-  await expect(roomInput).toBeVisible({ timeout: 20_000 });
   await roomInput.fill(roomName);
   await page.getByRole("button", { name: "作成" }).click();
 

@@ -763,15 +763,77 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
     throw codedError("rate_limited", "rate_limited");
   }
   try {
-    const snap = await roomRef.get();
-    if (!snap.exists) {
-      throw codedError("room_not_found", "room_not_found");
+    let isAdmin = false;
+    try {
+      isAdmin = (await getAdminAuth().verifyIdToken(params.token)).admin === true;
+    } catch {
+      isAdmin = false;
     }
-    const room = snap.data() as RoomDoc | undefined;
-    const prevStatus = room?.status ?? null;
-    // Idempotent: 同じ requestId で既に waiting なら成功扱い
-    if (params.requestId && room?.resetRequestId === params.requestId && room?.status === "waiting") {
-      traceAction("room.reset.server.idempotent", { roomId: params.roomId, uid, requestId: params.requestId });
+
+    let prevStatus: RoomDoc["status"] | null = null;
+    let alreadyReset = false;
+    let playerCount = 0;
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists) {
+        throw codedError("room_not_found", "room_not_found");
+      }
+
+      const room = snap.data() as RoomDoc | undefined;
+      prevStatus = room?.status ?? null;
+      alreadyReset =
+        !!params.requestId &&
+        room?.resetRequestId === params.requestId &&
+        room?.status === "waiting";
+
+      const authorized =
+        uid === room?.hostId ||
+        uid === room?.creatorId ||
+        isAdmin;
+      if (!authorized) {
+        throw codedError("forbidden", "forbidden", "host_only");
+      }
+
+      // Read all docs before any writes (Firestore transaction requirement).
+      const playersRef = roomRef.collection("players");
+      const playersSnap = await tx.get(playersRef);
+      playerCount = playersSnap.size;
+
+      if (!alreadyReset) {
+        const resetPayload = composeWaitingResetPayload({
+          recallOpen: params.recallSpectators ?? true,
+          resetRound: true,
+          clearTopic: true,
+          closedAt: null,
+          expiresAt: null,
+        });
+        if (params.requestId) {
+          resetPayload.resetRequestId = params.requestId;
+        }
+        resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
+        resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
+        tx.update(roomRef, resetPayload);
+      }
+
+      // Atomic: waiting reset must clear per-player state together to avoid "room waiting but players stale".
+      playersSnap.forEach((doc) => {
+        tx.update(doc.ref, {
+          number: null,
+          clue1: "",
+          ready: false,
+          orderIndex: 0,
+        } satisfies Partial<PlayerDoc>);
+      });
+    });
+
+    if (alreadyReset) {
+      traceAction("room.reset.server.idempotent", {
+        roomId: params.roomId,
+        uid,
+        requestId: params.requestId,
+        players: playerCount,
+      });
       void logRoomCommandAudit({
         roomId: params.roomId,
         uid,
@@ -783,33 +845,15 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
       });
       return;
     }
-    const authorized =
-      uid === room?.hostId || uid === room?.creatorId || (await getAdminAuth().verifyIdToken(params.token)).admin === true;
-    if (!authorized) {
-      throw codedError("forbidden", "forbidden", "host_only");
-    }
-
-    const resetPayload = composeWaitingResetPayload({
-      recallOpen: params.recallSpectators ?? true,
-      resetRound: true,
-      clearTopic: true,
-      closedAt: null,
-      expiresAt: null,
-    });
-    if (params.requestId) {
-      resetPayload.resetRequestId = params.requestId;
-    }
-    resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
-    resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
-    await roomRef.update(resetPayload);
 
     // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
     traceAction("room.reset.server", {
       roomId: params.roomId,
       uid,
       requestId: params.requestId ?? null,
-      prevStatus: room?.status ?? null,
+      prevStatus,
       nextStatus: "waiting",
+      players: playerCount,
     });
     void logRoomCommandAudit({
       roomId: params.roomId,

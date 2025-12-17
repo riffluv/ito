@@ -97,6 +97,8 @@ describe("useRevealAnimation", () => {
       expect(last?.revealIndex).toBe(orderList.length);
       expect(last?.finalizeScheduled).toBe(true);
     });
-    expect(finalizeRevealMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(finalizeRevealMock).toHaveBeenCalledTimes(1);
+    });
   });
 });
