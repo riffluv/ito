@@ -22,13 +22,17 @@ export function TopicShuffleButton({
 
   const currentTopic = room.topic ?? null;
   const currentTopicBox = room.topicBox ?? null;
+  const currentCategory =
+    currentTopicBox === "通常版" || currentTopicBox === "レインボー版" || currentTopicBox === "クラシック版"
+      ? currentTopicBox
+      : null;
 
   const handleShuffle = async () => {
-    if (isLoading || !currentTopicBox) return;
+    if (isLoading || !currentCategory) return;
 
     setIsLoading(true);
     try {
-      await topicControls.shuffleTopic(roomId, currentTopicBox);
+      await topicControls.shuffleTopic(roomId, currentCategory);
       notify({
         id: toastIds.topicShuffleSuccess(roomId),
         title: "お題をシャッフルしました",
@@ -49,7 +53,7 @@ export function TopicShuffleButton({
     }
   };
 
-  const canShuffle = Boolean(currentTopic && currentTopicBox);
+  const canShuffle = Boolean(currentTopic && currentCategory);
 
   return (
     <OctopathDockButton

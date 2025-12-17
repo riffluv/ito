@@ -1,6 +1,6 @@
 "use client";
 
-import { db, firebaseEnabled } from "@/lib/firebase/client";
+import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { notify } from "@/components/ui/notify";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
@@ -17,6 +17,8 @@ import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
+import { applyRoomSyncPatch } from "@/lib/sync/applyRoomSyncPatch";
+import { parseRoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import {
   evaluateRoomSnapshotWatchdog,
   type RoomSnapshotWatchdogEpisode,
@@ -32,6 +34,7 @@ import {
   onSnapshot,
   type FirestoreError,
 } from "firebase/firestore";
+import { off as offRtdb, onValue, ref as rtdbRef, type DataSnapshot } from "firebase/database";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import {
@@ -198,6 +201,7 @@ export function useRoomSnapshot(
   displayName?: string | null
 ): RoomSnapshotState {
   const [room, setRoom] = useState<(RoomDoc & { id: string }) | null>(null);
+  const roomStateRef = useRef<(RoomDoc & { id: string }) | null>(null);
   const [roomLoaded, setRoomLoaded] = useState(false);
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,6 +219,11 @@ export function useRoomSnapshot(
   const joinLimitNotifiedRef = useRef(false);
   const ensureMemberHeartbeatRef = useRef<EnsureMemberHeartbeat | null>(null);
   const statusVersionRef = useRef<number>(0);
+  const lastServerStatusVersionRef = useRef<number>(0);
+  const rtdbLastEventVersionRef = useRef<number>(0);
+  const rtdbLastEventKeyRef = useRef<string>("");
+  const rtdbConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rtdbPendingConfirmVersionRef = useRef<number>(0);
   const forceRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const restartRoomListenerRef = useRef<((reason: string) => void) | null>(null);
   const resumeKickAtRef = useRef<number>(0);
@@ -275,6 +284,10 @@ export function useRoomSnapshot(
     return null;
   }, [displayName]);
 
+  useEffect(() => {
+    roomStateRef.current = room;
+  }, [room]);
+
   const isMember = useMemo(() => players.some((p) => p.id === uid), [players, uid]);
 
   const enqueueCommit = useCallback(
@@ -325,6 +338,14 @@ export function useRoomSnapshot(
     roomSnapshotCacheSinceRef.current = null;
     lastListenErrorAtRef.current = null;
     lastListenErrorCodeRef.current = null;
+    lastServerStatusVersionRef.current = 0;
+    rtdbLastEventVersionRef.current = 0;
+    rtdbLastEventKeyRef.current = "";
+    rtdbPendingConfirmVersionRef.current = 0;
+    if (rtdbConfirmTimerRef.current !== null) {
+      clearTimeout(rtdbConfirmTimerRef.current);
+      rtdbConfirmTimerRef.current = null;
+    }
     syncEpisodeRef.current = {
       active: false,
       kind: null,
@@ -337,6 +358,162 @@ export function useRoomSnapshot(
     setSyncHealth("initial");
     setSyncSnapshotAgeMs(null);
     setSyncRecoveryAttempts(0);
+  }, [roomId]);
+
+  // Apply sync patches (API/RTDB) without waiting for Firestore propagation.
+  useEffect(() => {
+    if (typeof window === "undefined") return () => undefined;
+    if (!roomId) return () => undefined;
+
+    const handler = (event: Event) => {
+      if (leavingRef.current) return;
+      const patch = parseRoomSyncPatch((event as CustomEvent).detail);
+      if (!patch || patch.roomId !== roomId) return;
+
+      const startedAt = typeof performance !== "undefined" ? performance.now() : null;
+      const result = applyRoomSyncPatch(roomStateRef.current, patch);
+      enqueueCommit(() => {
+        if (!result.applied) {
+          setMetric(
+            "roomSnapshot",
+            "patch.lastIgnored",
+            `${result.reason}@${patch.meta.source}:${patch.statusVersion}`
+          );
+          return;
+        }
+
+        statusVersionRef.current = patch.statusVersion;
+        roomStateRef.current = result.next;
+        setRoom(result.next);
+
+        setMetric("roomSnapshot", "patch.lastSource", patch.meta.source);
+        setMetric("roomSnapshot", "patch.lastStatusVersion", patch.statusVersion);
+        if (typeof patch.meta.ts === "number" && Number.isFinite(patch.meta.ts)) {
+          setMetric("roomSnapshot", "patch.lastTs", patch.meta.ts);
+        }
+        if (typeof patch.meta.requestId === "string" && patch.meta.requestId.trim().length > 0) {
+          setMetric("roomSnapshot", "patch.lastRequestId", patch.meta.requestId);
+        }
+        try {
+          traceAction("room.sync.patch.apply", {
+            source: patch.meta.source,
+            roomId,
+            statusVersion: String(patch.statusVersion),
+            status: patch.room.status ?? undefined,
+            command: patch.meta.command ?? undefined,
+            requestId: patch.meta.requestId ?? undefined,
+          });
+        } catch {}
+        try {
+          const { id: _ignored, ...toStore } = result.next;
+          storePrefetchedRoom(roomId, toStore as unknown as Record<string, unknown>);
+        } catch {}
+      }, startedAt, "syncPatchCommitMs");
+    };
+
+    window.addEventListener("ito:room-sync-patch", handler as EventListener);
+    return () => {
+      window.removeEventListener("ito:room-sync-patch", handler as EventListener);
+    };
+  }, [roomId, enqueueCommit]);
+
+  // RTDB roomSync event bus (server-issued fast notifications).
+  useEffect(() => {
+    if (typeof window === "undefined") return () => undefined;
+    if (!roomId || !rtdb) return () => undefined;
+
+    const ref = rtdbRef(rtdb, `roomSync/${roomId}/latest`);
+    const handler = (snap: DataSnapshot) => {
+      if (leavingRef.current) return;
+      const patch = parseRoomSyncPatch(snap.val());
+      if (!patch || patch.roomId !== roomId) return;
+
+      const key = `${patch.statusVersion}:${patch.meta.ts ?? 0}:${patch.meta.requestId ?? ""}:${patch.meta.command ?? ""}`;
+      if (key === rtdbLastEventKeyRef.current) return;
+      rtdbLastEventKeyRef.current = key;
+      rtdbLastEventVersionRef.current = patch.statusVersion;
+
+      setMetric("roomSnapshot", "rtdb.lastEventTs", Date.now());
+      setMetric("roomSnapshot", "rtdb.lastStatusVersion", patch.statusVersion);
+      if (typeof patch.meta.ts === "number" && Number.isFinite(patch.meta.ts)) {
+        setMetric("roomSnapshot", "rtdb.lastEventServerTs", patch.meta.ts);
+      }
+
+      try {
+        traceAction("room.sync.event.received", {
+          source: "rtdb",
+          roomId,
+          statusVersion: String(patch.statusVersion),
+          command: patch.meta.command ?? undefined,
+          requestId: patch.meta.requestId ?? undefined,
+        });
+      } catch {}
+
+      try {
+        window.dispatchEvent(new CustomEvent("ito:room-sync-patch", { detail: patch }));
+      } catch {}
+
+      const serverVersion = lastServerStatusVersionRef.current;
+      if (patch.statusVersion <= serverVersion) {
+        return;
+      }
+
+      rtdbPendingConfirmVersionRef.current = patch.statusVersion;
+      if (rtdbConfirmTimerRef.current !== null) {
+        clearTimeout(rtdbConfirmTimerRef.current);
+        rtdbConfirmTimerRef.current = null;
+      }
+      rtdbConfirmTimerRef.current = setTimeout(() => {
+        rtdbConfirmTimerRef.current = null;
+        const pending = rtdbPendingConfirmVersionRef.current;
+        if (pending !== patch.statusVersion) return;
+        const confirmed = lastServerStatusVersionRef.current;
+        if (confirmed >= patch.statusVersion) return;
+
+        try {
+          traceAction("room.sync.rtdb.unconfirmed.forceRefresh", {
+            roomId,
+            statusVersion: String(patch.statusVersion),
+            confirmedVersion: String(confirmed),
+          });
+        } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("ito:room-force-refresh", {
+              detail: {
+                roomId,
+                reason: `room.sync.rtdb.unconfirmed:${patch.statusVersion}`,
+              },
+            })
+          );
+        } catch {}
+        try {
+          window.dispatchEvent(
+            new CustomEvent("ito:room-restart-listener", {
+              detail: {
+                roomId,
+                reason: `room.sync.rtdb.unconfirmed:${patch.statusVersion}`,
+              },
+            })
+          );
+        } catch {}
+      }, 1500);
+    };
+    const onErr = (error: Error) => {
+      setMetric("roomSnapshot", "rtdb.lastListenErrorTs", Date.now());
+      traceError("room.sync.event.listen", error, { roomId });
+    };
+
+    onValue(ref, handler, onErr);
+    return () => {
+      try {
+        offRtdb(ref, "value", handler);
+      } catch {}
+      if (rtdbConfirmTimerRef.current !== null) {
+        clearTimeout(rtdbConfirmTimerRef.current);
+        rtdbConfirmTimerRef.current = null;
+      }
+    };
   }, [roomId]);
 
   useEffect(() => {
@@ -550,6 +727,10 @@ export function useRoomSnapshot(
               typeof sanitized.statusVersion === "number"
                 ? sanitized.statusVersion
                 : 0;
+            if (!fromCache) {
+              lastServerStatusVersionRef.current = incomingVersion;
+              setMetric("roomSnapshot", "lastServerStatusVersion", incomingVersion);
+            }
             const currentVersion =
               typeof statusVersionRef.current === "number"
                 ? statusVersionRef.current
@@ -795,6 +976,10 @@ export function useRoomSnapshot(
           const sanitized = sanitizeRoom(rawData);
           const incomingVersion =
             typeof sanitized.statusVersion === "number" ? sanitized.statusVersion : 0;
+          if (!fromCache) {
+            lastServerStatusVersionRef.current = incomingVersion;
+            setMetric("roomSnapshot", "lastServerStatusVersion", incomingVersion);
+          }
           const currentVersion =
             typeof statusVersionRef.current === "number" ? statusVersionRef.current : 0;
           if (incomingVersion < currentVersion) {

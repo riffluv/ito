@@ -61,8 +61,8 @@ export async function POST(
   }
 
   try {
-    await resetRoomCommand({ roomId, recallSpectators, token, requestId, sessionId });
-    return NextResponse.json({ ok: true });
+    const sync = await resetRoomCommand({ roomId, recallSpectators, token, requestId, sessionId });
+    return NextResponse.json({ ok: true, sync });
   } catch (error) {
     traceError("room.reset.api", error, { roomId });
     const code = (error as { code?: string }).code;

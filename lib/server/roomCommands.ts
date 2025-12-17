@@ -18,11 +18,13 @@ import {
 } from "@/lib/game/domain";
 import { acquireRoomLock, releaseRoomLock } from "@/lib/server/roomQueue";
 import { composeWaitingResetPayload, leaveRoomServer } from "@/lib/server/roomActions";
+import { buildRoomSyncPatch, publishRoomSyncPatch } from "@/lib/server/roomSync";
 import { logRoomCommandAudit } from "@/lib/server/roomAudit";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
 import { normalizeVersion } from "@/lib/server/roomVersionGate";
+import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import type { OrderState } from "@/lib/game/rules";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { toMillis } from "@/lib/time";
@@ -459,7 +461,7 @@ export async function startGameCommand(params: {
   topicType?: string | null;
   customTopic?: string | null;
   presenceUids?: string[] | null;
-} & WithAuth) {
+} & WithAuth): Promise<RoomSyncPatch> {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const roomSnapForAuth = await roomRef.get();
@@ -471,7 +473,11 @@ export async function startGameCommand(params: {
   let alreadyStarted = false;
   const rateLimitMs = 700;
   let prevStatus: RoomDoc["status"] | null = null;
+  let nextStatusVersion = 0;
+  let syncTopic: string | null | undefined = undefined;
+  let syncTopicBox: RoomDoc["topicBox"] | null | undefined = undefined;
   const doAutoDeal = params.autoDeal === true;
+  const syncTs = Date.now();
 
   const lockHolder = `start:${requestId}`;
   const locked = await acquireRoomLock(params.roomId, lockHolder);
@@ -594,10 +600,14 @@ export async function startGameCommand(params: {
       }
       const room = snap.data() as RoomDoc;
       prevStatus = room.status ?? null;
+      const currentStatusVersion = typeof room.statusVersion === "number" ? room.statusVersion : 0;
 
       // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
       if (room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
         alreadyStarted = true;
+        nextStatusVersion = currentStatusVersion;
+        syncTopic = room.topic ?? null;
+        syncTopicBox = (room.topicBox as RoomDoc["topicBox"] | null | undefined) ?? null;
         return;
       }
 
@@ -633,6 +643,7 @@ export async function startGameCommand(params: {
       if (room.hostId && room.hostId !== uid) {
         throw codedError("forbidden", "forbidden", "host_only");
       }
+      nextStatusVersion = currentStatusVersion + 1;
       const payload: Partial<RoomDoc> = {
         status: "clue",
         result: null,
@@ -649,11 +660,11 @@ export async function startGameCommand(params: {
           : null,
         mvpVotes: {},
         lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-        ui: { ...(room.ui ?? {}), recallOpen: false },
+        ui: { ...(room.ui ?? {}), recallOpen: false, roundPreparing: false, revealPending: false },
         startRequestId: requestId,
         dealRequestId: doAutoDeal && preparedDeal ? requestId : room.dealRequestId ?? null,
         lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
-        statusVersion: FieldValue.increment(1) as unknown as number,
+        statusVersion: nextStatusVersion,
       };
 
       if (doAutoDeal && preparedDeal) {
@@ -661,6 +672,11 @@ export async function startGameCommand(params: {
         payload.topicBox = preparedDeal.topicBox as RoomDoc["topicBox"] | null;
         payload.topicOptions = null;
         payload.deal = preparedDeal.dealPayload;
+        syncTopic = preparedDeal.topic;
+        syncTopicBox = (preparedDeal.topicBox as RoomDoc["topicBox"] | null) ?? null;
+      } else {
+        syncTopic = room.topic ?? null;
+        syncTopicBox = (room.topicBox as RoomDoc["topicBox"] | null | undefined) ?? null;
       }
 
       tx.update(roomRef, payload);
@@ -697,7 +713,25 @@ export async function startGameCommand(params: {
         nextStatus: "clue",
         note: "idempotent",
       });
-      return;
+      const sync = buildRoomSyncPatch({
+        roomId: params.roomId,
+        statusVersion: nextStatusVersion,
+        room: {
+          status: "clue",
+          topic: syncTopic,
+          topicBox: syncTopicBox,
+          ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+        },
+        command: "start",
+        requestId,
+        source: "api",
+        ts: syncTs,
+      });
+      void publishRoomSyncPatch({
+        ...sync,
+        meta: { ...sync.meta, source: "rtdb" },
+      });
+      return sync;
     }
 
     traceAction("host.start.server", {
@@ -719,6 +753,26 @@ export async function startGameCommand(params: {
       nextStatus: "clue",
       note: doAutoDeal ? "autoDeal" : undefined,
     });
+
+    const sync = buildRoomSyncPatch({
+      roomId: params.roomId,
+      statusVersion: nextStatusVersion,
+      room: {
+        status: "clue",
+        topic: syncTopic,
+        topicBox: syncTopicBox,
+        ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+      },
+      command: "start",
+      requestId,
+      source: "api",
+      ts: syncTs,
+    });
+    void publishRoomSyncPatch({
+      ...sync,
+      meta: { ...sync.meta, source: "rtdb" },
+    });
+    return sync;
   } catch (error) {
     try {
       const failureSnap = await roomRef.get();
@@ -751,7 +805,7 @@ export async function startGameCommand(params: {
   }
 }
 
-export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId: string | null; sessionId?: string } & WithAuth) {
+export async function resetRoomCommand(params: { roomId: string; recallSpectators?: boolean; requestId: string | null; sessionId?: string } & WithAuth): Promise<RoomSyncPatch> {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const roomSnapForAuth = await roomRef.get();
@@ -773,6 +827,8 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
     let prevStatus: RoomDoc["status"] | null = null;
     let alreadyReset = false;
     let playerCount = 0;
+    let nextStatusVersion = 0;
+    const syncTs = Date.now();
 
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(roomRef);
@@ -782,10 +838,12 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
 
       const room = snap.data() as RoomDoc | undefined;
       prevStatus = room?.status ?? null;
+      const currentStatusVersion = typeof room?.statusVersion === "number" ? room.statusVersion : 0;
       alreadyReset =
         !!params.requestId &&
         room?.resetRequestId === params.requestId &&
         room?.status === "waiting";
+      nextStatusVersion = alreadyReset ? currentStatusVersion : currentStatusVersion + 1;
 
       const authorized =
         uid === room?.hostId ||
@@ -812,7 +870,7 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
           resetPayload.resetRequestId = params.requestId;
         }
         resetPayload.lastCommandAt = FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"];
-        resetPayload.statusVersion = FieldValue.increment(1) as unknown as number;
+        resetPayload.statusVersion = nextStatusVersion;
         tx.update(roomRef, resetPayload);
       }
 
@@ -843,7 +901,30 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
         nextStatus: "waiting",
         note: "idempotent",
       });
-      return;
+      const sync = buildRoomSyncPatch({
+        roomId: params.roomId,
+        statusVersion: nextStatusVersion,
+        room: {
+          status: "waiting",
+          topic: null,
+          topicBox: null,
+          round: 0,
+          ui: {
+            roundPreparing: false,
+            recallOpen: params.recallSpectators ?? true,
+            revealPending: false,
+          },
+        },
+        command: "reset",
+        requestId: params.requestId,
+        source: "api",
+        ts: syncTs,
+      });
+      void publishRoomSyncPatch({
+        ...sync,
+        meta: { ...sync.meta, source: "rtdb" },
+      });
+      return sync;
     }
 
     // ルーム更新完了後、即座にログを出力（レスポンス前の最小限の処理）
@@ -912,6 +993,30 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
         traceError("room.reset.spectator.cleanup", cleanupError, { roomId: params.roomId });
       }
     })();
+    const sync = buildRoomSyncPatch({
+      roomId: params.roomId,
+      statusVersion: nextStatusVersion,
+      room: {
+        status: "waiting",
+        topic: null,
+        topicBox: null,
+        round: 0,
+        ui: {
+          roundPreparing: false,
+          recallOpen: params.recallSpectators ?? true,
+          revealPending: false,
+        },
+      },
+      command: "reset",
+      requestId: params.requestId,
+      source: "api",
+      ts: syncTs,
+    });
+    void publishRoomSyncPatch({
+      ...sync,
+      meta: { ...sync.meta, source: "rtdb" },
+    });
+    return sync;
   } finally {
     await releaseLockSafely(params.roomId, lockHolder);
   }
@@ -1709,12 +1814,14 @@ export type NextRoundResult = {
   playerCount: number;
   topic: string | null;
   topicType: string | null;
+  sync: RoomSyncPatch;
 };
 
 export async function nextRoundCommand(params: NextRoundParams): Promise<NextRoundResult> {
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const rateLimitMs = 700;
+  const syncTs = Date.now();
   const lockHolder = `next:${params.requestId}`;
   const locked = await acquireRoomLock(params.roomId, lockHolder);
   if (!locked) {
@@ -1754,12 +1861,29 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     // Idempotent: 直前と同じ requestId ですでに遷移済みならそのまま返す
     if (room?.nextRequestId && room.nextRequestId === params.requestId && room.status === "clue") {
       const playerCount = Array.isArray(room?.deal?.players) ? room.deal!.players!.length : 0;
+      const sync = buildRoomSyncPatch({
+        roomId: params.roomId,
+        statusVersion: typeof room?.statusVersion === "number" ? room.statusVersion : 0,
+        room: {
+          status: "clue",
+          topic: room?.topic ?? null,
+          topicBox: (room?.topicBox as RoomDoc["topicBox"] | null | undefined) ?? null,
+          round: typeof room?.round === "number" ? room.round : 0,
+          ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+        },
+        command: "next-round",
+        requestId: params.requestId,
+        source: "api",
+        ts: syncTs,
+      });
+      void publishRoomSyncPatch({ ...sync, meta: { ...sync.meta, source: "rtdb" } });
       return {
         ok: true,
         round: typeof room?.round === "number" ? room.round : 0,
         playerCount,
         topic: room?.topic ?? null,
         topicType: (room?.topicBox as string | null | undefined) ?? null,
+        sync,
       };
     }
 
@@ -1862,6 +1986,8 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     // 7. 新しい round 番号
     const currentRound = typeof room?.round === "number" ? room.round : 0;
     const nextRound = currentRound + 1;
+    const currentStatusVersion = typeof room?.statusVersion === "number" ? room.statusVersion : 0;
+    const nextStatusVersion = currentStatusVersion + 1;
 
     // 8. room を更新（アトミックに全てを設定）
     const roomUpdate: Record<string, unknown> = {
@@ -1885,7 +2011,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       nextRequestId: params.requestId,
       dealRequestId: params.requestId,
       lastCommandAt: FieldValue.serverTimestamp(),
-      statusVersion: FieldValue.increment(1) as unknown as number,
+      statusVersion: nextStatusVersion,
       "ui.roundPreparing": false,
       "ui.recallOpen": false,
       "ui.revealPending": false,
@@ -1956,12 +2082,30 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       topic: topic ?? undefined,
     });
 
+    const sync = buildRoomSyncPatch({
+      roomId: params.roomId,
+      statusVersion: nextStatusVersion,
+      room: {
+        status: "clue",
+        topic,
+        topicBox: (topicBox as RoomDoc["topicBox"] | null) ?? null,
+        round: nextRound,
+        ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+      },
+      command: "next-round",
+      requestId: params.requestId,
+      source: "api",
+      ts: syncTs,
+    });
+    void publishRoomSyncPatch({ ...sync, meta: { ...sync.meta, source: "rtdb" } });
+
     return {
       ok: true,
       round: nextRound,
       playerCount: ordered.length,
       topic,
       topicType: topicBox,
+      sync,
     };
   } catch (error) {
     try {

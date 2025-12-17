@@ -30,18 +30,19 @@ test("background/resume keeps clue input editable after game start", async ({ pa
   await expect(enterRoom).toBeVisible({ timeout: 30_000 });
   await enterRoom.click();
 
+  // Known repro: background during room loading, then resume and start the game.
+  const backgroundDuringLoad = await context.newPage();
+  await backgroundDuringLoad.goto("about:blank");
+  await backgroundDuringLoad.bringToFront();
+  await backgroundDuringLoad.waitForTimeout(3500);
+  await page.bringToFront();
+  await backgroundDuringLoad.close();
+
   const startButton = page.getByRole("button", { name: "ゲーム開始" });
   await expect(startButton).toBeVisible({ timeout: 45_000 });
   await expect(startButton).toBeEnabled({ timeout: 45_000 });
 
   await startButton.click();
-
-  const background = await context.newPage();
-  await background.goto("about:blank");
-  await background.bringToFront();
-  await background.waitForTimeout(3500);
-  await page.bringToFront();
-  await background.close();
 
   const clueInput = page.getByLabel("連想ワード");
   await expect(clueInput).toBeVisible({ timeout: 45_000 });

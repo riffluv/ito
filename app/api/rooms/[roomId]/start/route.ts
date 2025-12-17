@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
   }
 
   try {
-    await startGameCommand({
+    const sync = await startGameCommand({
       roomId,
       token: parsed.data.token,
       sessionId: parsed.data.sessionId ?? undefined,
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: { roomId: str
       customTopic: parsed.data.customTopic ?? undefined,
       presenceUids: parsed.data.presenceUids ?? undefined,
     });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, sync });
   } catch (error) {
     traceError("room.start.api", error, { roomId });
     const code = (error as { code?: string }).code;

@@ -2,6 +2,7 @@ import { auth } from "@/lib/firebase/client";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
+import { parseRoomSyncPatch, type RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 
 export type ApiError = Error & {
   code?: string;
@@ -148,6 +149,27 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
   return json as T;
 }
 
+function dispatchRoomSyncPatch(value: unknown): RoomSyncPatch | null {
+  if (typeof window === "undefined") return null;
+  const patch = parseRoomSyncPatch(value);
+  if (!patch) return null;
+  try {
+    window.dispatchEvent(new CustomEvent("ito:room-sync-patch", { detail: patch }));
+  } catch {
+    // ignore
+  }
+  try {
+    setMetric(
+      "api",
+      "lastSyncPatch",
+      `${patch.meta.source}:${patch.statusVersion}@${patch.roomId}`
+    );
+  } catch {
+    // ignore
+  }
+  return patch;
+}
+
 export async function apiCreateRoom(payload: {
   roomName: string;
   displayName: string;
@@ -217,7 +239,7 @@ export async function apiStartGame(
   }
 ): Promise<void> {
   const token = await getIdTokenOrThrow("start-game");
-  await postJson(`/api/rooms/${roomId}/start`, {
+  const result = await postJson<{ ok: true; sync?: unknown }>(`/api/rooms/${roomId}/start`, {
     token,
     clientVersion: APP_VERSION,
     allowFromFinished: opts?.allowFromFinished ?? false,
@@ -229,6 +251,7 @@ export async function apiStartGame(
     customTopic: opts?.customTopic ?? undefined,
     presenceUids: opts?.presenceUids ?? undefined,
   });
+  dispatchRoomSyncPatch(result?.sync);
 }
 
 export async function apiResetRoom(
@@ -238,13 +261,14 @@ export async function apiResetRoom(
   sessionId?: string | null
 ): Promise<void> {
   const token = await getIdTokenOrThrow("reset-room");
-  await postJson(`/api/rooms/${roomId}/reset`, {
+  const result = await postJson<{ ok: true; sync?: unknown }>(`/api/rooms/${roomId}/reset`, {
     token,
     clientVersion: APP_VERSION,
     recallSpectators,
     requestId,
     sessionId: sessionId ?? undefined,
   });
+  dispatchRoomSyncPatch(result?.sync);
 }
 
 // ============================================================================
@@ -268,11 +292,12 @@ export type NextRoundResult = {
   playerCount: number;
   topic: string | null;
   topicType: string | null;
+  sync?: RoomSyncPatch;
 };
 
 export async function apiNextRound(roomId: string, opts: NextRoundOptions): Promise<NextRoundResult> {
   const token = await getIdTokenOrThrow("next-round");
-  return postJson(`/api/rooms/${roomId}/next-round`, {
+  const result = await postJson<NextRoundResult>(`/api/rooms/${roomId}/next-round`, {
     token,
     clientVersion: APP_VERSION,
     topicType: opts?.topicType ?? undefined,
@@ -281,6 +306,8 @@ export async function apiNextRound(roomId: string, opts: NextRoundOptions): Prom
     sessionId: opts.sessionId ?? undefined,
     presenceUids: opts.presenceUids ?? undefined,
   });
+  dispatchRoomSyncPatch(result?.sync);
+  return result;
 }
 
 export async function apiDealNumbers(
