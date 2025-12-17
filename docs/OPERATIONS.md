@@ -6,6 +6,7 @@
 
 ## 1. プロジェクト概要
 - **技術スタック**: Next.js 14（App Router）/ TypeScript / Chakra UI / Pixi.js / GSAP / Firebase（Firestore + RTDB + Auth + Functions）/ Stripe
+- **デバッグメトリクス**: 不具合報告時は `docs/DEBUG_METRICS.md` の手順で `dumpItoMetricsJson()` を採取する。
 - **主要環境変数**  
   - `NEXT_PUBLIC_APP_VERSION`: ビルド識別子。Safe Update の差分判定にも利用。  
   - `NEXT_PUBLIC_ENABLE_PWA`: PWA / Service Worker を有効化。  

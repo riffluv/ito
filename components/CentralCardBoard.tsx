@@ -642,7 +642,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const mouseSensorOptions = useMemo(
     () => ({
       activationConstraint: {
-        distance: dragBoostEnabled ? 1 : pointerProfile.isCoarsePointer ? 6 : 2,
+        // Avoid accidental micro-drags on desktop (which can momentarily hide the card)
+        // while keeping touch devices responsive.
+        distance: (() => {
+          const base = pointerProfile.isCoarsePointer ? 6 : 4;
+          // "Boost" keeps activation snappy but should not be hair-trigger.
+          return dragBoostEnabled ? Math.max(2, Math.round(base * 0.5)) : base;
+        })(),
       },
     }),
     [pointerProfile.isCoarsePointer, dragBoostEnabled]

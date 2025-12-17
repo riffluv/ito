@@ -52,12 +52,14 @@ function WaitingAreaCardComponent({
   }, [player, ready, displayClue]);
 
   // ドラッグ機能（連想ワード確定後のみ有効）
+  const draggable =
+    isDraggingEnabled && ready && (meId ? player.id === meId : false);
   const { attributes, listeners, setNodeRef, isDragging } =
     useDraggable({
       id: player.id,
       // 本人のカード以外はドラッグ不可。連想ワード未確定も不可。
       disabled:
-        !isDraggingEnabled || !ready || (meId ? player.id !== meId : true),
+        !draggable,
     });
 
   const baseStyle: CSSProperties = isDragging
@@ -68,11 +70,15 @@ function WaitingAreaCardComponent({
         transition: "none",
       }
     : {
-        cursor:
-          isDraggingEnabled && ready && meId === player.id ? "grab" : "default",
+        cursor: draggable ? "grab" : "default",
         transition: "transform 0.28s ease",
       };
-  const style: CSSProperties = baseStyle;
+  const style: CSSProperties = {
+    ...baseStyle,
+    // Prevent mobile browsers from treating the gesture as scroll, which can
+    // cancel the drag and lead to "dropped but not submitted" feeling.
+    ...(draggable ? { touchAction: "none" } : {}),
+  };
 
   return (
     <Box
@@ -82,8 +88,8 @@ function WaitingAreaCardComponent({
       aria-grabbed={isDragging ? "true" : "false"}
       aria-label={player.name ? `${player.name}のカード` : "カード"}
       data-dragging={isDragging ? "true" : undefined}
-      {...(isDraggingEnabled && ready ? listeners : {})}
-      {...(isDraggingEnabled && ready ? attributes : {})}
+      {...(draggable ? listeners : {})}
+      {...(draggable ? attributes : {})}
     >
       <GameCard {...cardViewModel} />
     </Box>
