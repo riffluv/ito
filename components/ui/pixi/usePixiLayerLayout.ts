@@ -43,6 +43,7 @@ export function usePixiLayerLayout(
   const lastLayoutRef = useRef<DOMRect | null>(null);
   const dprRef = useRef(typeof window !== "undefined" ? window.devicePixelRatio : 1);
   const resizeTimeoutRef = useRef<number | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const target = targetRef.current;
@@ -54,6 +55,21 @@ export function usePixiLayerLayout(
     }
 
     let active = true;
+    let stableFrames = 0;
+    let pollingMode: "watch" | "idle" = "watch";
+    const STABLE_FRAMES_TO_IDLE = 12;
+    const IDLE_POLL_MS = 500;
+
+    const clearTimers = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (idleTimerRef.current !== null) {
+        window.clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
 
     // レイアウト更新処理
     const updateLayout = () => {
@@ -78,6 +94,7 @@ export function usePixiLayerLayout(
       if (hasChanged) {
         lastLayoutRef.current = rect;
         dprRef.current = currentDpr;
+        stableFrames = 0;
 
         // Pixiコンテナの位置は設定しない（Graphics側で設定する）
         // container.position.set(rect.x, rect.y);
@@ -90,10 +107,31 @@ export function usePixiLayerLayout(
           y: rect.y,
           dpr: currentDpr,
         });
+      } else {
+        stableFrames += 1;
       }
 
-      // 次のフレームでも監視を続ける
-      rafRef.current = requestAnimationFrame(updateLayout);
+      // 位置/サイズが安定したら監視頻度を落としてCPU負荷を抑える。
+      // - watch: 毎フレーム確認（モーダル開閉/レイアウト遷移中の追従）
+      // - idle: 低頻度ポーリング（稀な位置ズレ検知の保険）
+      if (pollingMode === "watch" && stableFrames >= STABLE_FRAMES_TO_IDLE) {
+        pollingMode = "idle";
+      } else if (pollingMode === "idle" && hasChanged) {
+        pollingMode = "watch";
+        stableFrames = 0;
+      }
+
+      if (pollingMode === "watch") {
+        rafRef.current = requestAnimationFrame(updateLayout);
+        return;
+      }
+
+      // idle: 500ms間隔でチェックし、変化が見えたらwatchへ戻る
+      idleTimerRef.current = window.setTimeout(() => {
+        idleTimerRef.current = null;
+        if (!active) return;
+        rafRef.current = requestAnimationFrame(updateLayout);
+      }, IDLE_POLL_MS);
     };
 
     // ResizeObserver でサイズ変化を監視（debounce 付き）
@@ -103,9 +141,9 @@ export function usePixiLayerLayout(
         clearTimeout(resizeTimeoutRef.current);
       }
       resizeTimeoutRef.current = window.setTimeout(() => {
-        if (rafRef.current !== null) {
-          cancelAnimationFrame(rafRef.current);
-        }
+        clearTimers();
+        pollingMode = "watch";
+        stableFrames = 0;
         updateLayout();
       }, 16);
     });
@@ -119,10 +157,7 @@ export function usePixiLayerLayout(
     return () => {
       active = false;
 
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
+      clearTimers();
 
       if (resizeTimeoutRef.current !== null) {
         clearTimeout(resizeTimeoutRef.current);
