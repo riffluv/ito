@@ -31,3 +31,6 @@ downloaded-logs-*.json
 
 # Local task sync artifacts
 tasksync/
+
+# Gemini settings (contains API keys)
+.gemini/
