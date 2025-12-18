@@ -7,10 +7,11 @@ import { POST as sessionReject } from "../app/api/spectator/sessions/[sessionId]
 import { POST as sessionCancel } from "../app/api/spectator/sessions/[sessionId]/cancel/route";
 
 const originalEnv = process.env.NODE_ENV;
+const CLIENT_VERSION = "dev";
 
 const buildRequest = (body: Record<string, unknown>) =>
   ({
-    json: async () => body,
+    json: async () => ({ clientVersion: CLIENT_VERSION, ...body }),
   }) as any;
 
 declare global {
@@ -110,6 +111,16 @@ test.describe("spectator host approval flow", () => {
                 update: async (payload: Record<string, unknown>) => {
                   sessionStore[id] = { ...(sessionStore[id] ?? {}), ...payload };
                 },
+              }),
+            };
+          }
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
               }),
             };
           }
@@ -324,6 +335,16 @@ test.describe("spectator host approval flow", () => {
               }),
             };
           }
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           throw new Error(`unexpected collection ${name}`);
         },
       },
@@ -361,6 +382,16 @@ test.describe("spectator host approval flow", () => {
               }),
             };
           }
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           throw new Error(`unexpected collection ${name}`);
         },
       },
@@ -392,6 +423,16 @@ test.describe("spectator host approval flow", () => {
                 update: async (payload: Record<string, any>) => {
                   sessionStore[id] = { ...(sessionStore[id] ?? {}), ...payload };
                 },
+              }),
+            };
+          }
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
               }),
             };
           }

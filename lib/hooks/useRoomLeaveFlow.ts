@@ -236,6 +236,7 @@ export function useRoomLeaveFlow({
     detachNow,
     leavingRef,
     user,
+    roomStatus,
   });
 
   return {

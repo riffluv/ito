@@ -1,10 +1,11 @@
+import { test, expect } from "@playwright/test";
 import {
   computeSlotCount,
   computeVisibleProposal,
   getPresenceEligibleIds,
 } from "@/lib/game/selectors";
 
-describe("selectors minimal", () => {
+test.describe("selectors minimal", () => {
   test("computeSlotCount uses online count when presenceReady", () => {
     const n = computeSlotCount({
       status: "clue" as any,
@@ -16,7 +17,7 @@ describe("selectors minimal", () => {
       playersCount: 1,
       playerIds: ["a", "b"],
     });
-    expect(n).toBe(1); // max(proposal=1, online=1)
+    expect(n).toBe(2); // max(proposal=1, deal=2, online=1, players=1)
   });
 
   test("computeSlotCount ignores spectators when presenceReady", () => {

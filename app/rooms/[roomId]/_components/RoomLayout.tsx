@@ -64,6 +64,7 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import {
@@ -1919,10 +1920,16 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   useEffect(() => {
     if (!uid) return;
-    if (displayName) {
-      setPlayerName(roomId, uid, displayName).catch(() => void 0);
-    }
-  }, [displayName, uid, roomId]);
+    if (!myPlayer) return;
+    if (typeof displayName !== "string") return;
+    const trimmed = displayName.trim();
+    if (!trimmed) return;
+    const cleanName = sanitizePlainText(trimmed).slice(0, 24);
+    if (!cleanName) return;
+    const currentName = (myPlayer.name ?? "").trim();
+    if (currentName === cleanName) return;
+    setPlayerName(roomId, uid, cleanName).catch(() => void 0);
+  }, [displayName, uid, roomId, myPlayer]);
 
 
 

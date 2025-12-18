@@ -58,9 +58,11 @@ test.describe("host action model preparing gate", () => {
     const quickStart = intents.find((i) => i.key === "quickStart");
     const advanced = intents.find((i) => i.key === "advancedMode");
     expect(quickStart?.disabled).toBe(true);
-    expect(quickStart?.reason).toBe("準備中です");
+    expect(quickStart?.reason).toBe("ui.preparing");
+    expect(quickStart?.hint).toBe("準備中です");
     expect(advanced?.disabled).toBe(true);
-    expect(advanced?.reason).toBe("準備中です");
+    expect(advanced?.reason).toBe("ui.preparing");
+    expect(advanced?.hint).toBe("準備中です");
   });
 
   test("clue中で ui.revealPending=true のとき evaluate/reset が disabled", () => {
@@ -81,9 +83,10 @@ test.describe("host action model preparing gate", () => {
     const evaluate = intents.find((i) => i.key === "evaluate");
     const reset = intents.find((i) => i.key === "reset");
     expect(evaluate?.disabled).toBe(true);
-    expect(evaluate?.reason).toBe("準備中です");
+    expect(evaluate?.reason).toBe("ui.preparing");
+    expect(evaluate?.hint).toBe("準備中です");
     expect(reset?.disabled).toBe(true);
-    expect(reset?.reason).toBe("準備中です");
+    expect(reset?.reason).toBe("ui.preparing");
+    expect(reset?.hint).toBe("準備中です");
   });
 });
-

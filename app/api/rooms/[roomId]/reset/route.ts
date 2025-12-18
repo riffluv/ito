@@ -5,6 +5,23 @@ import { traceError } from "@/lib/utils/trace";
 
 export const runtime = "nodejs";
 
+type ResetRouteOverrides = {
+  guard?: typeof checkRoomVersionGuard;
+  resetCommand?: typeof resetRoomCommand;
+};
+
+let overrides: ResetRouteOverrides | null = null;
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __setResetRouteOverrides: ((value: ResetRouteOverrides | null) => void) | undefined;
+}
+
+globalThis.__setResetRouteOverrides = (value) => {
+  if (process.env.NODE_ENV !== "test") return;
+  overrides = value;
+};
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { roomId: string } }
@@ -46,7 +63,7 @@ export async function POST(
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
-  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  const guard = await (overrides?.guard ?? checkRoomVersionGuard)(roomId, clientVersion);
   if (!guard.ok) {
     return NextResponse.json(
       {
@@ -61,7 +78,13 @@ export async function POST(
   }
 
   try {
-    const sync = await resetRoomCommand({ roomId, recallSpectators, token, requestId, sessionId });
+    const sync = await (overrides?.resetCommand ?? resetRoomCommand)({
+      roomId,
+      recallSpectators,
+      token,
+      requestId,
+      sessionId,
+    });
     return NextResponse.json({ ok: true, sync });
   } catch (error) {
     traceError("room.reset.api", error, { roomId });

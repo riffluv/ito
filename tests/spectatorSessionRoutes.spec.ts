@@ -10,10 +10,11 @@ import { POST as sessionApprove } from "../app/api/spectator/sessions/[sessionId
 import { POST as sessionReject } from "../app/api/spectator/sessions/[sessionId]/reject/route";
 
 const originalNodeEnv = process.env.NODE_ENV;
+const CLIENT_VERSION = "dev";
 
 const buildRequest = (body: Record<string, unknown>) =>
   ({
-    json: async () => body,
+    json: async () => ({ clientVersion: CLIENT_VERSION, ...body }),
   }) as any;
 
 declare global {
@@ -103,6 +104,9 @@ test.afterAll(() => {
 test.describe("spectator session routes", () => {
   test("consume invite creates session and increments usage", async () => {
     const now = 1700000000000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const invites: Record<string, any> = {
       "invite-1": {
         roomId: "room-1",
@@ -123,6 +127,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorInvites") {
             return {
               doc: (id: string) => ({
@@ -175,6 +189,9 @@ test.describe("spectator session routes", () => {
 
   test("session watch updates status for owner", async () => {
     const now = 1700000000000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-1": {
         roomId: "room-1",
@@ -190,6 +207,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -220,6 +247,9 @@ test.describe("spectator session routes", () => {
 
   test("session rejoin stores pending request", async () => {
     const now = 1700000000000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-2": {
         roomId: "room-1",
@@ -235,6 +265,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -268,6 +308,9 @@ test.describe("spectator session routes", () => {
 
   test("session rejoin rejects mismatched viewer", async () => {
     const now = 1700000005000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-mismatch": {
         roomId: "room-1",
@@ -283,6 +326,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -314,6 +367,9 @@ test.describe("spectator session routes", () => {
 
   test("session cancel clears rejoinRequest", async () => {
     const now = 1700000000000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-3": {
         roomId: "room-1",
@@ -330,6 +386,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -360,6 +426,9 @@ test.describe("spectator session routes", () => {
 
   test("session rejoin after cancel creates fresh pending snapshot", async () => {
     const firstNow = 1700000004000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-3b": {
         roomId: "room-1",
@@ -376,6 +445,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -411,6 +490,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -445,6 +534,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({
@@ -477,6 +576,9 @@ test.describe("spectator session routes", () => {
 
   test("session end updates status and reason", async () => {
     const now = 1700000000000;
+    const roomsStore: Record<string, any> = {
+      "room-1": { hostId: "host-1", creatorId: "host-1" },
+    };
     const sessionStore: Record<string, any> = {
       "session-4": {
         roomId: "room-1",
@@ -492,6 +594,16 @@ test.describe("spectator session routes", () => {
       },
       db: {
         collection: (name: string) => {
+          if (name === "rooms") {
+            return {
+              doc: (id: string) => ({
+                get: async () => ({
+                  exists: !!roomsStore[id],
+                  data: () => roomsStore[id],
+                }),
+              }),
+            };
+          }
           if (name === "spectatorSessions") {
             return {
               doc: (id: string) => ({

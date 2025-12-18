@@ -9,6 +9,22 @@ test("background/resume keeps clue input editable after game start", async ({ pa
 
   await page.goto("/");
 
+  const emulatorReady = await page.evaluate(() => {
+    const g = globalThis as typeof globalThis & {
+      __AUTH_EMULATOR_INITIALIZED__?: boolean;
+      __FIRESTORE_EMULATOR_INITIALIZED__?: boolean;
+      __RTDB_EMULATOR_INITIALIZED__?: boolean;
+    };
+    return {
+      auth: g.__AUTH_EMULATOR_INITIALIZED__ === true,
+      firestore: g.__FIRESTORE_EMULATOR_INITIALIZED__ === true,
+      rtdb: g.__RTDB_EMULATOR_INITIALIZED__ === true,
+    };
+  });
+  expect(emulatorReady.auth, "Auth emulator must be enabled for E2E tests").toBe(true);
+  expect(emulatorReady.firestore, "Firestore emulator must be enabled for E2E tests").toBe(true);
+  expect(emulatorReady.rtdb, "RTDB emulator must be enabled for E2E tests").toBe(true);
+
   await page.getByRole("button", { name: "新しい部屋を作成" }).first().click();
 
   const nameInput = page.getByPlaceholder("れい: コーヒーやめます");

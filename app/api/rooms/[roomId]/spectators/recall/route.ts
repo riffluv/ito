@@ -71,7 +71,7 @@ export async function POST(
     return NextResponse.json({ error: "auth_required" }, { status: 401 });
   }
 
-  const guard = await checkRoomVersionGuard(roomId, clientVersion);
+  const guard = await checkRoomVersionGuard(roomId, clientVersion, { db: resolveAdminDb() });
   if (!guard.ok) {
     return NextResponse.json(
       {

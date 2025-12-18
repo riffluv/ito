@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { POST } from "../app/api/rooms/[roomId]/spectators/recall/route";
 
 const ROOM_ID = "room-spectator-recall-spec";
+const CLIENT_VERSION = "dev";
 const originalNodeEnv = process.env.NODE_ENV;
 
 const buildRequest = (body: Record<string, unknown>) =>
@@ -44,11 +45,28 @@ test.describe("spectator recall API route", () => {
           throw new Error("bad-token");
         },
       } as any,
+      db: {
+        collection: () => ({
+          doc: () => ({
+            get: async () => ({
+              exists: true,
+              data: () => ({
+                hostId: "host-1",
+                creatorId: "creator-9",
+                status: "waiting",
+              }),
+            }),
+          }),
+        }),
+      } as any,
     });
 
-    const response = await POST(buildRequest({ token: "bad-token" }) as any, {
+    const response = await POST(
+      buildRequest({ token: "bad-token", clientVersion: CLIENT_VERSION }) as any,
+      {
       params: { roomId: ROOM_ID },
-    });
+      }
+    );
 
     expect(response.status).toBe(401);
     const json = await response.json();
@@ -76,9 +94,12 @@ test.describe("spectator recall API route", () => {
       } as any,
     });
 
-    const response = await POST(buildRequest({ token: "valid-token" }) as any, {
+    const response = await POST(
+      buildRequest({ token: "valid-token", clientVersion: CLIENT_VERSION }) as any,
+      {
       params: { roomId: ROOM_ID },
-    });
+      }
+    );
 
     expect(response.status).toBe(403);
     const json = await response.json();
@@ -106,9 +127,12 @@ test.describe("spectator recall API route", () => {
       } as any,
     });
 
-    const response = await POST(buildRequest({ token: "valid-token" }) as any, {
+    const response = await POST(
+      buildRequest({ token: "valid-token", clientVersion: CLIENT_VERSION }) as any,
+      {
       params: { roomId: ROOM_ID },
-    });
+      }
+    );
 
     expect(response.status).toBe(409);
     const json = await response.json();
@@ -140,9 +164,12 @@ test.describe("spectator recall API route", () => {
       } as any,
     });
 
-    const response = await POST(buildRequest({ token: "valid-token" }) as any, {
+    const response = await POST(
+      buildRequest({ token: "valid-token", clientVersion: CLIENT_VERSION }) as any,
+      {
       params: { roomId: ROOM_ID },
-    });
+      }
+    );
 
     expect(response.status).toBe(200);
     const json = await response.json();

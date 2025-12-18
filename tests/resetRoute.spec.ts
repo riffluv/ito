@@ -2,11 +2,12 @@ import { expect, test } from "@playwright/test";
 import { POST } from "../app/api/rooms/[roomId]/reset/route";
 
 const ROOM_ID = "room-reset-spec";
+const CLIENT_VERSION = "dev";
 const originalNodeEnv = process.env.NODE_ENV;
 
 const buildRequest = (body: Record<string, unknown>) =>
   ({
-    json: async () => body,
+    json: async () => ({ clientVersion: CLIENT_VERSION, ...body }),
   }) as any;
 
 declare global {
@@ -38,11 +39,12 @@ test.afterAll(() => {
 test.describe("rooms reset API route", () => {
   test("returns 401 when token verification fails", async () => {
     setOverrides({
-      auth: {
-        verifyIdToken: async () => {
-          throw new Error("bad-token");
-        },
-      } as any,
+      guard: async () => ({ ok: true, roomVersion: null, serverVersion: null }),
+      resetCommand: async () => {
+        const error = new Error("unauthorized") as Error & { code?: string };
+        error.code = "unauthorized";
+        throw error;
+      },
     });
 
     const response = await POST(
@@ -55,28 +57,29 @@ test.describe("rooms reset API route", () => {
     expect(json.error).toBe("unauthorized");
   });
 
-  test("updates recallOpen=true via compose payload", async () => {
-    let updatedPayload: any = null;
+  test("passes recallSpectators=true to reset command", async () => {
+    const calls: Array<{ roomId: string; recallSpectators: boolean; requestId: string | null }> = [];
     setOverrides({
-      auth: {
-        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
-      } as any,
-      db: {
-        collection: () => ({
-          doc: () => ({
-            get: async () => ({
-              exists: true,
-              data: () => ({
-                hostId: "host-1",
-                creatorId: "creator-9",
-              }),
-            }),
-            update: async (payload: any) => {
-              updatedPayload = payload;
-            },
-          }),
-        }),
-      } as any,
+      guard: async () => ({ ok: true, roomVersion: null, serverVersion: null }),
+      resetCommand: async (params: any) => {
+        calls.push({
+          roomId: params.roomId,
+          recallSpectators: params.recallSpectators,
+          requestId: params.requestId ?? null,
+        });
+        return {
+          roomId: params.roomId,
+          statusVersion: 1,
+          room: {
+            status: "waiting",
+            topic: null,
+            topicBox: null,
+            round: 0,
+            ui: { recallOpen: params.recallSpectators, roundPreparing: false, revealPending: false },
+          },
+          meta: { source: "api", command: "reset", requestId: params.requestId ?? null, ts: 0 },
+        };
+      },
     });
 
     const response = await POST(
@@ -87,35 +90,23 @@ test.describe("rooms reset API route", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.ok).toBe(true);
-    expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload.status).toBe("waiting");
-    expect(updatedPayload["ui.recallOpen"]).toBe(true);
-    expect(updatedPayload.round).toBe(0);
-    expect(updatedPayload.topic).toBeNull();
+    expect(calls).toEqual([{ roomId: ROOM_ID, recallSpectators: true, requestId: null }]);
+    expect(json.sync?.room?.ui?.recallOpen).toBe(true);
   });
 
-  test("defaults recallOpen=true when option omitted", async () => {
-    let updatedPayload: any = null;
+  test("defaults recallSpectators=true when option omitted", async () => {
+    const calls: Array<{ recallSpectators: boolean }> = [];
     setOverrides({
-      auth: {
-        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
-      } as any,
-      db: {
-        collection: () => ({
-          doc: () => ({
-            get: async () => ({
-              exists: true,
-              data: () => ({
-                hostId: "host-1",
-                creatorId: "creator-9",
-              }),
-            }),
-            update: async (payload: any) => {
-              updatedPayload = payload;
-            },
-          }),
-        }),
-      } as any,
+      guard: async () => ({ ok: true, roomVersion: null, serverVersion: null }),
+      resetCommand: async (params: any) => {
+        calls.push({ recallSpectators: params.recallSpectators });
+        return {
+          roomId: params.roomId,
+          statusVersion: 1,
+          room: { status: "waiting", ui: { recallOpen: params.recallSpectators } },
+          meta: { source: "api", command: "reset" },
+        };
+      },
     });
 
     const response = await POST(buildRequest({ token: "valid-token" }) as any, {
@@ -123,32 +114,22 @@ test.describe("rooms reset API route", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload["ui.recallOpen"]).toBe(true);
+    expect(calls).toEqual([{ recallSpectators: true }]);
   });
 
-  test("updates recallOpen=false when option is false", async () => {
-    let updatedPayload: any = null;
+  test("passes recallSpectators=false to reset command", async () => {
+    const calls: Array<{ recallSpectators: boolean }> = [];
     setOverrides({
-      auth: {
-        verifyIdToken: async () => ({ uid: "host-1", admin: false }),
-      } as any,
-      db: {
-        collection: () => ({
-          doc: () => ({
-            get: async () => ({
-              exists: true,
-              data: () => ({
-                hostId: "host-1",
-                creatorId: "creator-9",
-              }),
-            }),
-            update: async (payload: any) => {
-              updatedPayload = payload;
-            },
-          }),
-        }),
-      } as any,
+      guard: async () => ({ ok: true, roomVersion: null, serverVersion: null }),
+      resetCommand: async (params: any) => {
+        calls.push({ recallSpectators: params.recallSpectators });
+        return {
+          roomId: params.roomId,
+          statusVersion: 1,
+          room: { status: "waiting", ui: { recallOpen: params.recallSpectators } },
+          meta: { source: "api", command: "reset" },
+        };
+      },
     });
 
     const response = await POST(
@@ -159,7 +140,7 @@ test.describe("rooms reset API route", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json.ok).toBe(true);
-    expect(updatedPayload).toBeTruthy();
-    expect(updatedPayload["ui.recallOpen"]).toBe(false);
+    expect(calls).toEqual([{ recallSpectators: false }]);
+    expect(json.sync?.room?.ui?.recallOpen).toBe(false);
   });
 });

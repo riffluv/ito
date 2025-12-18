@@ -43,7 +43,8 @@ export const versionsEqual = (a: string | null, b: string | null): boolean => {
  */
 export async function checkRoomVersionGuard(
   roomId: string,
-  clientVersionInput: unknown
+  clientVersionInput: unknown,
+  deps?: { db?: ReturnType<typeof getAdminDb> }
 ): Promise<RoomVersionCheckResult> {
   const clientVersion = normalizeVersion(clientVersionInput);
   const serverVersion = normalizeVersion(APP_VERSION);
@@ -59,7 +60,8 @@ export async function checkRoomVersionGuard(
     };
   }
 
-  const snap = await getAdminDb().collection("rooms").doc(roomId).get();
+  const db = deps?.db ?? getAdminDb();
+  const snap = await db.collection("rooms").doc(roomId).get();
   if (!snap.exists) {
     return {
       ok: false,

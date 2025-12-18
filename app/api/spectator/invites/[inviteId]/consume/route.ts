@@ -112,7 +112,7 @@ export async function POST(
   const viewerUid = verifiedUid ?? requestedViewerUid ?? null;
 
   try {
-    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion);
+    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion, { db: resolveDb() });
     if (!versionCheck.ok) {
       return NextResponse.json(
         {

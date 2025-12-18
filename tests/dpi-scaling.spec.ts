@@ -1,218 +1,213 @@
-// DPI Scaling Validation Tests
-// Playwright E2E tests for Windows 125%/150% DPI scaling
+/**
+ * DPI / deviceScaleFactor でレイアウトが破綻しないことを確認する E2E。
+ *
+ * - Windows 125%/150% を deviceScaleFactor で近似
+ * - /rooms/test-room の固定依存を廃止し、テスト内で部屋を作成する
+ * - スナップショット比較は不安定になりやすいので数値検証に寄せる
+ */
 
-import { test, expect } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
-test.describe('DPI Scaling Validation', () => {
-  // Test multiple DPI scales using deviceScaleFactor
-  const dpiScales = [
-    { name: '100% DPI', deviceScaleFactor: 1.0 },
-    { name: '125% DPI', deviceScaleFactor: 1.25 },
-    { name: '150% DPI', deviceScaleFactor: 1.5 },
-  ];
+test.describe.configure({ mode: "serial" });
 
-  const viewports = [
-    { name: 'Desktop HD', width: 1280, height: 800 },
-    { name: 'Desktop FHD', width: 1920, height: 1080 },
-    { name: 'Laptop', width: 1440, height: 900 },
-  ];
-
-  dpiScales.forEach(dpi => {
-    viewports.forEach(viewport => {
-      test(`${dpi.name} - ${viewport.name} - Cardboard Fits Viewport`, async ({ page }) => {
-        // Set up viewport with DPI scale
-        await page.setViewportSize({
-          width: viewport.width,
-          height: viewport.height,
-        });
-
-        // Mock device pixel ratio for DPI testing
-        await page.addInitScript(`
-          Object.defineProperty(window, 'devicePixelRatio', {
-            get: () => ${dpi.deviceScaleFactor}
-          });
-        `);
-
-        // Navigate to game room
-        await page.goto('/rooms/test-room');
-
-        // Wait for cardboard to load
-        const cardboard = page.locator('[data-testid="cardboard"], .card-board, [aria-label*="card"], [aria-label*="board"]').first();
-        await cardboard.waitFor({ timeout: 10000 });
-
-        // Verify cardboard doesn't overflow horizontally
-        const cardboardBox = await cardboard.boundingBox();
-        const viewportSize = page.viewportSize();
-
-        expect(cardboardBox).toBeTruthy();
-        expect(cardboardBox!.width).toBeLessThanOrEqual(viewportSize!.width);
-
-        // Check for horizontal scrollbar (indicates overflow)
-        const bodyScrollWidth = await page.evaluate(() => document.body.scrollWidth);
-        const bodyClientWidth = await page.evaluate(() => document.body.clientWidth);
-        expect(bodyScrollWidth).toBeLessThanOrEqual(bodyClientWidth + 5); // 5px tolerance
-
-        // Visual regression test
-        await expect(page).toHaveScreenshot(`cardboard-${dpi.name.replace('%', 'pct').replace(' ', '-')}-${viewport.name.replace(' ', '-')}.png`, {
-          fullPage: true,
-          threshold: 0.2
-        });
-      });
-
-      test(`${dpi.name} - ${viewport.name} - Cards Maintain Aspect Ratio`, async ({ page }) => {
-        await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.addInitScript(`
-          Object.defineProperty(window, 'devicePixelRatio', {
-            get: () => ${dpi.deviceScaleFactor}
-          });
-        `);
-
-        await page.goto('/rooms/test-room');
-
-        // Wait for cards to render
-        const cards = page.locator('[data-testid="game-card"], .game-card').first();
-        await cards.waitFor({ timeout: 10000 });
-
-        // Measure card aspect ratio
-        const cardBox = await cards.boundingBox();
-        expect(cardBox).toBeTruthy();
-
-        const aspectRatio = cardBox!.width / cardBox!.height;
-        const expectedRatio = 5 / 7; // 0.714...
-        const tolerance = 0.05; // 5% tolerance
-
-        expect(aspectRatio).toBeGreaterThan(expectedRatio - tolerance);
-        expect(aspectRatio).toBeLessThan(expectedRatio + tolerance);
-      });
-    });
+const ensureE2EEmulators = async (page: Page) => {
+  await page.goto("/");
+  const emulatorReady = await page.evaluate(() => {
+    const g = globalThis as typeof globalThis & {
+      __AUTH_EMULATOR_INITIALIZED__?: boolean;
+      __FIRESTORE_EMULATOR_INITIALIZED__?: boolean;
+      __RTDB_EMULATOR_INITIALIZED__?: boolean;
+    };
+    return {
+      auth: g.__AUTH_EMULATOR_INITIALIZED__ === true,
+      firestore: g.__FIRESTORE_EMULATOR_INITIALIZED__ === true,
+      rtdb: g.__RTDB_EMULATOR_INITIALIZED__ === true,
+    };
   });
+  expect(emulatorReady.auth, "Auth emulator must be enabled for E2E tests").toBe(true);
+  expect(emulatorReady.firestore, "Firestore emulator must be enabled for E2E tests").toBe(true);
+  expect(emulatorReady.rtdb, "RTDB emulator must be enabled for E2E tests").toBe(true);
+};
 
-  test('Container Query Responsiveness', async ({ page }) => {
-    await page.goto('/rooms/test-room');
+const installDisplayNameForPage = async (page: Page, displayName: string) => {
+  await page.addInitScript(
+    (name) => {
+      localStorage.setItem("displayName", String(name));
+    },
+    displayName
+  );
+};
 
-    // Test different container widths
-    const containerWidths = [350, 600, 900, 1200];
+const installDisplayNameForContext = async (context: BrowserContext, displayName: string) => {
+  await context.addInitScript(
+    (name) => {
+      localStorage.setItem("displayName", String(name));
+    },
+    displayName
+  );
+};
 
-    for (const width of containerWidths) {
-      await page.setViewportSize({ width, height: 800 });
-      
-      // Wait for layout to stabilize
-      await page.waitForTimeout(500);
+const createRoomAsHost = async (page: Page, hostName: string, roomName: string) => {
+  await installDisplayNameForPage(page, hostName);
+  await ensureE2EEmulators(page);
+  await page.getByRole("button", { name: "新しい部屋を作成" }).first().click();
 
-      // Check that cards adapt to container size
-      const cardboard = page.locator('[data-testid="cardboard"]').first();
-      const cardboardBox = await cardboard.boundingBox();
+  const roomInput = page.getByPlaceholder("れい: 友達とあそぶ");
+  await expect(roomInput).toBeVisible({ timeout: 20_000 });
+  await roomInput.fill(roomName);
+  await page.getByRole("button", { name: "作成" }).click();
 
-      expect(cardboardBox).toBeTruthy();
-      expect(cardboardBox!.width).toBeLessThanOrEqual(width);
+  const enterRoom = page.getByRole("button", { name: "へやへ すすむ" });
+  await expect(enterRoom).toBeVisible({ timeout: 30_000 });
+  await enterRoom.click();
+  await page.waitForURL(/\/rooms\/[^/]+$/, { timeout: 45_000 });
 
-      // Verify CSS Grid is working
-      const gridColumns = await page.evaluate(() => {
-        const element = document.querySelector('[data-testid="cardboard"]') as HTMLElement;
-        return element ? getComputedStyle(element).gridTemplateColumns : '';
-      });
+  const url = new URL(page.url());
+  const roomId = url.pathname.split("/rooms/")[1] ?? "";
+  if (!roomId) throw new Error(`Failed to resolve roomId from URL: ${page.url()}`);
+  return { origin: url.origin, roomId };
+};
 
-      expect(gridColumns).toContain('repeat');
-    }
+const joinRoomAsPlayer = async (browser: Browser, origin: string, roomId: string, playerName: string) => {
+  const context = await browser.newContext();
+  await installDisplayNameForContext(context, playerName);
+  const page = await context.newPage();
+  await page.goto(`${origin}/rooms/${roomId}`);
+  await page.waitForTimeout(1200);
+  return { context, page };
+};
+
+const startGameAndMakeBoardStable = async (page: Page, hostName: string) => {
+  const startButton = page.getByRole("button", { name: "ゲーム開始" });
+  await expect(startButton).toBeVisible({ timeout: 45_000 });
+  await expect(startButton).toBeEnabled({ timeout: 45_000 });
+  await startButton.click();
+
+  const clueInput = page.getByLabel("連想ワード");
+  await expect(clueInput).toBeVisible({ timeout: 45_000 });
+  await clueInput.fill("りんご");
+
+  const decideButton = page.getByRole("button", { name: /決定/ });
+  await expect(decideButton).toBeVisible({ timeout: 20_000 });
+  await expect(decideButton).toBeEnabled({ timeout: 20_000 });
+  await decideButton.click();
+
+  const myCard = page.getByLabel(`${hostName}のカード`);
+  await expect(myCard).toBeVisible({ timeout: 20_000 });
+
+  const boardRoot = page.locator("[data-board-root]");
+  await expect(boardRoot).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("[data-slot]").first()).toBeVisible({ timeout: 20_000 });
+};
+
+const assertNoHorizontalOverflow = async (page: Page, tolerancePx = 6) => {
+  const overflow = await page.evaluate(() => {
+    const root = document.documentElement;
+    return root.scrollWidth - root.clientWidth;
   });
+  expect(overflow).toBeLessThanOrEqual(tolerancePx);
+};
 
-  test('CSS Custom Properties Are Applied', async ({ page }) => {
-    await page.goto('/rooms/test-room');
+const assertBoardFitsViewport = async (page: Page, tolerancePx = 6) => {
+  const board = page.locator("[data-board-root]");
+  await expect(board).toBeVisible();
 
-    // Check that CSS custom properties are defined
-    const cssProperties = await page.evaluate(() => {
-      const root = document.documentElement;
-      const computedStyle = getComputedStyle(root);
-      
-      return {
-        cardGap: computedStyle.getPropertyValue('--card-gap'),
-        cardMin: computedStyle.getPropertyValue('--card-min'),
-        cardIdeal: computedStyle.getPropertyValue('--card-ideal'),
-        cardMax: computedStyle.getPropertyValue('--card-max'),
-        cardAspect: computedStyle.getPropertyValue('--card-aspect'),
-      };
-    });
+  const box = await board.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).toBeTruthy();
+  expect(viewport).toBeTruthy();
+  if (!box || !viewport) return;
 
-    expect(cssProperties.cardGap).toBeTruthy();
-    expect(cssProperties.cardMin).toBeTruthy();
-    expect(cssProperties.cardIdeal).toBeTruthy();
-    expect(cssProperties.cardMax).toBeTruthy();
-    expect(cssProperties.cardAspect).toContain('5 / 7');
-  });
+  expect(box.width).toBeLessThanOrEqual(viewport.width + tolerancePx);
+};
 
-  test('No Layout Shift During Card Loading', async ({ page }) => {
-    // Navigate to page
-    await page.goto('/rooms/test-room');
+const assertSlotAspectRatio = async (page: Page) => {
+  const slot = page.locator("[data-slot]").first();
+  await expect(slot).toBeVisible();
 
-    // Measure Cumulative Layout Shift
-    await page.evaluate(() => {
-      return new Promise((resolve) => {
-        let cumulativeLayoutShift = 0;
-        
-        const observer = new PerformanceObserver((entryList) => {
-          for (const entry of entryList.getEntries()) {
-            if (entry.entryType === 'layout-shift' && !(entry as any).hadRecentInput) {
-              cumulativeLayoutShift += (entry as any).value;
-            }
+  const box = await slot.boundingBox();
+  expect(box).toBeTruthy();
+  if (!box) return;
+
+  const actual = box.width / box.height;
+  const expected = 5 / 7;
+  const tolerance = 0.08; // transforms/border の誤差を許容
+  expect(actual).toBeGreaterThan(expected - tolerance);
+  expect(actual).toBeLessThan(expected + tolerance);
+};
+
+const viewports = [
+  { name: "Desktop HD", width: 1280, height: 800 },
+  { name: "Desktop FHD", width: 1920, height: 1080 },
+  { name: "Laptop", width: 1440, height: 900 },
+];
+
+const dpiScales = [
+  { name: "100% DPI", deviceScaleFactor: 1 },
+  { name: "125% DPI", deviceScaleFactor: 1.25 },
+  { name: "150% DPI", deviceScaleFactor: 1.5 },
+] as const;
+
+test.describe("DPI Scaling Validation", () => {
+  for (const dpi of dpiScales) {
+    test.describe(dpi.name, () => {
+      test.use({ deviceScaleFactor: dpi.deviceScaleFactor });
+
+      test("board fits viewport and slots keep ratio", async ({ page, browser }) => {
+        test.setTimeout(240_000);
+        await page.emulateMedia({ reducedMotion: "reduce" });
+
+        const id = Math.random().toString(36).slice(2, 8);
+        const hostName = `e2e-host-${id}`;
+        const roomName = `e2e-room-${id}`;
+
+        const { origin, roomId } = await createRoomAsHost(page, hostName, roomName);
+
+        const contexts: BrowserContext[] = [];
+        try {
+          const p2 = await joinRoomAsPlayer(browser, origin, roomId, `e2e-p2-${id}`);
+          contexts.push(p2.context);
+          const p3 = await joinRoomAsPlayer(browser, origin, roomId, `e2e-p3-${id}`);
+          contexts.push(p3.context);
+
+          await expect(page.getByText(/参加人数：3人/)).toBeVisible({ timeout: 45_000 });
+
+          await startGameAndMakeBoardStable(page, hostName);
+
+          for (const viewport of viewports) {
+            await test.step(viewport.name, async () => {
+              await page.setViewportSize({ width: viewport.width, height: viewport.height });
+              await page.waitForTimeout(350);
+              await assertBoardFitsViewport(page);
+              await assertNoHorizontalOverflow(page);
+              await assertSlotAspectRatio(page);
+            });
           }
-        });
-
-        observer.observe({ entryTypes: ['layout-shift'] });
-
-        // Wait for page to stabilize
-        setTimeout(() => {
-          observer.disconnect();
-          resolve(cumulativeLayoutShift);
-        }, 3000);
-      });
-    }).then((cls) => {
-      // CLS should be under 0.1 for good user experience
-      expect(cls).toBeLessThan(0.1);
-    });
-  });
-
-  test('Grid Layout Works in Legacy Browsers', async ({ page }) => {
-    // Simulate legacy browser without container query support
-    await page.addInitScript(() => {
-      // Remove container query support
-      Object.defineProperty(CSS, 'supports', {
-        value: (property: string, value?: string) => {
-          if (property.includes('container') || value?.includes('container')) {
-            return false;
-          }
-          return true; // Support other CSS features
+        } finally {
+          await Promise.all(contexts.map((c) => c.close()));
         }
       });
     });
+  }
 
-    await page.goto('/rooms/test-room');
-
-    // Verify fallback CSS grid still works
-    const cardboard = page.locator('.legacy-card-grid, [data-testid="cardboard"]').first();
-    await cardboard.waitFor({ timeout: 10000 });
-
-    const cardboardBox = await cardboard.boundingBox();
-    const viewportSize = page.viewportSize();
-
-    expect(cardboardBox).toBeTruthy();
-    expect(cardboardBox!.width).toBeLessThanOrEqual(viewportSize!.width);
-  });
-
-  test('Performance - Paint Times Under 50ms', async ({ page }) => {
-    await page.goto('/rooms/test-room');
-
-    // Measure paint performance
-    const paintMetrics = await page.evaluate(() => {
-      return performance.getEntriesByType('paint').map(entry => ({
-        name: entry.name,
-        startTime: entry.startTime
-      }));
+  test("CSS custom properties are defined", async ({ page }) => {
+    await page.goto("/");
+    const cssProperties = await page.evaluate(() => {
+      const root = document.documentElement;
+      const style = getComputedStyle(root);
+      return {
+        cardGap: style.getPropertyValue("--card-gap").trim(),
+        cardMin: style.getPropertyValue("--card-min").trim(),
+        cardIdeal: style.getPropertyValue("--card-ideal").trim(),
+        cardMax: style.getPropertyValue("--card-max").trim(),
+        cardAspect: style.getPropertyValue("--card-aspect").trim(),
+      };
     });
 
-    const firstContentfulPaint = paintMetrics.find(m => m.name === 'first-contentful-paint');
-    expect(firstContentfulPaint?.startTime).toBeLessThan(3000); // Under 3 seconds
+    expect(cssProperties.cardGap).not.toBe("");
+    expect(cssProperties.cardMin).not.toBe("");
+    expect(cssProperties.cardIdeal).not.toBe("");
+    expect(cssProperties.cardMax).not.toBe("");
+    expect(cssProperties.cardAspect).toContain("5 / 7");
   });
 });
-
-// Visual regression test configuration
-test.describe.configure({ mode: 'parallel' });

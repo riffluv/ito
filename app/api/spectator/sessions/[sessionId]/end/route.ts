@@ -96,7 +96,7 @@ export async function POST(
   }
 
   try {
-    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion);
+    const versionCheck = await checkRoomVersionGuard(roomId, clientVersion, { db: resolveDb() });
     if (!versionCheck.ok) {
       return NextResponse.json(
         {

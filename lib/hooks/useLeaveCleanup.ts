@@ -61,6 +61,7 @@ export function useLeaveCleanup({
   detachNow,
   leavingRef,
   user,
+  roomStatus,
 }: {
   enabled: boolean
   roomId: string
@@ -69,6 +70,7 @@ export function useLeaveCleanup({
   detachNow: () => Promise<void> | void
   leavingRef: React.MutableRefObject<boolean>
   user: User | null
+  roomStatus: string | null
 }) {
   const tokenRef = useRef<string | null>(null)
   const tokenKey = uid ? `${TOKEN_KEY_PREFIX}${uid}` : null
@@ -285,6 +287,10 @@ export function useLeaveCleanup({
       Promise.resolve(detachNow()).catch(() => {})
     } catch {}
     if (isReloadIntent) return
+    // Mid-game のページライフサイクル（beforeunload/pagehide/unmount）で「退室」まで行うと、
+    // リロード・復帰・ブラウザ都合の再読み込みでカードや進行状態が失われやすい。
+    // 進行中は presence を唯一のソースとして扱い、退出は明示操作に限定する。
+    if (roomStatus !== "waiting") return
 
     // page lifecycle での「退室」は、可能なら beacon を優先（重い処理や二重送信を避ける）。
     if (source !== "unmount") {
@@ -295,7 +301,7 @@ export function useLeaveCleanup({
     try {
       Promise.resolve(leaveRoomAction(roomId, uid, displayName)).catch(() => {})
     } catch {}
-  }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey])
+  }, [uid, roomId, detachNow, leavingRef, sendLeaveBeacon, displayName, rejoinKey, roomStatus])
 
   const performCleanupRef = useRef(performCleanup)
   const skipCleanupRef = useRef(false)
