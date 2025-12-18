@@ -201,6 +201,8 @@ const DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS = 4000;
 const DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS = 30_000;
 const DEFAULT_ROOM_SNAPSHOT_POST_STALE_MS = 5 * 60_000;
 const DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS = 12_000;
+const DEFAULT_ROOM_SNAPSHOT_RESUME_WINDOW_MS = 15_000;
+const DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS = 2000;
 const DEFAULT_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS = 6;
 const DEFAULT_ROOM_SNAPSHOT_RECOVERY_HARD_COOLDOWN_MS = 60_000;
 const DEFAULT_ROOM_SNAPSHOT_TRACE_INTERVAL_MS = 20_000;
@@ -245,6 +247,26 @@ const ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS = (() => {
     : DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS;
 })();
 
+const ROOM_SNAPSHOT_RESUME_WINDOW_MS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_RESUME_WINDOW_MS ??
+      DEFAULT_ROOM_SNAPSHOT_RESUME_WINDOW_MS
+  );
+  return Number.isFinite(parsed) && parsed >= 1000
+    ? Math.min(60_000, Math.max(1000, Math.floor(parsed)))
+    : DEFAULT_ROOM_SNAPSHOT_RESUME_WINDOW_MS;
+})();
+
+const ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS = (() => {
+  const parsed = Number(
+    process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS ??
+      DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS
+  );
+  return Number.isFinite(parsed) && parsed >= 200
+    ? Math.min(20_000, Math.max(200, Math.floor(parsed)))
+    : DEFAULT_ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS;
+})();
+
 const ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS = (() => {
   const parsed = Number(
     process.env.NEXT_PUBLIC_ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS ??
@@ -270,6 +292,14 @@ type EnsureMemberHeartbeat = {
   uid: string;
   displayName: string | null | undefined;
   timestamp: number;
+};
+
+type RoomSnapshotResumeProbe = {
+  seq: number;
+  at: number;
+  trigger: RoomSnapshotWatchdogTrigger;
+  baselineServerSnapshotAt: number | null;
+  retryScheduled: boolean;
 };
 
 export function useRoomSnapshot(
@@ -304,6 +334,9 @@ export function useRoomSnapshot(
   const forceRefreshInFlightRef = useRef<Promise<void> | null>(null);
   const restartRoomListenerRef = useRef<((reason: string) => void) | null>(null);
   const resumeKickAtRef = useRef<number>(0);
+  const resumeProbeSeqRef = useRef<number>(0);
+  const resumeProbeRef = useRef<RoomSnapshotResumeProbe | null>(null);
+  const resumeForceRefreshRetryTimerRef = useRef<number | null>(null);
   const optimisticPlayerPatchesRef = useRef<Record<string, OptimisticPlayerPatchEntry>>({});
 
   const syncStartAtRef = useRef<number>(Date.now());
@@ -423,6 +456,12 @@ export function useRoomSnapshot(
     if (rtdbConfirmTimerRef.current !== null) {
       clearTimeout(rtdbConfirmTimerRef.current);
       rtdbConfirmTimerRef.current = null;
+    }
+    resumeProbeRef.current = null;
+    resumeProbeSeqRef.current = 0;
+    if (resumeForceRefreshRetryTimerRef.current !== null) {
+      clearTimeout(resumeForceRefreshRetryTimerRef.current);
+      resumeForceRefreshRetryTimerRef.current = null;
     }
     syncEpisodeRef.current = {
       active: false,
@@ -861,6 +900,7 @@ export function useRoomSnapshot(
         }
         unsubRef.current = onSnapshot(
           doc(db!, "rooms", roomId),
+          { includeMetadataChanges: true },
           (snap) => {
             // Expose a lightweight heartbeat for debugging "snapshot stalled" reports.
             const nowTs = Date.now();
@@ -877,6 +917,26 @@ export function useRoomSnapshot(
             } else {
               roomSnapshotCacheSinceRef.current = null;
               lastRoomSnapshotAtRef.current = nowTs;
+              const probe = resumeProbeRef.current;
+              if (probe && probe.at > 0 && probe.at <= nowTs) {
+                const syncMs = Math.max(0, nowTs - probe.at);
+                setMetric("roomSnapshot", "resume.serverSyncMs", Math.round(syncMs));
+                setMetric("roomSnapshot", "resume.serverSyncSeq", probe.seq);
+                setMetric("roomSnapshot", "resume.serverSyncTrigger", probe.trigger);
+                if (syncMs >= 2500) {
+                  traceAction("room.snapshot.resume.slowServerSync", {
+                    roomId,
+                    trigger: probe.trigger,
+                    seq: String(probe.seq),
+                    syncMs: String(Math.round(syncMs)),
+                  });
+                }
+                resumeProbeRef.current = null;
+                if (resumeForceRefreshRetryTimerRef.current !== null) {
+                  clearTimeout(resumeForceRefreshRetryTimerRef.current);
+                  resumeForceRefreshRetryTimerRef.current = null;
+                }
+              }
               lastListenErrorAtRef.current = null;
               lastListenErrorCodeRef.current = null;
               setMetric("roomSnapshot", "lastSnapshotTs", nowTs);
@@ -1071,6 +1131,7 @@ export function useRoomSnapshot(
 
       const task = (async () => {
         traceAction("room.snapshot.forceRefresh", { roomId, reason });
+        let forceRefreshFromCache = false;
         try {
           const roomRef = doc(firestore, "rooms", roomId);
           let snap: Awaited<ReturnType<typeof getDoc>> | null = null;
@@ -1127,6 +1188,7 @@ export function useRoomSnapshot(
             return;
           }
           const fromCache = snap.metadata.fromCache === true;
+          forceRefreshFromCache = fromCache;
           if (fromCache) {
             traceAction("room.snapshot.forceRefresh.fromCache", { roomId, reason });
             setMetric("roomSnapshot", "forceRefresh.fromCacheTs", Date.now());
@@ -1206,6 +1268,70 @@ export function useRoomSnapshot(
               Math.round(performance.now() - startedAt)
             );
           }
+          if (
+            forceRefreshFromCache &&
+            typeof window !== "undefined" &&
+            typeof document !== "undefined" &&
+            document.visibilityState === "visible"
+          ) {
+            const probe = resumeProbeRef.current;
+            const now = Date.now();
+            if (
+              probe &&
+              !probe.retryScheduled &&
+              now - probe.at <= ROOM_SNAPSHOT_RESUME_WINDOW_MS &&
+              (typeof navigator === "undefined" || navigator.onLine !== false)
+            ) {
+              probe.retryScheduled = true;
+              setMetric("roomSnapshot", "resume.retryScheduledAt", now);
+              setMetric("roomSnapshot", "resume.retryScheduledSeq", probe.seq);
+              setMetric("roomSnapshot", "resume.retryScheduledReason", reason);
+              if (resumeForceRefreshRetryTimerRef.current !== null) {
+                clearTimeout(resumeForceRefreshRetryTimerRef.current);
+                resumeForceRefreshRetryTimerRef.current = null;
+              }
+              const seq = probe.seq;
+              resumeForceRefreshRetryTimerRef.current = window.setTimeout(() => {
+                resumeForceRefreshRetryTimerRef.current = null;
+                if (leavingRef.current) return;
+                if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+                  return;
+                }
+                if (typeof navigator !== "undefined" && navigator.onLine === false) {
+                  return;
+                }
+                const current = resumeProbeRef.current;
+                if (!current || current.seq !== seq) return;
+                try {
+                  traceAction("room.snapshot.resume.retry", {
+                    roomId,
+                    seq: String(seq),
+                    trigger: current.trigger,
+                  });
+                } catch {}
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("ito:room-force-refresh", {
+                      detail: {
+                        roomId,
+                        reason: `room.snapshot.resume.retry:${seq}`,
+                      },
+                    })
+                  );
+                } catch {}
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("ito:room-restart-listener", {
+                      detail: {
+                        roomId,
+                        reason: `room.snapshot.resume.retry:${seq}`,
+                      },
+                    })
+                  );
+                } catch {}
+              }, 900);
+            }
+          }
         }
       })();
 
@@ -1221,6 +1347,10 @@ export function useRoomSnapshot(
         "ito:room-force-refresh",
         handler as EventListener
       );
+      if (resumeForceRefreshRetryTimerRef.current !== null) {
+        clearTimeout(resumeForceRefreshRetryTimerRef.current);
+        resumeForceRefreshRetryTimerRef.current = null;
+      }
     };
   }, [roomId, enqueueCommit]);
 
@@ -1250,6 +1380,26 @@ export function useRoomSnapshot(
           const now = Date.now();
           if (now - resumeKickAtRef.current >= 1200) {
             resumeKickAtRef.current = now;
+            const seq = (resumeProbeSeqRef.current += 1);
+            resumeProbeRef.current = {
+              seq,
+              at: now,
+              trigger,
+              baselineServerSnapshotAt: lastRoomSnapshotAtRef.current,
+              retryScheduled: false,
+            };
+            setMetric("roomSnapshot", "resume.kickAt", now);
+            setMetric("roomSnapshot", "resume.kickSeq", seq);
+            setMetric("roomSnapshot", "resume.kickTrigger", trigger);
+            setMetric(
+              "roomSnapshot",
+              "resume.kickBaselineServerSnapshotTs",
+              lastRoomSnapshotAtRef.current
+            );
+            if (resumeForceRefreshRetryTimerRef.current !== null) {
+              clearTimeout(resumeForceRefreshRetryTimerRef.current);
+              resumeForceRefreshRetryTimerRef.current = null;
+            }
             try {
               window.dispatchEvent(
                 new CustomEvent("ito:room-force-refresh", {
@@ -1274,6 +1424,12 @@ export function useRoomSnapshot(
         }
 
         const now = Date.now();
+        const probe = resumeProbeRef.current;
+        const inResumeWindow =
+          !!probe &&
+          probe.at > 0 &&
+          now - probe.at <= ROOM_SNAPSHOT_RESUME_WINDOW_MS &&
+          document.visibilityState === "visible";
         const decision = evaluateRoomSnapshotWatchdog(
           {
             now,
@@ -1292,7 +1448,9 @@ export function useRoomSnapshot(
           {
             initialStaleMs: ROOM_SNAPSHOT_INITIAL_STALE_MS,
             postStaleMs: ROOM_SNAPSHOT_POST_STALE_MS,
-            cacheOnlyStaleMs: ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS,
+            cacheOnlyStaleMs: inResumeWindow
+              ? ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS
+              : ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS,
             recoveryCooldownMs: DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS,
             recoverySlowCooldownMs: DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS,
             recoveryMaxAttempts: ROOM_SNAPSHOT_RECOVERY_MAX_ATTEMPTS,

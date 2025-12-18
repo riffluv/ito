@@ -75,6 +75,8 @@ copy(dumpItoMetricsJson("issue"))
 - `lastSnapshotSource`: `"server"` か `"cache"` か（`cache` だけが続くのは要注意）
 - `lastSnapshotTs` / `lastAnySnapshotTs`: 最後に受けた snapshot の時刻（epoch ms）
 - `forceRefreshMs`: 強制リフレッシュにかかった時間（自己回復が走っていれば出る）
+- `resume.serverSyncMs`: タブ復帰（focus/visibility）から **server snapshot** を受け取るまでの時間（復帰後の“もたつき”調査に有効）
+- `resume.retryScheduledAt`: 復帰直後の `forceRefresh` が `cache` だったため再試行を予約した時刻（この後に改善するかを見る）
 
 ### 3-2. `hostAction`（ホスト操作の観測）
 ホストボタンの結果・スピナー理由の確認に使います。
@@ -120,4 +122,3 @@ copy(dumpItoMetricsJson("issue"))
 
 - `dumpItoMetricsJson()` は “その端末が見ている状態” のスナップショットです。**現象が治ってから**打つと痕跡が薄れるので、なるべく直後に。
 - 認証トークン等の秘匿値を表示する設計にはしていませんが、貼り付け前に念のため目視してください。
-
