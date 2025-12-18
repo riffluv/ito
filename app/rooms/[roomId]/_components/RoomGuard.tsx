@@ -25,12 +25,11 @@ import { Box, Spinner, Text, HStack } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
-  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
-import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
+import { useSoundManager } from "@/lib/audio/SoundProvider";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { setMetric } from "@/lib/utils/metrics";
 import { initMetricsExport } from "@/lib/utils/metricsExport";
@@ -91,8 +90,6 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     setPasswordVerified,
   } = props;
   const soundManager = useSoundManager();
-  const soundSettings = useSoundSettings();
-  const bgmPlayingRef = useRef(false);
   const safeUpdateFeatureEnabled =
     process.env.NEXT_PUBLIC_FEATURE_SAFE_UPDATE === "1";
   const idleApplyConfiguredMs = safeUpdateFeatureEnabled
@@ -339,33 +336,6 @@ function RoomGuardContent(props: RoomGuardContentProps) {
       modulePrefetchCancel?.();
     };
   }, [soundManager]);
-
-  const shouldPlayBgm =
-    !!soundManager &&
-    !soundSettings.muted &&
-    (soundSettings.categoryVolume?.ambient ?? 0) > 0.001;
-
-  useEffect(() => {
-    if (!soundManager) {
-      bgmPlayingRef.current = false;
-      return undefined;
-    }
-    if (shouldPlayBgm) {
-      bgmPlayingRef.current = true;
-      void soundManager.play("bgm1").catch(() => {
-        bgmPlayingRef.current = false;
-      });
-    } else if (bgmPlayingRef.current) {
-      soundManager.stop("bgm1");
-      bgmPlayingRef.current = false;
-    }
-    return () => {
-      if (bgmPlayingRef.current) {
-        soundManager.stop("bgm1");
-        bgmPlayingRef.current = false;
-      }
-    };
-  }, [soundManager, shouldPlayBgm]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;

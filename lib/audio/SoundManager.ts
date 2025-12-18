@@ -409,6 +409,20 @@ export class SoundManager {
     this.stopHandles.delete(soundId);
   }
 
+  /**
+   * Cancel queued playback requests that were deferred while the AudioContext
+   * was still suspended (e.g. before first user interaction on mobile).
+   *
+   * This is important for long-looping sounds (BGM) so they do not start later
+   * after the user already navigated away from the screen that requested them.
+   */
+  cancelPending(soundId: SoundId) {
+    if (!this.pendingPlays.length) return;
+    const next = this.pendingPlays.filter((item) => item.soundId !== soundId);
+    if (next.length === this.pendingPlays.length) return;
+    this.pendingPlays = next;
+  }
+
   destroy() {
     if (!isBrowser()) return;
     document.removeEventListener(

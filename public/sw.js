@@ -32,6 +32,117 @@ const CACHE_NAME = `${CACHE_PREFIX}-${SW_VERSION}`;
 // Keep this list small to guarantee install never fails while still providing
 // an offline shell.
 const CORE_ASSETS = ["/", "/manifest.webmanifest", "/images/knight1.webp"];
+const OFFLINE_FALLBACK_URL = "/__sw-offline-fallback";
+const OFFLINE_FALLBACK_HTML = `<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>読み込みに失敗しました</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: radial-gradient(1200px 800px at 20% 10%, rgba(32, 64, 120, 0.35), transparent 60%),
+          radial-gradient(900px 700px at 80% 40%, rgba(120, 48, 64, 0.25), transparent 60%),
+          linear-gradient(135deg, rgba(8, 9, 15, 0.98), rgba(12, 14, 22, 0.98));
+        color: rgba(245, 247, 250, 0.95);
+        display: grid;
+        place-items: center;
+      }
+      .panel {
+        width: min(560px, calc(100vw - 2rem));
+        padding: 1.25rem 1.1rem;
+        border-radius: 16px;
+        background: rgba(8, 9, 15, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+      p { margin: 0.35rem 0; line-height: 1.5; color: rgba(245, 247, 250, 0.82); }
+      .row { display: flex; gap: 0.6rem; margin-top: 0.9rem; flex-wrap: wrap; }
+      button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(245, 247, 250, 0.95);
+        padding: 0.6rem 0.85rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:active { transform: translateY(1px); }
+      .muted { color: rgba(245, 247, 250, 0.6); font-size: 0.9rem; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        background: rgba(255, 255, 255, 0.06);
+        padding: 0.08rem 0.35rem;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <h1>読み込みに失敗しました</h1>
+      <p>ネットワークが不安定、または更新中の可能性があります。</p>
+      <p class="muted">この画面は Service Worker の復旧用フォールバックです。</p>
+      <div class="row">
+        <button id="reload" type="button">再読み込み</button>
+      </div>
+      <p class="muted" id="status"></p>
+      <p class="muted">ヒント: 機内モード→解除、または Wi‑Fi/4G/5G を切り替えると直ることがあります。</p>
+    </div>
+    <script>
+      (function () {
+        var btn = document.getElementById("reload");
+        var status = document.getElementById("status");
+        var didReload = false;
+        function setStatus(text) { if (status) status.textContent = text; }
+        function reload() {
+          if (didReload) return;
+          didReload = true;
+          try { setStatus("再読み込みしています…"); } catch (e) {}
+          location.reload();
+        }
+        if (btn) btn.addEventListener("click", reload, { passive: true });
+        window.addEventListener("online", function () {
+          setStatus("接続が戻りました。再読み込みします…");
+          reload();
+        }, { passive: true });
+
+        // Wake-from-sleep 等で一時的に失敗するケース向けに、限定回数だけ自動で疎通確認→復旧を試す。
+        var tries = 0;
+        var maxTries = 3;
+        function probe() {
+          if (tries >= maxTries) return;
+          tries += 1;
+          fetch("/sw-meta.js", { cache: "no-store" })
+            .then(function (res) { if (res && res.ok) reload(); })
+            .catch(function () {})
+            .finally(function () {
+              if (!didReload && tries < maxTries) {
+                setStatus("接続を確認しています… (" + tries + "/" + maxTries + ")");
+                setTimeout(probe, 1200 * tries);
+              }
+            });
+        }
+        probe();
+      })();
+    </script>
+  </body>
+</html>`;
+
+const buildOfflineFallbackResponse = () =>
+  new Response(OFFLINE_FALLBACK_HTML, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      // Avoid caching this document at the HTTP layer; the SW cache is the source of truth.
+      "Cache-Control": "no-store",
+    },
+  });
 
 const updateBroadcast =
   typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("ito-safe-update-v1") : null;
@@ -99,7 +210,14 @@ const reportFetchError = async (detail) => {
 
 const precacheCoreAssets = async () => {
   const cache = await caches.open(CACHE_NAME);
-  const results = await Promise.allSettled(
+  // Always provide a non-empty offline/update recovery page for navigation fallbacks.
+  // This prevents "blank screen" failures when the first navigation after wake/update is offline.
+  try {
+    await cache.put(OFFLINE_FALLBACK_URL, buildOfflineFallbackResponse());
+  } catch {
+    /* ignore */
+  }
+  await Promise.allSettled(
     CORE_ASSETS.map((path) =>
       cache.add(path).catch((error) => {
         // Surface but do not fail install; missing assets should not block SW activation.
@@ -115,15 +233,6 @@ const precacheCoreAssets = async () => {
     )
   );
   // If every entry failed, still resolve to avoid install rejection.
-  const anyFulfilled = results.some((r) => r.status === "fulfilled");
-  if (!anyFulfilled) {
-    // Create a minimal offline shell so activation can proceed.
-    try {
-      await cache.put("/", new Response("", { status: 200 }));
-    } catch {
-      /* ignore */
-    }
-  }
 };
 
 self.addEventListener("install", (event) => {
@@ -248,12 +357,11 @@ self.addEventListener("fetch", (event) => {
             });
           }
           const cache = await caches.open(CACHE_NAME);
-          const shell =
-            (await cache.match(request)) ||
-            (await cache.match("/")) ||
-            (await cache.match("/_next/static/chunks/main.js"));
-          if (shell) return shell;
-          return new Response("", { status: 503, statusText: "offline" });
+          const cachedPage = await cache.match(request);
+          if (cachedPage) return cachedPage;
+          const fallback = await cache.match(OFFLINE_FALLBACK_URL);
+          if (fallback) return fallback;
+          return buildOfflineFallbackResponse();
         }
       })()
     );

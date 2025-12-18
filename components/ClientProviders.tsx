@@ -10,6 +10,7 @@ import { Box, ChakraProvider } from "@chakra-ui/react";
 import React from "react";
 import { AnimationProvider } from "@/lib/animation/AnimationContext";
 import { SoundProvider } from "@/lib/audio/SoundProvider";
+import { RouteBgmController } from "@/lib/audio/RouteBgmController";
 import { ThemeProvider } from "next-themes";
 import { usePathname } from "next/navigation";
 
@@ -28,6 +29,7 @@ export default function ClientProviders({
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       <ChakraProvider value={system}>
         <SoundProvider>
+          <RouteBgmController enabled={hudEnabled} />
           <AnimationProvider>
             <TransitionProvider>
               <PixiHudStage zIndex={105} enabled={hudEnabled}>
