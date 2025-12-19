@@ -42,7 +42,7 @@ describe("SpectatorNotice", () => {
 
     expect(screen.getByText("ホストが再開準備中だよ")).toBeInTheDocument();
     expect(screen.getByText("席に戻る申請を送信しました。ホストの承認を待っています…")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "申請中..." })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ロビーへ戻る" })).toBeEnabled();
   });
 
   test("displays rejection copy after host denial", () => {
@@ -62,7 +62,7 @@ describe("SpectatorNotice", () => {
     });
 
     expect(screen.getByText("席に戻る申請が見送られました。もう少し待ってから再度お試しください。")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "席に戻れるか試す" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "ロビーへ戻る" })).toBeEnabled();
   });
 
   test("shows timeout guidance when no host response", () => {
@@ -77,7 +77,7 @@ describe("SpectatorNotice", () => {
     });
 
     expect(
-      screen.getByText("応答がありませんでした。電波状況を確認して「席に戻れるか試す」を押すか、ロビーへ戻って入り直してください。")
+      screen.getByText("応答がありませんでした。電波状況を確認してから、ロビーへ戻って入り直してください。")
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ロビーへ戻る" })).toBeEnabled();
   });

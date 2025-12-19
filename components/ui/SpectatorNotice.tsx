@@ -2,7 +2,7 @@ import { AppButton } from "@/components/ui/AppButton";
 import type { SeatRequestViewState } from "@/lib/spectator/v2/useSpectatorController";
 import type { SpectatorReason } from "@/lib/state/roomMachine";
 import { UI_TOKENS } from "@/theme/layout";
-import { Box, HStack, Spinner, Text, VStack } from "@chakra-ui/react";
+import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { type ReactNode } from "react";
 
 type SpectatorNoticeProps = {
@@ -60,7 +60,7 @@ const StatusMessage: React.FC<{
             color={UI_TOKENS.COLORS.whiteAlpha60}
             lineHeight={1.6}
           >
-            応答がありませんでした。電波状況を確認して「席に戻れるか試す」を押すか、ロビーへ戻って入り直してください。
+            応答がありませんでした。電波状況を確認してから、ロビーへ戻って入り直してください。
           </Text>
         );
       }
@@ -71,11 +71,8 @@ const StatusMessage: React.FC<{
 export function SpectatorNotice({
   reason,
   seatRequestState,
-  seatRequestPending,
   seatRequestTimedOut,
-  seatRequestButtonDisabled,
   spectatorUpdateButton,
-  onRetryJoin,
   onForceExit,
 }: SpectatorNoticeProps) {
   if (!reason) {
@@ -122,22 +119,6 @@ export function SpectatorNotice({
           >
             今すぐ更新
           </AppButton>
-          <AppButton
-            palette="gray"
-            visual="outline"
-            size="md"
-            onClick={onRetryJoin}
-            disabled={seatRequestButtonDisabled}
-          >
-            {seatRequestPending ? (
-              <HStack gap={2} align="center">
-                <Spinner size="sm" />
-                <Text as="span">申請中...</Text>
-              </HStack>
-            ) : (
-              "席に戻れるか試す"
-            )}
-          </AppButton>
           <AppButton palette="gray" size="md" onClick={onForceExit}>
             ロビーへ戻る
           </AppButton>
@@ -145,6 +126,24 @@ export function SpectatorNotice({
       </VStack>
     );
   }
+
+  const titleText =
+    reason === "mid-game"
+      ? "ゲーム進行中です"
+      : reason === "waiting-open"
+        ? "ホストが再開準備中だよ"
+        : reason === "waiting-closed"
+          ? "次のゲーム準備中です"
+          : "観戦中";
+
+  const descriptionText =
+    reason === "mid-game"
+      ? "いまは観戦のみです。ホストが待機状態に戻したら参戦できます！"
+      : reason === "waiting-open"
+        ? "ホストが待機状態に戻したら参戦できます！少し待ってね。"
+        : reason === "waiting-closed"
+          ? "参加受付が閉じています。ホストの操作が完了するまで観戦でお待ちください。"
+          : "ホストの操作が完了するまで観戦でお待ちください。";
 
   return (
     <Box
@@ -180,61 +179,21 @@ export function SpectatorNotice({
           ▼ 観戦中 ▼
         </Text>
         <Box textAlign="center">
-          {reason === "waiting-open" ? (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                ホストが再開準備中だよ
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                少し待つか「席に戻れるか試す」を押して席へ戻ろう！
-              </Text>
-            </>
-          ) : reason === "waiting-closed" ? (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                次のゲーム準備中です
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                ホストが席を開放すると戻れるようになります。しばらくお待ちください。
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text
-                fontSize={{ base: "md", md: "lg" }}
-                fontWeight={700}
-                textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              >
-                通信復旧待機中
-              </Text>
-              <Text
-                fontSize={{ base: "sm", md: "md" }}
-                color={UI_TOKENS.COLORS.whiteAlpha80}
-                lineHeight={1.7}
-                mt={1}
-              >
-                接続が安定すると自動で席へ戻ります。しばらくこのままお待ちください。
-              </Text>
-            </>
-          )}
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            fontWeight={700}
+            textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+          >
+            {titleText}
+          </Text>
+          <Text
+            fontSize={{ base: "sm", md: "md" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={1}
+          >
+            {descriptionText}
+          </Text>
         </Box>
       </Box>
       <StatusMessage
@@ -248,22 +207,6 @@ export function SpectatorNotice({
         justifyContent="center"
       >
         {spectatorUpdateButton}
-        <AppButton
-          palette="gray"
-          visual="outline"
-          size="md"
-          onClick={onRetryJoin}
-          disabled={seatRequestButtonDisabled}
-        >
-          {seatRequestPending ? (
-            <HStack gap={2} align="center">
-              <Spinner size="sm" />
-              <Text as="span">申請中...</Text>
-            </HStack>
-          ) : (
-            "席に戻れるか試す"
-          )}
-        </AppButton>
         <AppButton palette="brand" size="md" onClick={onForceExit}>
           ロビーへ戻る
         </AppButton>
