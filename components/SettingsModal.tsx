@@ -220,6 +220,57 @@ export function SettingsModal({
     }
   });
 
+  const [supportToolsEnabled, setSupportToolsEnabled] = useState(false);
+  const [supportCopying, setSupportCopying] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const envEnabled = process.env.NEXT_PUBLIC_ENABLE_SUPPORT_TOOLS === "1";
+      const params = new URLSearchParams(window.location.search);
+      const param = params.get("support");
+      const stored = window.localStorage.getItem("ito-support-tools") === "1";
+      if (param === "1") {
+        window.localStorage.setItem("ito-support-tools", "1");
+      } else if (param === "0") {
+        window.localStorage.removeItem("ito-support-tools");
+      }
+      setSupportToolsEnabled(envEnabled || stored || param === "1");
+    } catch {
+      setSupportToolsEnabled(false);
+    }
+  }, []);
+
+  const handleCopySupportLog = useCallback(async () => {
+    if (supportCopying) return;
+    setSupportCopying(true);
+    try {
+      if (typeof window === "undefined") return;
+      const dump = window.dumpItoMetricsJson;
+      if (typeof dump !== "function") {
+        notify({ title: "診断ログを取得できませんでした", type: "error" });
+        return;
+      }
+      const label = roomId ? `support:${roomId}` : "support";
+      const payload = dump(label);
+      if (!payload) {
+        notify({ title: "診断ログが空でした", type: "warning" });
+        return;
+      }
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(payload);
+        notify({ title: "診断ログをコピーしました", type: "success" });
+      } else {
+        window.prompt("診断ログをコピーしてください", payload);
+        notify({ title: "診断ログを表示しました", type: "info" });
+      }
+    } catch {
+      notify({ title: "診断ログのコピーに失敗しました", type: "error" });
+    } finally {
+      setSupportCopying(false);
+    }
+  }, [roomId, supportCopying]);
+
   // OSのreduce-motion変化を監視
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) {
@@ -750,6 +801,60 @@ export function SettingsModal({
                         ? "せっていは ホストのみ かえられます"
                         : "せっていは たいきちゅうのみ かえられます"}
                     </Text>
+                  </Box>
+                )}
+
+                {supportToolsEnabled && (
+                  <Box
+                    p={4}
+                    bg={UI_TOKENS.COLORS.whiteAlpha05}
+                    borderRadius="0"
+                    border="2px solid"
+                    borderColor={UI_TOKENS.COLORS.whiteAlpha60}
+                    boxShadow={UI_TOKENS.SHADOWS.panelSubtle}
+                  >
+                    <VStack align="start" gap={2}>
+                      <Text
+                        fontSize="sm"
+                        fontWeight="600"
+                        color="gray.300"
+                        fontFamily="monospace"
+                      >
+                        サポート用ログ
+                      </Text>
+                      <Text
+                        fontSize="xs"
+                        color={UI_TOKENS.COLORS.textMuted}
+                        fontFamily="monospace"
+                      >
+                        不具合調査用の診断ログを1クリックでコピーします。
+                      </Text>
+                      <HStack gap={3}>
+                        <Box
+                          as="button"
+                          onClick={handleCopySupportLog}
+                          px={4}
+                          py={2}
+                          borderRadius="0"
+                          border="2px solid"
+                          borderColor={UI_TOKENS.COLORS.whiteAlpha90}
+                          bg={UI_TOKENS.COLORS.whiteAlpha10}
+                          color="white"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          cursor={supportCopying ? "not-allowed" : "pointer"}
+                          opacity={supportCopying ? 0.6 : 1}
+                          pointerEvents={supportCopying ? "none" : "auto"}
+                          transition={`background-color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
+                          _hover={{
+                            borderColor: UI_TOKENS.COLORS.whiteAlpha80,
+                            bg: UI_TOKENS.COLORS.whiteAlpha15,
+                          }}
+                        >
+                          診断ログをコピー
+                        </Box>
+                      </HStack>
+                    </VStack>
                   </Box>
                 )}
               </Stack>

@@ -18,6 +18,11 @@ const requiredKeys = [
   "NEXT_PUBLIC_FIREBASE_DATABASE_URL",
 ];
 
+const recommendedKeys = [
+  "NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION",
+  "NEXT_PUBLIC_SENTRY_DSN",
+];
+
 const adminKeyOptions = [
   "FIREBASE_ADMIN_KEY_JSON",
   "FIREBASE_ADMIN_KEY_BASE64",
@@ -39,6 +44,11 @@ if (missing.length > 0) {
   errors.push(`Missing required env keys: ${missing.join(", ")}`);
 }
 
+const recommendedMissing = recommendedKeys.filter((key) => !truthy(process.env[key]));
+if (recommendedMissing.length > 0) {
+  warnings.push(`Missing recommended env keys: ${recommendedMissing.join(", ")}`);
+}
+
 if (missingAdmin.length > 0) {
   errors.push(
     "Missing Firebase Admin credentials. Set one of: " +
@@ -53,6 +63,14 @@ if (pwaEnabled && pwaEnabled !== "1") {
 const safeUpdateEnabled = process.env.NEXT_PUBLIC_FEATURE_SAFE_UPDATE;
 if (safeUpdateEnabled && safeUpdateEnabled !== "1") {
   warnings.push("NEXT_PUBLIC_FEATURE_SAFE_UPDATE is not '1' (Safe Update disabled).");
+}
+
+const appVersionRaw = process.env.NEXT_PUBLIC_APP_VERSION;
+if (truthy(appVersionRaw)) {
+  const appVersion = String(appVersionRaw).trim().toLowerCase();
+  if (["dev", "development", "local"].includes(appVersion)) {
+    warnings.push(`NEXT_PUBLIC_APP_VERSION is '${appVersionRaw}' (consider setting a release tag).`);
+  }
 }
 
 const emulatorFlag = process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATOR;

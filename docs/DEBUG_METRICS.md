@@ -27,6 +27,14 @@ Console が長くてコピーしづらい時は:
 copy(dumpItoMetricsJson("issue"))
 ```
 
+### 1-3. サポート用ボタン（設定画面）
+サポート用ツールが有効な場合、**設定 → Game Settings** に「診断ログをコピー」ボタンが表示されます。
+クリックすると `dumpItoMetricsJson()` の内容がクリップボードへコピーされます。
+表示条件:
+- `NEXT_PUBLIC_ENABLE_SUPPORT_TOOLS=1` または
+- URL に `?support=1` を付与、または
+- `localStorage.ito-support-tools=1`
+
 ---
 
 ## 2) どういう時に打つ？（おすすめラベル集）

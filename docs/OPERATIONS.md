@@ -11,6 +11,7 @@
   - `NEXT_PUBLIC_APP_VERSION`: ビルド識別子。Safe Update の差分判定にも利用。  
   - `NEXT_PUBLIC_ENABLE_PWA`: PWA / Service Worker を有効化。  
   - `NEXT_PUBLIC_FEATURE_SAFE_UPDATE`: Safe Update フローを有効化。  
+  - `NEXT_PUBLIC_ENABLE_SUPPORT_TOOLS`: 設定画面に診断ログコピーを表示（運用時のみ ON）。  
   - `NEXT_PUBLIC_FSM_*`: （廃止済み）XState は常時有効なため不要。  
   - `NEXT_PUBLIC_PRESENCE_*`: RTDB プレゼンス調整用。  
 - **基本コマンド**  
@@ -149,6 +150,7 @@ Safe Update は 2025-10-25 時点でフローを再構築済み。最新仕様�
 ---
 
 ## 8. インシデント対応フロー
+まずは `docs/OPS_QUICK_RECOVERY.md` の「クイックリカバリ手順」で初動を行う。
 1. 発生時刻・影響範囲・再現条件を記録（スクリーンショットや Console ログも保存）。  
 2. `docs/` 配下のインシデントテンプレートに追記。必要に応じて Slack / Notion で共有。  
 3. 原因分析と暫定対応をまとめたら、再発防止策を ISSUE / ドキュメントに反映。  
