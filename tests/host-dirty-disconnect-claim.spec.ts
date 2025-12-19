@@ -80,9 +80,18 @@ const createRoomAsHost = async (page: Page, hostName: string, roomName: string) 
   await page.getByRole("button", { name: "作成" }).click();
 
   const enterRoom = page.getByRole("button", { name: "へやへ すすむ" });
-  await expect(enterRoom).toBeVisible({ timeout: 30_000 });
-  await enterRoom.click();
-  await page.waitForURL(/\/rooms\/[^/]+$/, { timeout: 45_000 });
+  const roomUrlPattern = /\/rooms\/[^/]+$/;
+  const entry = await Promise.race([
+    enterRoom.waitFor({ state: "visible", timeout: 30_000 }).then(() => "button"),
+    page.waitForURL(roomUrlPattern, { timeout: 45_000 }).then(() => "url"),
+  ]).catch(() => null);
+
+  if (entry === "button") {
+    await enterRoom.click();
+    await page.waitForURL(roomUrlPattern, { timeout: 45_000 });
+  } else if (entry !== "url") {
+    await page.waitForURL(roomUrlPattern, { timeout: 45_000 });
+  }
 
   const url = new URL(page.url());
   const roomId = url.pathname.split("/rooms/")[1] ?? "";

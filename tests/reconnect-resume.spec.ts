@@ -55,6 +55,14 @@ const waitForPhase = async (page: Page, phase: string, timeoutMs = 60_000) => {
   );
 };
 
+const waitForPresenceReady = async (page: Page, timeoutMs = 60_000) => {
+  await page.waitForFunction(
+    () => window.__ITO_METRICS__?.room?.presenceReady === 1,
+    null,
+    { timeout: timeoutMs }
+  );
+};
+
 const createRoomAsHost = async (page: Page, hostName: string, roomName: string) => {
   await installDisplayNameForPage(page, hostName);
   await ensureE2EEmulators(page);
@@ -127,6 +135,7 @@ test("回線揺れ/リロードでもプレイヤーとして残る", async ({ p
     await p2.context.setOffline(false);
 
     await waitForPhase(p2.page, "clue", 60_000);
+    await waitForPresenceReady(p2.page, 60_000);
     await expect(p2.page.getByText("▼ 観戦中 ▼")).toBeHidden({ timeout: 30_000 });
 
     const clueInput = p2.page.getByLabel("連想ワード");
@@ -137,6 +146,7 @@ test("回線揺れ/リロードでもプレイヤーとして残る", async ({ p
     await p2.page.waitForTimeout(1200);
 
     await waitForPhase(p2.page, "clue", 60_000);
+    await waitForPresenceReady(p2.page, 60_000);
     await expect(p2.page.getByText("▼ 観戦中 ▼")).toBeHidden({ timeout: 30_000 });
     await expect(p2.page.getByLabel("連想ワード")).toBeVisible({ timeout: 45_000 });
   } finally {

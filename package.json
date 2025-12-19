@@ -13,6 +13,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit --pretty false",
     "check": "npm run lint && npm run typecheck && npm run build",
+    "preflight:release": "node scripts/preflight-release.js --strict",
     "lint": "eslint . --ext ts,tsx --max-warnings=0",
     "lint:css": "stylelint \"**/*.{css,scss}\"",
     "chakra:typegen": "npx @chakra-ui/cli typegen ./theme/index.ts --outdir types",

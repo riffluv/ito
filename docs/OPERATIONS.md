@@ -39,6 +39,8 @@
 1. `.env.production` / Vercel 環境変数で必要なキーが揃っているか確認。  
    - `NEXT_PUBLIC_APP_VERSION` を更新済みか。  
    - `NEXT_PUBLIC_ENABLE_PWA=1` / `NEXT_PUBLIC_FEATURE_SAFE_UPDATE=1` が有効か。  
+   - Stripe は別途（本番アカウント登録後に確認）。  
+   - 可能なら `npm run preflight:release` を実行して環境変数の抜けを検査する（ローカルで不足している場合は `--allow-missing` を付ける）。  
 2. `npm run lint -- --max-warnings=0` と `npm run typecheck` を必ず実行。  
 3. 進行/ホスト系の変更が入った場合は最低限以下を個別実行して“ゴールデンパス”を守る。  
    - `npx playwright test tests/roomMachine.spec.ts tests/hostActions.nextRound.spec.ts tests/hostActions.preparing.spec.ts`  
