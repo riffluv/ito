@@ -32,11 +32,11 @@ describe("presence authority logic", () => {
     ).toBe(false);
   });
 
-  test("keeps host online regardless of stale timestamp if still connected", () => {
+  test("treats stale heartbeat as offline even if still flagged online", () => {
     const staleTs = now - PRESENCE_STALE_MS * 10;
     expect(
       isPresenceConnectionActive({ online: true, ts: staleTs }, now)
-    ).toBe(true);
+    ).toBe(false);
   });
 
   test("retains host when at least one tab stays fresh", () => {

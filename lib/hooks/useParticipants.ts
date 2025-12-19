@@ -119,6 +119,7 @@ export function useParticipants(
 ): ParticipantsState {
   const [players, setPlayers] = useState<(PlayerDoc & { id: string })[]>([]);
   const [onlineUids, setOnlineUids] = useState<string[] | undefined>(undefined);
+  const onlineUidsSignatureRef = useRef<string | null>(null);
   const [stableOnlineUids, setStableOnlineUids] = useState<string[] | undefined>(
     undefined
   );
@@ -405,6 +406,7 @@ export function useParticipants(
   // RTDB: presence 購読
   useEffect(() => {
     presenceHydratedRef.current = false;
+    onlineUidsSignatureRef.current = null;
     if (presenceHydrationTimerRef.current) {
       clearTimeout(presenceHydrationTimerRef.current);
       presenceHydrationTimerRef.current = null;
@@ -415,6 +417,7 @@ export function useParticipants(
         clearTimeout(presenceHydrationTimerRef.current);
         presenceHydrationTimerRef.current = null;
       }
+      onlineUidsSignatureRef.current = null;
       setPresenceReady(false);
       setPresenceDegraded(!presenceSupported());
       setOnlineUids(undefined);
@@ -429,6 +432,11 @@ export function useParticipants(
       return cleanup;
     }
     const markReady = (uids: string[]) => {
+      const signature = [...uids].sort().join(",");
+      if (presenceHydratedRef.current && onlineUidsSignatureRef.current === signature) {
+        return;
+      }
+      onlineUidsSignatureRef.current = signature;
       presenceHydratedRef.current = true;
       setOnlineUids(uids);
       setPresenceReady(true);

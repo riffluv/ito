@@ -100,7 +100,10 @@ import { PRUNE_PROPOSAL_DEBOUNCE_MS } from '@/lib/constants/uiTimings';
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 
 const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
-const HOST_UNAVAILABLE_GRACE_MS = Math.max(PRESENCE_STALE_MS, 60_000);
+const HOST_UNAVAILABLE_GRACE_MS = Math.max(
+  10_000,
+  Math.min(PRESENCE_STALE_MS, 30_000)
+);
 
 const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
   "auth-required": "認証情報が無効です。再度ログインしてください。",
@@ -674,6 +677,9 @@ export function RoomLayout(props: RoomLayoutProps) {
     }
   }, [room?.status]);
   useEffect(() => {
+    setMetric("room", "isHost", isHost ? 1 : 0);
+  }, [isHost]);
+  useEffect(() => {
     if (requiredSwVersion) {
       setMetric("app", "requiredSwVersion", requiredSwVersion);
     } else {
@@ -1007,6 +1013,15 @@ export function RoomLayout(props: RoomLayoutProps) {
     resetIdleTimer();
   }, [safeUpdateFeatureEnabled, idleApplyMs, hasWaitingUpdate, resetIdleTimer]);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
+  const hostAvailabilityTimerRef = useRef<number | null>(null);
+  const hostMissingSinceRef = useRef<number | null>(null);
+  const [hostLikelyUnavailable, setHostLikelyUnavailable] = useState(false);
+  const clearHostAvailabilityTimer = useCallback(() => {
+    if (hostAvailabilityTimerRef.current !== null) {
+      window.clearTimeout(hostAvailabilityTimerRef.current);
+      hostAvailabilityTimerRef.current = null;
+    }
+  }, []);
   const onlineUidSignature = useMemo(
     () => (Array.isArray(onlineUids) ? onlineUids.join(",") : "_"),
     [onlineUids]
@@ -1107,29 +1122,77 @@ export function RoomLayout(props: RoomLayoutProps) {
   const stableHostId =
     typeof room?.hostId === "string" ? room.hostId.trim() : "";
 
-  const hostLikelyUnavailable = useMemo(() => {
-    if (!stableHostId) {
-      return true;
+  useEffect(() => {
+    const presenceAvailable =
+      presenceReady || presenceDegraded || Array.isArray(onlineUids);
+    if (!presenceAvailable) {
+      hostMissingSinceRef.current = null;
+      setHostLikelyUnavailable(false);
+      clearHostAvailabilityTimer();
+      return;
     }
-    if (!presenceReady) {
-      return false;
+    if (!stableHostId) {
+      hostMissingSinceRef.current = null;
+      setHostLikelyUnavailable(true);
+      clearHostAvailabilityTimer();
+      return;
     }
     if (uid && stableHostId === uid) {
-      return false;
+      hostMissingSinceRef.current = null;
+      setHostLikelyUnavailable(false);
+      clearHostAvailabilityTimer();
+      return;
     }
     if (Array.isArray(onlineUids) && onlineUids.includes(stableHostId)) {
-      return false;
+      hostMissingSinceRef.current = null;
+      setHostLikelyUnavailable(false);
+      clearHostAvailabilityTimer();
+      return;
     }
-    const lastSeenTs = presenceLastSeenRef.current.get(stableHostId);
-    if (!lastSeenTs) {
-      return false;
+
+    const now = Date.now();
+    if (!hostMissingSinceRef.current) {
+      hostMissingSinceRef.current = now;
+      clearHostAvailabilityTimer();
     }
-    const elapsed = Date.now() - lastSeenTs;
-    if (elapsed < HOST_UNAVAILABLE_GRACE_MS) {
-      return false;
+
+    const missingElapsed = now - (hostMissingSinceRef.current ?? now);
+    const remaining = HOST_UNAVAILABLE_GRACE_MS - missingElapsed;
+    if (remaining <= 0) {
+      setHostLikelyUnavailable(true);
+      clearHostAvailabilityTimer();
+      return;
     }
-    return true;
-  }, [stableHostId, uid, presenceReady, onlineUids]);
+
+    setHostLikelyUnavailable(false);
+    if (hostAvailabilityTimerRef.current === null) {
+      hostAvailabilityTimerRef.current = window.setTimeout(() => {
+        hostAvailabilityTimerRef.current = null;
+        setHostLikelyUnavailable(true);
+      }, remaining + 50);
+    }
+  }, [
+    presenceReady,
+    presenceDegraded,
+    stableHostId,
+    uid,
+    onlineUids,
+    clearHostAvailabilityTimer,
+  ]);
+  useEffect(() => {
+    return () => clearHostAvailabilityTimer();
+  }, [clearHostAvailabilityTimer]);
+
+  useEffect(() => {
+    setMetric("room", "hostLikelyUnavailable", hostLikelyUnavailable ? 1 : 0);
+  }, [hostLikelyUnavailable]);
+  const isSelfOnline = useMemo(() => {
+    if (!uid) return false;
+    return Array.isArray(onlineUids) && onlineUids.includes(uid);
+  }, [onlineUids, uid]);
+  useEffect(() => {
+    setMetric("room", "selfOnline", isSelfOnline ? 1 : 0);
+  }, [isSelfOnline]);
 
   const isSoloMember = useMemo(
     () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
@@ -1144,12 +1207,26 @@ export function RoomLayout(props: RoomLayoutProps) {
 
     void joinVersion;
 
-    if (lastKnownHostId && players.some((p) => p.id === lastKnownHostId)) {
-      return lastKnownHostId;
-    }
-
     const onlineSet = new Set(Array.isArray(onlineUids) ? onlineUids : []);
     const now = Date.now();
+
+    if (lastKnownHostId && players.some((p) => p.id === lastKnownHostId)) {
+      if (!presenceReady) {
+        return lastKnownHostId;
+      }
+      if (onlineSet.has(lastKnownHostId)) {
+        return lastKnownHostId;
+      }
+      if (lastKnownHostId === stableHostId && hostLikelyUnavailable) {
+        // host missing beyond grace; fall through to selectHostCandidate
+      } else {
+        const lastPresence =
+          presenceLastSeenRef.current.get(lastKnownHostId) ?? null;
+        if (lastPresence !== null && now - lastPresence < HOST_UNAVAILABLE_GRACE_MS) {
+          return lastKnownHostId;
+        }
+      }
+    }
     const inputs = players.map((player) => {
       const joinedAt =
         playerJoinOrderRef.current.get(player.id) ?? Number.MAX_SAFE_INTEGER;
@@ -1171,7 +1248,16 @@ export function RoomLayout(props: RoomLayoutProps) {
     });
 
     return selectHostCandidate(inputs) ?? null;
-  }, [room?.id, players, lastKnownHostId, joinVersion, presenceReady, onlineUids]);
+  }, [
+    room?.id,
+    players,
+    lastKnownHostId,
+    stableHostId,
+    joinVersion,
+    presenceReady,
+    onlineUids,
+    hostLikelyUnavailable,
+  ]);
 
 
   const [pop, setPop] = useState(false);

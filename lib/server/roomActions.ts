@@ -357,19 +357,13 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const playerDocs = playersSnap.docs as QueryDocumentSnapshot<PlayerDoc>[];
 
     const normalizedHostId = currentHost ? currentHost : null;
-    if (normalizedHostId && normalizedHostId !== uid) {
-      const hostStillRegistered = playerDocs.some((doc) => {
-        if (doc.id === normalizedHostId) return true;
-        const data = doc.data() as PlayerDoc;
-        return typeof data?.uid === "string" && data.uid === normalizedHostId;
-      });
-      if (hostStillRegistered) {
-        if (Object.keys(baseUpdates).length > 0) {
-          tx.update(roomRef, baseUpdates);
-        }
-        return;
-      }
-    }
+    const hostStillRegistered = normalizedHostId
+      ? playerDocs.some((doc) => {
+          if (doc.id === normalizedHostId) return true;
+          const data = doc.data() as PlayerDoc;
+          return typeof data?.uid === "string" && data.uid === normalizedHostId;
+        })
+      : false;
 
     const meDoc =
       playerDocs.find((doc) => doc.id === uid) ||
@@ -404,6 +398,14 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       } catch {}
     }
 
+    const hostOnline = normalizedHostId ? onlineSet.has(normalizedHostId) : false;
+    if (normalizedHostId && normalizedHostId !== uid && hostStillRegistered && hostOnline) {
+      if (Object.keys(baseUpdates).length > 0) {
+        tx.update(roomRef, baseUpdates);
+      }
+      return;
+    }
+
     const playerInputs = buildHostPlayerInputsFromSnapshots({
       docs: canonicalDocs,
       getJoinedAt: (doc) => (doc.createTime ? doc.createTime.toMillis() : null),
@@ -418,9 +420,11 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       onlineIds: onlineSet,
     });
 
+    const effectiveHostId =
+      normalizedHostId && hostStillRegistered && hostOnline ? currentHost : null;
     const manager = new HostManager({
       roomId,
-      currentHostId: currentHost,
+      currentHostId: effectiveHostId,
       players: playerInputs,
     });
 

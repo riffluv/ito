@@ -102,13 +102,15 @@ export function useHostClaim({
     const hasNoRecordedHost = !candidateId && !lastKnownHostId;
     const isSelfFallback =
       lastKnownHostId === uid && (!candidateId || candidateId === uid);
-    const shouldAttemptClaim =
+    const baseEligible =
       (isDesignatedCandidate ||
         isRecoveringHost ||
         hasNoRecordedHost ||
         isSelfFallback ||
         isSoloMember) &&
       (!lastKnownHostId || lastKnownHostId === uid || !previousHostStillMember);
+    const fallbackEligible = hostUnavailable && !previousHostStillMember;
+    const shouldAttemptClaim = baseEligible || fallbackEligible;
 
     logDebug(
       "room-page",

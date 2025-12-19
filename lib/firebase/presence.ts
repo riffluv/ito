@@ -63,6 +63,10 @@ export function isPresenceConnectionActive(
   if (!conn) return false;
   const record = conn as PresenceConn;
   if (record.online === false) return false;
+  const lastTs = toNumber(record.ts);
+  if (lastTs && now - lastTs > PRESENCE_STALE_MS) {
+    return false;
+  }
   const offlineAt = toNumber(record.offlineAt);
   if (offlineAt && now - offlineAt > PRESENCE_STALE_MS * 2) {
     return false;
