@@ -1,5 +1,5 @@
 /**
- * 回線揺れ/リロードでも観戦落ちせずにゲームに残れることを確認
+ * 長めの一時オフラインでも観戦落ちせずに復帰できることを確認
  * - Firebase Emulator 前提（本番誤爆防止）
  */
 
@@ -110,7 +110,7 @@ const joinRoomAsPlayer = async (
   return { context, page };
 };
 
-test("回線揺れ/リロードでもプレイヤーとして残る", async ({ page, browser }) => {
+test("長めのオフライン復帰でも観戦落ちしない", async ({ page, browser }) => {
   test.setTimeout(300_000);
 
   const id = Math.random().toString(36).slice(2, 8);
@@ -139,19 +139,8 @@ test("回線揺れ/リロードでもプレイヤーとして残る", async ({ p
     await Promise.all([waitForPhase(page, "clue", 60_000), waitForPhase(p2.page, "clue", 60_000)]);
 
     await p2.context.setOffline(true);
-    await p2.page.waitForTimeout(3_000);
+    await p2.page.waitForTimeout(25_000);
     await p2.context.setOffline(false);
-
-    await waitForPhase(p2.page, "clue", 60_000);
-    await waitForPresenceReady(p2.page, 60_000);
-    await expect(p2.page.getByText("▼ 観戦中 ▼")).toBeHidden({ timeout: 30_000 });
-
-    const clueInput = p2.page.getByLabel("連想ワード");
-    await expect(clueInput).toBeVisible({ timeout: 45_000 });
-    await expect(clueInput).toBeEnabled({ timeout: 45_000 });
-
-    await p2.page.reload();
-    await p2.page.waitForTimeout(1200);
 
     await waitForPhase(p2.page, "clue", 60_000);
     await waitForPresenceReady(p2.page, 60_000);
