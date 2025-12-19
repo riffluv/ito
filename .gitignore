@@ -5,6 +5,11 @@ yarn.lock
 *.log
 .DS_Store
 無題.jpg
+
+# Playwright artifacts
+test-results/
+playwright-report/
+
 #. Local environment variables (keep out of repo)
 .env.local
 .env

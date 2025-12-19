@@ -456,6 +456,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         window.cancelAnimationFrame(dragMoveRafRef.current);
         dragMoveRafRef.current = null;
       }
+      latestDragMoveEventRef.current = null;
     };
   }, []);
 
@@ -492,6 +493,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       return () => {};
     }
     const handlePointerDown = () => {
+      updateBoardBounds();
       if (typeof performance !== "undefined") {
         dragActivationStartRef.current = performance.now();
       }
@@ -509,7 +511,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       window.removeEventListener("pointerup", clearPointerClock);
       window.removeEventListener("pointercancel", clearPointerClock);
     };
-  }, [boardElement]);
+  }, [boardElement, updateBoardBounds]);
 
   useEffect(() => {
     if (roomStatus !== "clue" && dragBoostEnabled) {
@@ -783,6 +785,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [flushPendingDragMove, processDragMoveFrame]
   );
+
+  const cancelPendingDragMove = useCallback(() => {
+    if (typeof window !== "undefined" && dragMoveRafRef.current !== null) {
+      window.cancelAnimationFrame(dragMoveRafRef.current);
+      dragMoveRafRef.current = null;
+    }
+    latestDragMoveEventRef.current = null;
+  }, []);
 
   useEffect(() => {
     setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
@@ -1817,6 +1827,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     (event: DragStartEvent) => {
       traceAction("drag.start", { activeId: String(event.active.id) });
       beginDropSession();
+      updateBoardBounds();
       updateDropAnimationTarget(null);
       resetMagnet({ immediate: true });
       setActiveId(String(event.active.id));
@@ -1861,6 +1872,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [
       beginDropSession,
+      updateBoardBounds,
       resetMagnet,
       playDragPickup,
       setCursorSnapOffset,
@@ -1897,13 +1909,57 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     ]
   );
 
+  const cancelActiveDrag = useCallback(
+    (reason: "visibilitychange" | "pointercancel" | "touchcancel" | "blur") => {
+      if (!activeId) return;
+      traceAction("drag.cancel.fallback", {
+        activeId: String(activeId),
+        reason,
+      });
+      dragActivationStartRef.current = null;
+      updateDropAnimationTarget(null);
+      cancelPendingDragMove();
+      clearActive();
+      endDropSession();
+    },
+    [activeId, cancelPendingDragMove, clearActive, endDropSession, updateDropAnimationTarget]
+  );
+
+  useEffect(() => {
+    if (!activeId || typeof window === "undefined") return undefined;
+    const handlePointerCancel = () => cancelActiveDrag("pointercancel");
+    const handleTouchCancel = () => cancelActiveDrag("touchcancel");
+    const handleBlur = () => cancelActiveDrag("blur");
+    const handleVisibility = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        cancelActiveDrag("visibilitychange");
+      }
+    };
+    const touchCancelOptions: AddEventListenerOptions = { passive: true };
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("touchcancel", handleTouchCancel, touchCancelOptions);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("touchcancel", handleTouchCancel);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeId, cancelActiveDrag]);
+
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
+      if (!activeId) {
+        cancelPendingDragMove();
+        return;
+      }
       traceAction("drag.end", {
         activeId: String(active.id),
         overId: over ? String(over.id) : null,
       });
+      cancelPendingDragMove();
       const activeRect = getActiveRectWithDelta(active, event.delta);
       if (activeRect) {
         lastDragPositionRef.current = {
@@ -2208,6 +2264,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }
     },
     [
+      activeId,
+      cancelPendingDragMove,
       enqueueMagnetUpdate,
       getProjectedMagnetState,
       resolveMode,
@@ -2236,9 +2294,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     traceAction("drag.cancel");
     dragActivationStartRef.current = null;
     updateDropAnimationTarget(null);
+    cancelPendingDragMove();
     clearActive();
     endDropSession();
-  }, [clearActive, updateDropAnimationTarget, endDropSession]);
+  }, [cancelPendingDragMove, clearActive, updateDropAnimationTarget, endDropSession]);
 
   const activeBoard = resolveMode === "sort-submit" && roomStatus === "clue";
 

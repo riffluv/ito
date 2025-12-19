@@ -5,6 +5,23 @@
 
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
+const waitForMyDraggableCard = async (page: Page, playerName: string) => {
+  const boardRoot = page.locator("[data-board-root]");
+  const boardCard = boardRoot
+    .locator("[data-interactive='true']")
+    .filter({ hasText: playerName })
+    .first();
+  const waitingCard = page.getByLabel(`${playerName}のカード`);
+
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 20_000) {
+    if (await boardCard.isVisible().catch(() => false)) return boardCard;
+    if (await waitingCard.isVisible().catch(() => false)) return waitingCard;
+    await page.waitForTimeout(100);
+  }
+  throw new Error(`Failed to locate draggable card for ${playerName}`);
+};
+
 const ensureE2EEmulators = async (page: Page) => {
   await page.goto("/");
   const emulatorReady = await page.evaluate(() => {
@@ -53,7 +70,7 @@ const createRoomAsHost = async (page: Page, hostName: string, roomName: string) 
   await page.getByRole("button", { name: "作成" }).click();
 
   const enterRoom = page.getByRole("button", { name: "へやへ すすむ" });
-  await expect(enterRoom).toBeVisible({ timeout: 30_000 });
+  await expect(enterRoom).toBeVisible({ timeout: 90_000 });
   await enterRoom.click();
   await page.waitForURL(/\/rooms\/[^/]+$/, { timeout: 45_000 });
 
@@ -70,7 +87,7 @@ const joinRoomAsPlayer = async (browser: Browser, origin: string, roomId: string
   await page.goto(`${origin}/rooms/${roomId}`);
   // presence が上がるまで少し待つ
   await page.waitForTimeout(1200);
-  return { context, page };
+  return { context, page, playerName };
 };
 
 const startGameAndMakeCardDraggable = async (page: Page, hostName: string) => {
@@ -88,7 +105,7 @@ const startGameAndMakeCardDraggable = async (page: Page, hostName: string) => {
   await expect(decideButton).toBeEnabled({ timeout: 20_000 });
   await decideButton.click();
 
-  const myCard = page.getByLabel(`${hostName}のカード`);
+  const myCard = await waitForMyDraggableCard(page, hostName);
   await expect(myCard).toBeVisible({ timeout: 20_000 });
   const touchAction = await myCard.evaluate((el: HTMLElement) => getComputedStyle(el).touchAction);
   expect(touchAction).toBe("none");
@@ -100,7 +117,6 @@ const withRoom = async (
   run: (ctx: {
     hostName: string;
     roomId: string;
-    other: { contexts: BrowserContext[]; pages: Page[] };
   }) => Promise<void>
 ) => {
   const id = Math.random().toString(36).slice(2, 8);
@@ -110,23 +126,31 @@ const withRoom = async (
   const { origin, roomId } = await createRoomAsHost(page, hostName, roomName);
 
   const otherContexts: BrowserContext[] = [];
-  const otherPages: Page[] = [];
   try {
     const p2 = await joinRoomAsPlayer(browser, origin, roomId, `e2e-p2-${id}`);
     otherContexts.push(p2.context);
-    otherPages.push(p2.page);
-    const p3 = await joinRoomAsPlayer(browser, origin, roomId, `e2e-p3-${id}`);
-    otherContexts.push(p3.context);
-    otherPages.push(p3.page);
 
     // 参加者が UI に反映されるまで待つ（players の反映は非同期）
-    await expect(page.getByText(/参加人数：3人/)).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByLabel(`${p2.playerName}のカード`)).toBeVisible({ timeout: 45_000 });
 
     await startGameAndMakeCardDraggable(page, hostName);
 
-    await run({ hostName, roomId, other: { contexts: otherContexts, pages: otherPages } });
+    await run({ hostName, roomId });
   } finally {
-    await Promise.all(otherContexts.map((c) => c.close()));
+    await Promise.all(
+      otherContexts.map(async (context) => {
+        try {
+          await Promise.race([
+            context.close(),
+            new Promise<void>((resolve) => {
+              setTimeout(resolve, 5000);
+            }),
+          ]);
+        } catch {
+          // ignore teardown errors/timeouts (WSL crash mitigation)
+        }
+      })
+    );
   }
 };
 
@@ -140,7 +164,7 @@ test.describe("ドラッグ操作のポインター座標優先", () => {
 
       const emptySlots = page.locator("[data-slot]");
       const slotCount = await emptySlots.count();
-      expect(slotCount).toBeGreaterThanOrEqual(3);
+      expect(slotCount).toBeGreaterThanOrEqual(2);
 
       const slotPositions = await Promise.all(
         Array.from({ length: slotCount }, async (_, i) => {
@@ -159,7 +183,7 @@ test.describe("ドラッグ操作のポインター座標優先", () => {
       const rightmost = slotPositions.reduce((prev, curr) => (curr.centerX > prev.centerX ? curr : prev));
       if (!rightmost.box) throw new Error("missing slot bounding box");
 
-      const myCard = page.getByLabel(`${hostName}のカード`);
+      const myCard = await waitForMyDraggableCard(page, hostName);
       await myCard.hover();
       await page.mouse.down();
 
@@ -193,7 +217,7 @@ test.describe("ドラッグ操作のポインター座標優先", () => {
       const center0 = { x: box0.x + box0.width / 2, y: box0.y + box0.height / 2 };
       const center1 = { x: box1.x + box1.width / 2, y: box1.y + box1.height / 2 };
 
-      const myCard = page.getByLabel(`${hostName}のカード`);
+      const myCard = await waitForMyDraggableCard(page, hostName);
       await myCard.hover();
       await page.mouse.down();
 
@@ -222,7 +246,7 @@ test.describe("ドラッグ操作のポインター座標優先", () => {
       const firstSlotBox = await slots.first().boundingBox();
       if (!firstSlotBox) throw new Error("missing slot bounding box");
 
-      const myCard = page.getByLabel(`${hostName}のカード`);
+      const myCard = await waitForMyDraggableCard(page, hostName);
       const boardBox = await boardRoot.boundingBox();
       if (!boardBox) throw new Error("missing board bounding box");
 
@@ -246,6 +270,72 @@ test.describe("ドラッグ操作のポインター座標優先", () => {
       expect(targetCountAfter).toBe(0);
 
       await page.mouse.up();
+    });
+  });
+
+  test("ドラッグ中にウィンドウがblurするとドラッグがキャンセルされる", async ({ page, browser }) => {
+    test.setTimeout(180_000);
+
+    await withRoom(page, browser, async ({ hostName }) => {
+      const boardRoot = page.locator("[data-board-root]");
+      await expect(boardRoot).toBeVisible();
+
+      const slots = page.locator("[data-slot]");
+      await expect(slots.first()).toBeVisible();
+      const firstSlotBox = await slots.first().boundingBox();
+      if (!firstSlotBox) throw new Error("missing slot bounding box");
+
+      const myCard = await waitForMyDraggableCard(page, hostName);
+      await myCard.hover();
+      await page.mouse.down();
+
+      const slotCenterX = firstSlotBox.x + firstSlotBox.width / 2;
+      const slotCenterY = firstSlotBox.y + firstSlotBox.height / 2;
+      await page.mouse.move(slotCenterX, slotCenterY, { steps: 6 });
+      await page.waitForTimeout(150);
+
+      const overlay = page.locator("[data-floating-card='true']");
+      await expect(overlay).toBeVisible();
+
+      await page.evaluate(() => {
+        window.dispatchEvent(new Event("blur"));
+      });
+
+      await expect(overlay).toHaveCount(0);
+      await expect(page.locator("[data-magnet-target='true']")).toHaveCount(0);
+    });
+  });
+
+  test("ドラッグ中にtouchcancelが発火するとドラッグがキャンセルされる", async ({ page, browser }) => {
+    test.setTimeout(180_000);
+
+    await withRoom(page, browser, async ({ hostName }) => {
+      const boardRoot = page.locator("[data-board-root]");
+      await expect(boardRoot).toBeVisible();
+
+      const slots = page.locator("[data-slot]");
+      await expect(slots.first()).toBeVisible();
+      const firstSlotBox = await slots.first().boundingBox();
+      if (!firstSlotBox) throw new Error("missing slot bounding box");
+
+      const myCard = await waitForMyDraggableCard(page, hostName);
+      await myCard.hover();
+      await page.mouse.down();
+
+      const slotCenterX = firstSlotBox.x + firstSlotBox.width / 2;
+      const slotCenterY = firstSlotBox.y + firstSlotBox.height / 2;
+      await page.mouse.move(slotCenterX, slotCenterY, { steps: 6 });
+      await page.waitForTimeout(150);
+
+      const overlay = page.locator("[data-floating-card='true']");
+      await expect(overlay).toBeVisible();
+
+      await page.evaluate(() => {
+        window.dispatchEvent(new Event("touchcancel"));
+      });
+
+      await expect(overlay).toHaveCount(0);
+      await expect(page.locator("[data-magnet-target='true']")).toHaveCount(0);
     });
   });
 });

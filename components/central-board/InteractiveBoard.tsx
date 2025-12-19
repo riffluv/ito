@@ -34,6 +34,85 @@ type CursorSnapOffset = {
   y: number;
 };
 
+type SlotItemProps = {
+  slot: DragSlotDescriptor;
+  isTarget: boolean;
+  magnetStrength: number;
+  prefersReducedMotion: boolean;
+  isDragActive: boolean;
+  renderSortableCard: (id: string, idx?: number) => React.ReactNode;
+};
+
+const SlotItem = React.memo(
+  function SlotItem({
+    slot,
+    isTarget,
+    magnetStrength,
+    prefersReducedMotion,
+    isDragActive,
+    renderSortableCard,
+  }: SlotItemProps) {
+    const showCard = slot.showCard && slot.cardId;
+
+    return (
+      <Box
+        position="relative"
+        display="grid"
+        gridTemplateColumns="1fr"
+        gridTemplateRows="1fr"
+      >
+        <Box gridColumn="1 / 2" gridRow="1 / 2">
+          <EmptyCard
+            slotNumber={slot.idx + 1}
+            totalSlots={slot.totalSlots}
+            alignSelf="flex-start"
+            id={slot.droppableId}
+            isDroppable={!showCard}
+            isDragActive={isDragActive}
+            isMagnetTarget={isTarget}
+            magnetStrength={magnetStrength}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        </Box>
+
+        {showCard ? (
+          <Box
+            gridColumn="1 / 2"
+            gridRow="1 / 2"
+            zIndex={1}
+            display="flex"
+            alignItems="stretch"
+            justifyContent="center"
+          >
+            {slot.proposalCardId && slot.proposalCardId === slot.cardId ? (
+              <SortableItem id={slot.cardId!}>
+                {renderSortableCard(slot.cardId!, slot.idx)}
+              </SortableItem>
+            ) : (
+              <Box
+                position="relative"
+                width="100%"
+                pointerEvents="none"
+                data-ghost-card="true"
+              >
+                {renderSortableCard(slot.cardId!, slot.idx)}
+              </Box>
+            )}
+          </Box>
+        ) : null}
+      </Box>
+    );
+  },
+  (prev, next) =>
+    prev.slot === next.slot &&
+    prev.isTarget === next.isTarget &&
+    prev.magnetStrength === next.magnetStrength &&
+    prev.prefersReducedMotion === next.prefersReducedMotion &&
+    prev.isDragActive === next.isDragActive &&
+    prev.renderSortableCard === next.renderSortableCard
+);
+SlotItem.displayName = "CentralBoardSlotItem";
+
 /**
  * 磁力吸着を DragOverlay の transform に直接適用する modifier
  * これにより overlayInnerStyle との競合を完全に排除
@@ -320,56 +399,16 @@ function InteractiveBoardBase({
         <SortableContext items={sortableItems}>
           {slots.map((slot) => {
             const isTarget = magnetSnapshot.targetId === slot.droppableId;
-            const showCard = slot.showCard && slot.cardId;
-
             return (
-              <Box
+              <SlotItem
                 key={slot.slotId}
-                position="relative"
-                display="grid"
-                gridTemplateColumns="1fr"
-                gridTemplateRows="1fr"
-              >
-                <Box gridColumn="1 / 2" gridRow="1 / 2">
-                  <EmptyCard
-                    slotNumber={slot.idx + 1}
-                    totalSlots={slot.totalSlots}
-                    alignSelf="flex-start"
-                    id={slot.droppableId}
-                    isDroppable={!showCard}
-                    isDragActive={!!activeId}
-                    isMagnetTarget={isTarget}
-                    magnetStrength={isTarget ? magnetSnapshot.strength : 0}
-                    prefersReducedMotion={prefersReducedMotion}
-                  />
-                </Box>
-
-                {showCard ? (
-                  <Box
-                    gridColumn="1 / 2"
-                    gridRow="1 / 2"
-                    zIndex={1}
-                    display="flex"
-                    alignItems="stretch"
-                    justifyContent="center"
-                  >
-                    {slot.proposalCardId && slot.proposalCardId === slot.cardId ? (
-                      <SortableItem id={slot.cardId!}>
-                        {renderSortableCard(slot.cardId!, slot.idx)}
-                      </SortableItem>
-                    ) : (
-                      <Box
-                        position="relative"
-                        width="100%"
-                        pointerEvents="none"
-                        data-ghost-card="true"
-                      >
-                        {renderSortableCard(slot.cardId!, slot.idx)}
-                      </Box>
-                    )}
-                  </Box>
-                ) : null}
-              </Box>
+                slot={slot}
+                isTarget={isTarget}
+                magnetStrength={isTarget ? magnetSnapshot.strength : 0}
+                prefersReducedMotion={prefersReducedMotion}
+                isDragActive={!!activeId}
+                renderSortableCard={renderSortableCard}
+              />
             );
           })}
         </SortableContext>
