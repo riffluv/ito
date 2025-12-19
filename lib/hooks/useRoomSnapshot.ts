@@ -1682,6 +1682,12 @@ export function useRoomSnapshot(
   useEffect(() => {
     if (!room || !uid || !firebaseEnabled) return;
     if (roomAccessBlocked) return;
+    const recallClosedForJoin =
+      room.status === "waiting" &&
+      room.ui?.recallOpen === false &&
+      !isMember &&
+      room.hostId !== uid;
+    if (recallClosedForJoin) return;
     const now = Date.now();
     const last = ensureMemberHeartbeatRef.current;
     if (last && now - last.timestamp < ENSURE_MEMBER_MIN_INTERVAL_MS) return;
@@ -1694,7 +1700,7 @@ export function useRoomSnapshot(
     ensureMember({ roomId, uid, displayName, clientVersion: APP_VERSION }).catch((error) => {
       handleRoomServiceAccessError(error, "ensureMember");
     });
-  }, [room, uid, roomId, displayName, roomAccessBlocked, handleRoomServiceAccessError]);
+  }, [room, uid, roomId, displayName, roomAccessBlocked, handleRoomServiceAccessError, isMember]);
 
   // auto join / join retry loop
   useEffect(() => {
@@ -1704,12 +1710,29 @@ export function useRoomSnapshot(
     if (roomAccessBlocked) return;
     if (!normalizedDisplayName) return;
 
+    const recallClosedForJoin =
+      room.status === "waiting" &&
+      room.ui?.recallOpen === false &&
+      !isMember &&
+      room.hostId !== uid;
+
     const clearRetryTimer = () => {
       if (joinRetryTimerRef.current) {
         clearTimeout(joinRetryTimerRef.current);
         joinRetryTimerRef.current = null;
       }
     };
+
+    if (recallClosedForJoin) {
+      joinAttemptRef.current = 0;
+      joinCompletedRef.current = false;
+      joinLimitNotifiedRef.current = false;
+      clearRetryTimer();
+      if (joinStatus !== "idle") {
+        setJoinStatus("idle");
+      }
+      return;
+    }
 
     if (room.status === "waiting") {
       const alreadyJoined = joinCompletedRef.current;
