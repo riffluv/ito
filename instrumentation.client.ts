@@ -9,11 +9,19 @@ export async function register() {
   if (!dsn) {
     return;
   }
+  const release =
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE ||
+    process.env.SENTRY_RELEASE ||
+    process.env.NEXT_PUBLIC_APP_VERSION ||
+    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ||
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    undefined;
 
   Sentry.init({
     dsn,
     environment:
       process.env.NEXT_PUBLIC_APP_ENV || process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV,
+    release,
     tracesSampleRate: Number(
       process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.1"
     ),

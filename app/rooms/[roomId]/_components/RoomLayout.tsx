@@ -73,6 +73,7 @@ import {
   useSpectatorHostQueue,
   type SpectatorHostRequest,
 } from "@/lib/spectator/v2/useSpectatorHostQueue";
+import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import {
   applyServiceWorkerUpdate,
   getWaitingServiceWorker,
@@ -235,6 +236,8 @@ export function RoomLayout(props: RoomLayoutProps) {
     reattachPresence,
     leavingRef,
     joinStatus,
+    phase,
+    sync,
     sendRoomEvent,
     spectatorStatus: fsmSpectatorStatus,
     spectatorReason: fsmSpectatorReason,
@@ -2833,69 +2836,83 @@ export function RoomLayout(props: RoomLayoutProps) {
   }
 
   return (
-    <RoomView
-      roomId={roomId}
-      room={room}
-      nodes={{
-        header: headerNode,
-        sidebar: sidebarNode,
-        main: mainNode,
-        handArea: handAreaNode,
-      }}
-      overlays={{
-        joinStatusBanner,
-        safeUpdateBannerNode,
-        versionMismatchOverlay,
-      }}
-      dealRecoveryOpen={dealRecoveryOpen}
-      onDealRecoveryDismiss={handleDealRecoveryDismiss}
-      needName={needName}
-      onSubmitName={handleSubmitName}
-      simplePhase={{
-        status: room.status || "waiting",
-        canStartSorting,
-        topic: room.topic || null,
-      }}
-      chat={{
-        players: playersWithOptimistic,
-        hostId: room.hostId ?? null,
-        isFinished: room.status === "finished",
-        onOpenLedger: handleOpenLedger,
-        ledgerLabel: ledgerButtonLabel,
-        canOpenLedger,
-      }}
-      passwordDialog={{
-        isOpen: passwordDialogOpen,
-        roomName: stripMinimalTag(room.name),
-        isLoading: passwordDialogLoading,
-        error: passwordDialogError,
-        onSubmit: handleRoomPasswordSubmit,
-        onCancel: handleRoomPasswordCancel,
-      }}
-      settings={{
-        isOpen: isSettingsOpen,
-        onClose: () => setIsSettingsOpen(false),
-        options: room.options ?? ({} as RoomDoc["options"]),
-        isHost,
-        roomStatus: room.status || "waiting",
-      }}
-      ledger={{
-        isOpen: isLedgerOpen && !!effectiveLedgerData,
-        onClose: () => setIsLedgerOpen(false),
-        players: effectiveLedgerData?.players ?? [],
-        orderList: effectiveLedgerData?.orderList ?? [],
-        topic: effectiveLedgerData?.topic ?? null,
-        failed: effectiveLedgerData?.failed ?? false,
-        roomId: effectiveLedgerData?.roomId ?? roomId,
-        myId: effectiveLedgerData?.myId ?? meId,
-        mvpVotes: effectiveLedgerData?.mvpVotes ?? null,
-        stats: effectiveLedgerData?.stats ?? null,
-        readOnly: usingLedgerSnapshot,
-        contextLabel: ledgerContextLabel,
-      }}
-      me={me}
-      isSpectatorMode={isSpectatorMode}
-      meHasPlacedCard={meHasPlacedCard}
-    />
+    <>
+      <SentryRoomContext
+        roomId={roomId}
+        uid={uid}
+        phase={phase ?? room.status ?? "waiting"}
+        joinStatus={joinStatus}
+        isHost={isHost}
+        isMember={isMember}
+        spectatorStatus={fsmSpectatorStatus ?? null}
+        presenceReady={presenceReady}
+        presenceDegraded={presenceDegraded}
+        syncHealth={sync?.health ?? null}
+      />
+      <RoomView
+        roomId={roomId}
+        room={room}
+        nodes={{
+          header: headerNode,
+          sidebar: sidebarNode,
+          main: mainNode,
+          handArea: handAreaNode,
+        }}
+        overlays={{
+          joinStatusBanner,
+          safeUpdateBannerNode,
+          versionMismatchOverlay,
+        }}
+        dealRecoveryOpen={dealRecoveryOpen}
+        onDealRecoveryDismiss={handleDealRecoveryDismiss}
+        needName={needName}
+        onSubmitName={handleSubmitName}
+        simplePhase={{
+          status: room.status || "waiting",
+          canStartSorting,
+          topic: room.topic || null,
+        }}
+        chat={{
+          players: playersWithOptimistic,
+          hostId: room.hostId ?? null,
+          isFinished: room.status === "finished",
+          onOpenLedger: handleOpenLedger,
+          ledgerLabel: ledgerButtonLabel,
+          canOpenLedger,
+        }}
+        passwordDialog={{
+          isOpen: passwordDialogOpen,
+          roomName: stripMinimalTag(room.name),
+          isLoading: passwordDialogLoading,
+          error: passwordDialogError,
+          onSubmit: handleRoomPasswordSubmit,
+          onCancel: handleRoomPasswordCancel,
+        }}
+        settings={{
+          isOpen: isSettingsOpen,
+          onClose: () => setIsSettingsOpen(false),
+          options: room.options ?? ({} as RoomDoc["options"]),
+          isHost,
+          roomStatus: room.status || "waiting",
+        }}
+        ledger={{
+          isOpen: isLedgerOpen && !!effectiveLedgerData,
+          onClose: () => setIsLedgerOpen(false),
+          players: effectiveLedgerData?.players ?? [],
+          orderList: effectiveLedgerData?.orderList ?? [],
+          topic: effectiveLedgerData?.topic ?? null,
+          failed: effectiveLedgerData?.failed ?? false,
+          roomId: effectiveLedgerData?.roomId ?? roomId,
+          myId: effectiveLedgerData?.myId ?? meId,
+          mvpVotes: effectiveLedgerData?.mvpVotes ?? null,
+          stats: effectiveLedgerData?.stats ?? null,
+          readOnly: usingLedgerSnapshot,
+          contextLabel: ledgerContextLabel,
+        }}
+        me={me}
+        isSpectatorMode={isSpectatorMode}
+        meHasPlacedCard={meHasPlacedCard}
+      />
+    </>
   );
 }

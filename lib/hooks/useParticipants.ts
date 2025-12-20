@@ -24,6 +24,7 @@ import { logDebug } from "@/lib/utils/log";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import { traceAction } from "@/lib/utils/trace";
+import { reportOpsEvent } from "@/lib/telemetry/opsMonitoring";
 import {
   collection,
   getDocs,
@@ -126,6 +127,7 @@ export function useParticipants(
   const stableOnlineUidsRef = useRef<string[] | undefined>(undefined);
   const [presenceReady, setPresenceReady] = useState(false);
   const [presenceDegraded, setPresenceDegraded] = useState(false);
+  const lastPresenceDegradedRef = useRef<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const detachRef = useRef<null | (() => Promise<void> | void)>(null);
@@ -631,6 +633,28 @@ export function useParticipants(
     presenceStallTimerRef.current = handle;
     return cleanup;
   }, [presenceReady, roomId]);
+
+  useEffect(() => {
+    if (lastPresenceDegradedRef.current === presenceDegraded) return;
+    if (presenceDegraded) {
+      reportOpsEvent({
+        name: "presence.degraded",
+        metric: "ops.presence.degraded",
+        level: "warning",
+        tags: { state: "degraded" },
+        extra: { roomId },
+      });
+    } else if (lastPresenceDegradedRef.current !== null) {
+      reportOpsEvent({
+        name: "presence.recovered",
+        metric: "ops.presence.recovered",
+        level: "info",
+        tags: { state: "ok" },
+        extra: { roomId },
+      });
+    }
+    lastPresenceDegradedRef.current = presenceDegraded;
+  }, [presenceDegraded, roomId]);
 
   // アンマウント時のデタッチ
   useEffect(() => {

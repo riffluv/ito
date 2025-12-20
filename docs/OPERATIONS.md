@@ -110,6 +110,36 @@
 - SHOWTIME / GameResultOverlay は `audio.play(result_*)` / `playResultSound` で呼び出せば 2.6 秒以内の重複を自動抑止し、常に 1 回だけ鳴る。  
 - 調査時はコンソールで `__ITO_LAST_RESULT_SOUND_AT__`, `__ITO_RESULT_SOUND_PENDING__`, `__ITO_RESULT_SOUND_SCHEDULED_AT__` を確認すると状態が分かる。  
 
+### 5.3 Sentry アラート設計（運用向け）
+Sentry には **低カーディナリティの Ops メトリクス**を送出する。アラート設計は以下を推奨。
+
+#### 送出メトリクス（Sentry Metrics）
+- `ops.room.join.status`（tag: `status=idle|joining|retrying|joined`）
+- `ops.room.access.error`（tag: `code`, `kind`）
+- `ops.room.access.recovered`（tag: `code`）
+- `ops.room.sync.health`（tag: `health=initial|ok|stale|recovering|blocked|paused`）
+- `ops.room.sync.staleAgeMs`（tag: `health=stale|recovering|blocked`）
+- `ops.presence.degraded`（tag: `state=degraded`）
+- `ops.presence.recovered`（tag: `state=ok`）
+
+#### 推奨アラート（目安）
+1. **Sync 劣化の急増**
+   - 指標: `ops.room.sync.health` の `health=stale|recovering|blocked`
+   - 例: 5分で 5 件以上 → warning
+2. **Presence 劣化の急増**
+   - 指標: `ops.presence.degraded`
+   - 例: 10分で 5 件以上 → warning
+3. **Join リトライの増加**
+   - 指標: `ops.room.join.status` の `status=retrying`
+   - 例: 10分で 10 件以上 → warning
+4. **アクセスエラー増加**
+   - 指標: `ops.room.access.error`
+   - 例: 10分で 3 件以上 → warning
+
+#### 運用メモ
+- `roomId` や `uid` は **Sentry の context** にのみ載せ、メトリクスの tag には載せない（高カーディナリティ回避）。  
+- エラーの詳細は `traceError`/`traceAction` の Sentry イベントで確認し、メトリクスは“兆候検知”用に使う。  
+
 ---
 
 ## 6. Safe Update 運用手順

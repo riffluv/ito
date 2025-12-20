@@ -2,6 +2,7 @@
 import PerfStatsOverlay from "@/components/dev/PerfStatsOverlay";
 import PerformanceMetricsInitializer from "@/components/perf/PerformanceMetricsInitializer";
 import NetworkDebugInitializer from "@/components/dev/NetworkDebugInitializer";
+import SentryAppContext from "@/components/telemetry/SentryAppContext";
 
 import React from "react";
 
@@ -11,6 +12,7 @@ import React from "react";
 export function ClientFrame({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <SentryAppContext />
       <PerformanceMetricsInitializer />
       <NetworkDebugInitializer />
       
