@@ -114,7 +114,15 @@ function resolveRendererInfo(): RendererInfo {
 function isSoftwareRenderer(rendererRaw: string | null): boolean {
   if (!rendererRaw) return true;
   const s = rendererRaw.toLowerCase();
-  const patterns = [/swiftshader/, /llvmpipe/, /softpipe/, /software/];
+  const patterns = [
+    /swiftshader/,
+    /llvmpipe/,
+    /softpipe/,
+    /software/,
+    /warp/,
+    /microsoft basic/,
+    /basic render/,
+  ];
   return patterns.some((pattern) => pattern.test(s));
 }
 

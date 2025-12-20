@@ -110,11 +110,20 @@ const getQualityForBackground = (id: BackgroundTheme): BackgroundQuality => {
 
 export function PixiBackground({ className }: PixiBackgroundProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const { supports3D, gpuCapability, softwareRenderer } =
+  const {
+    animationMode,
+    supports3D,
+    gpuCapability,
+    softwareRenderer,
+    effectiveMode,
+  } = useAnimationSettings();
     useAnimationSettings();
   const performanceProfile: PixiBackgroundProfile =
     softwareRenderer || gpuCapability === "low" ? "software" : "default";
   const shouldForceCssFallback = !supports3D || softwareRenderer;
+  const preferSimpleBackground = animationMode === "simple";
+  const allowHighQuality =
+    !preferSimpleBackground && gpuCapability !== "low" && !softwareRenderer;
 
   const [backgroundType, setBackgroundType] = useState<BackgroundTheme>(
     typeof window !== "undefined"
@@ -152,6 +161,27 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   useEffect(() => {
     pixiBackgroundHost.setPerformanceProfile(performanceProfile);
   }, [performanceProfile]);
+
+  useEffect(() => {
+    recordBackgroundMetric("gpuCapability", gpuCapability ?? "unknown");
+    recordBackgroundMetric("softwareRenderer", softwareRenderer ? 1 : 0);
+    recordBackgroundMetric("supports3D", supports3D ? 1 : 0);
+    recordBackgroundMetric("animationMode", animationMode);
+    recordBackgroundMetric("effectiveMode", effectiveMode);
+    if (typeof window !== "undefined") {
+      const mode =
+        (window as typeof window & { __pixiBackgroundMode?: string })
+          .__pixiBackgroundMode ?? "unknown";
+      recordBackgroundMetric("hostMode", mode);
+    }
+  }, [
+    animationMode,
+    effectiveMode,
+    gpuCapability,
+    recordBackgroundMetric,
+    softwareRenderer,
+    supports3D,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -242,6 +272,21 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     };
   }, [backgroundType]);
 
+  useEffect(() => {
+    if (
+      !shouldForceCssFallback &&
+      backgroundType === "css" &&
+      fallbackPreviousTypeRef.current &&
+      !fallbackNotice
+    ) {
+      const prev = fallbackPreviousTypeRef.current;
+      fallbackPreviousTypeRef.current = null;
+      suppressPersistCssRef.current = true;
+      setBackgroundType(prev);
+      setSceneNonce((value) => value + 1);
+    }
+  }, [backgroundType, fallbackNotice, shouldForceCssFallback]);
+
   const applySceneResult = useCallback((result: SetSceneResult) => {
     if (result.renderer === "pixi") {
       updateGlobalBackground({
@@ -267,11 +312,12 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
   const applyBackgroundScene = useCallback(async () => {
     const capability = {
       supportsPixi: !shouldForceCssFallback,
-      allowHighQuality: gpuCapability !== "low" && !softwareRenderer,
+      allowHighQuality,
     };
+    const localTheme = preferSimpleBackground ? "pixi-simple" : backgroundType;
     const currentType = resolveEffectiveBackground({
       hostTheme: undefined,
-      localTheme: backgroundType,
+      localTheme,
       capability,
     });
     const effectiveQuality = getQualityForBackground(currentType);
@@ -279,6 +325,10 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
 
     if (currentType === "css" || shouldForceCssFallback) {
       if (currentType !== "css") {
+        if (!fallbackPreviousTypeRef.current) {
+          fallbackPreviousTypeRef.current = currentType;
+        }
+        suppressPersistCssRef.current = true;
         setBackgroundType("css");
       }
       pixiBackgroundHost.setCanvasVisible(false);
@@ -351,7 +401,9 @@ export function PixiBackground({ className }: PixiBackgroundProps) {
     }
   }, [
     applySceneResult,
+    allowHighQuality,
     backgroundType,
+    preferSimpleBackground,
     gpuCapability,
     performanceProfile,
     recordBackgroundMetric,

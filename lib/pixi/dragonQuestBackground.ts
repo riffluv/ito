@@ -488,7 +488,18 @@ export async function createDragonQuestBackground(
   let running = true;
   let frameId: number | null = null;
   let lastRender = performance.now();
-  const minInterval = isSoftwareProfile ? 1000 / 45 : 1000 / 60;
+  const getTargetFps = (): number => {
+    if (!isSoftwareProfile) return 60;
+    const cores =
+      typeof navigator === "undefined"
+        ? 4
+        : navigator.hardwareConcurrency || 4;
+    if (cores <= 2) return 24;
+    if (cores <= 4) return 30;
+    if (cores <= 8) return 36;
+    return 45;
+  };
+  const minInterval = 1000 / getTargetFps();
 
   // Visibility API: 非アクティブ時は完全停止
   const handleVisibilityChange = () => {

@@ -122,15 +122,12 @@ export const resolveEffectiveBackground = ({
   }
 
   // いまは HQ 版が存在しないが、将来 tier を分ける前提で hook を残す
-  const highTierIds: BackgroundTheme[] = []; // 現状なし
+  const highTierIds: BackgroundTheme[] = ["pixi-inferno"];
   if (
     !capability.allowHighQuality &&
     highTierIds.includes(preferred)
   ) {
-    // 同ファミリーの標準版に落とす
-    if (preferred === "pixi-dq" || preferred === "pixi-inferno") {
-      return findFamilyStandard("scenery");
-    }
+    // 低スペック時は軽量テーマへフォールバック
     return findFamilyStandard("simple");
   }
 
