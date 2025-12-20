@@ -124,6 +124,7 @@ interface CentralCardBoardProps {
   ) => void;
   sendRoomEvent?: (event: RoomMachineClientEvent) => void;
   presenceReady?: boolean;
+  interactionEnabled?: boolean;
 }
 
 const shallowArrayEqual = (
@@ -260,6 +261,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   onOptimisticProposalChange,
   sendRoomEvent,
   presenceReady = true,
+  interactionEnabled = true,
 }) => {
   const { isRevealing, localRevealPending } = useRevealStatus(
     roomId,
@@ -817,6 +819,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     mePlaced,
     dealReady: dealReadyForMe,
     dealGuardActive,
+    interactionEnabled,
   });
 
   const updatePendingState = useCallback(
@@ -2299,7 +2302,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     endDropSession();
   }, [cancelPendingDragMove, clearActive, updateDropAnimationTarget, endDropSession]);
 
-  const activeBoard = resolveMode === "sort-submit" && roomStatus === "clue";
+  const activeBoard =
+    interactionEnabled && resolveMode === "sort-submit" && roomStatus === "clue";
 
   return (
     <Box

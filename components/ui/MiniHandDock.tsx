@@ -277,6 +277,7 @@ interface MiniHandDockProps {
   hostClaimStatus?: HostClaimStatus;
   presenceReady?: boolean;
   presenceDegraded?: boolean;
+  interactionEnabled?: boolean;
   phaseMessage?: string | null;
   roundPreparing?: boolean;
   showtimeIntentHandlers?: ShowtimeIntentHandlers;
@@ -310,11 +311,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     hostClaimStatus,
     presenceReady = true,
     presenceDegraded = false,
+    interactionEnabled = true,
     phaseMessage,
     roundPreparing = false,
     showtimeIntentHandlers,
     updateOptimisticProposalOverride,
   } = props;
+  const interactionDisabled = !interactionEnabled;
 
   const phaseMessageBottom = React.useMemo(
     () => ({ base: "calc(16px + 60px)", md: "calc(20px + 62px)" }),
@@ -511,6 +514,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     roomStatus: effectiveRoomStatus,
     player: me ?? null,
     inputRef,
+    interactionEnabled,
     onFeedback: setInlineFeedback,
   });
 
@@ -802,7 +806,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* 🔥 せーの！ボタン（フッター外の浮遊ボタン - Octopath風） */}
       <SeinoButton
         isVisible={seinoVisible}
-        disabled={preparing || isRevealAnimating}
+        disabled={preparing || isRevealAnimating || interactionDisabled}
         onClick={async () => {
           try {
             const ok = await evalSorted();
@@ -894,7 +898,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 size="lg"
                 visual="solid"
                 onClick={() => quickStart()}
-                disabled={!presenceCanStart || quickStartPending}
+                disabled={!presenceCanStart || quickStartPending || interactionDisabled}
                 css={{
                   animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
                 }}
@@ -965,7 +969,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               visual="solid"
               muteClickSound
               onClick={handleNextGame}
-              disabled={isRestarting || quickStartPending || autoStartLocked}
+              disabled={
+                isRestarting || quickStartPending || autoStartLocked || interactionDisabled
+              }
               css={{
                 animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
               }}
@@ -989,6 +995,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           justify="center"
           flexWrap="nowrap"
           maxW="95vw"
+          pointerEvents={interactionDisabled ? "none" : "auto"}
           css={{
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               bottom: "16px",
@@ -1066,7 +1073,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 visual="solid"
                 palette="brand"
                 onClick={handleDecide}
-                disabled={preparing || !canDecide}
+                disabled={preparing || !canDecide || interactionDisabled}
                 w="auto"
                 minW="60px"
               >
@@ -1080,7 +1087,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 visual="outline"
                 palette="gray"
                 onClick={handleClear}
-                disabled={clearButtonDisabled}
+                disabled={clearButtonDisabled || interactionDisabled}
                 w="auto"
                 minW="60px"
               >
@@ -1094,7 +1101,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 visual="solid"
                 palette="brand"
                 onClick={handleSubmit}
-                disabled={!effectiveCanClickProposalButton}
+                disabled={!effectiveCanClickProposalButton || interactionDisabled}
                 w="auto"
                 minW="70px"
               >
@@ -1131,7 +1138,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   isLoading={topicActionLoading}
                   disabled={
                     topicActionLoading ||
-                    (isGameFinished && effectiveDefaultTopicType !== "カスタム")
+                    (isGameFinished && effectiveDefaultTopicType !== "カスタム") ||
+                    interactionDisabled
                   }
                   onClick={async () => {
                     if (topicActionLoading) return;
@@ -1169,7 +1177,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     />
                   }
                   isLoading={dealActionLoading}
-                  disabled={dealActionLoading || isGameFinished}
+                  disabled={dealActionLoading || isGameFinished || interactionDisabled}
                   onClick={async () => {
                     if (dealActionLoading || isGameFinished) return;
                     setDealActionLoading(true);
@@ -1194,7 +1202,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     />
                   }
                   isLoading={isResetting}
-                  disabled={isResetting}
+                  disabled={isResetting || interactionDisabled}
                   onClick={async () => {
                     if (isResetting) return;
                     await resetGame({ playSound: true });
@@ -1257,6 +1265,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     setCustomText(currentTopic || "");
                     setCustomOpen(true);
                   }}
+                  disabled={interactionDisabled}
                   size="sm"
                   w="40px"
                   h="40px"
@@ -1468,10 +1477,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                     やめる
                   </button>
                   <button
-                    onClick={() =>
-                      customText.trim() && handleSubmitCustom(customText)
-                    }
-                    disabled={!customText.trim()}
+                    onClick={() => {
+                      if (interactionDisabled) return;
+                      if (customText.trim()) handleSubmitCustom(customText);
+                    }}
+                    disabled={!customText.trim() || interactionDisabled}
                     style={{
                       minWidth: "140px",
                       height: "40px",
@@ -1480,24 +1490,28 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                       fontSize: "1rem",
                       fontFamily: "monospace",
                       border: "borders.retrogameThin",
-                      background: !customText.trim()
-                        ? "#666"
-                        : "var(--colors-richBlack-600)",
+                      background:
+                        !customText.trim() || interactionDisabled
+                          ? "#666"
+                          : "var(--colors-richBlack-600)",
                       color: "white",
-                      cursor: !customText.trim() ? "not-allowed" : "pointer",
+                      cursor:
+                        !customText.trim() || interactionDisabled
+                          ? "not-allowed"
+                          : "pointer",
                       textShadow: "1px 1px 0px #000",
                       transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                      opacity: !customText.trim() ? 0.6 : 1,
+                      opacity: !customText.trim() || interactionDisabled ? 0.6 : 1,
                     }}
                     onMouseEnter={(e) => {
-                      if (customText.trim()) {
+                      if (customText.trim() && !interactionDisabled) {
                         e.currentTarget.style.background = "white";
                         e.currentTarget.style.color =
                           "var(--colors-richBlack-800)";
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (customText.trim()) {
+                      if (customText.trim() && !interactionDisabled) {
                         e.currentTarget.style.background =
                           "var(--colors-richBlack-600)";
                         e.currentTarget.style.color = "white";

@@ -12,6 +12,7 @@ import CentralCardBoard from "@/components/CentralCardBoard";
 import { AppButton } from "@/components/ui/AppButton";
 import DragonQuestParty from "@/components/ui/DragonQuestParty";
 import MiniHandDock from "@/components/ui/MiniHandDock";
+import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
 import { SpectatorHUD } from "@/components/rooms/SpectatorHUD";
 import { RoomView } from "@/components/rooms/RoomView";
 import { notify } from "@/components/ui/notify";
@@ -38,6 +39,7 @@ import {
 import { clearRevealPending, pruneProposalByEligible } from "@/lib/game/service";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
+import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
 import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import type {
   RoomMachineClientEvent,
@@ -251,6 +253,8 @@ export function RoomLayout(props: RoomLayoutProps) {
   const roomPasswordHash = room?.passwordHash ?? null;
   const roomPasswordSalt = room?.passwordSalt ?? null;
   const { user, displayName, setDisplayName, loading: authLoading } = auth;
+  const presenceSessionGuard = usePresenceSessionGuard(roomId, uid);
+  const interactionEnabled = presenceSessionGuard.isActiveSession;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const showtimeProcessedRef = useRef<Set<string>>(new Set());
@@ -2429,6 +2433,7 @@ export function RoomLayout(props: RoomLayoutProps) {
           onOptimisticProposalChange={updateOptimisticProposalOverride}
           sendRoomEvent={sendRoomEvent}
           presenceReady={presenceReady}
+          interactionEnabled={interactionEnabled}
         />
       </Box>
     </Box>
@@ -2526,6 +2531,13 @@ export function RoomLayout(props: RoomLayoutProps) {
       seatAcceptanceActive ||
       (uid ? players.some((player) => player.id === uid) : false));
 
+  const sessionNotice =
+    !isSpectatorMode &&
+    presenceSessionGuard.hasMultipleSessions &&
+    !presenceSessionGuard.isActiveSession ? (
+      <MultiSessionNotice onRequestActive={presenceSessionGuard.requestActive} />
+    ) : null;
+
   const showRejoinOverlay =
     (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
   const prioritizedTransitionMessage = isMember ? transitionMessage : null;
@@ -2563,6 +2575,7 @@ export function RoomLayout(props: RoomLayoutProps) {
       roundIds={clueTargetIds}
       presenceReady={presenceReady}
       presenceDegraded={presenceDegraded}
+      interactionEnabled={interactionEnabled}
       onOpenSettings={() => setIsSettingsOpen(true)}
       onLeaveRoom={leaveRoom}
       pop={pop}
@@ -2579,6 +2592,7 @@ export function RoomLayout(props: RoomLayoutProps) {
       controller={spectatorController}
       seatRequestTimedOut={seatRequestTimedOut}
       spectatorUpdateButton={spectatorUpdateButton}
+      extraNotice={sessionNotice}
       onRetryJoin={handleRetryJoin}
       onForceExit={handleForcedExitLeaveNow}
       isSpectatorMode={isSpectatorMode}

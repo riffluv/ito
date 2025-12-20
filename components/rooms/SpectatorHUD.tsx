@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { VStack } from "@chakra-ui/react";
 
 import { SpectatorNotice } from "@/components/ui/SpectatorNotice";
 import { SpectatorRejoinManager } from "@/components/ui/SpectatorRejoinManager";
@@ -29,6 +30,7 @@ type SpectatorHUDProps = {
   controller: SpectatorController;
   seatRequestTimedOut: boolean;
   spectatorUpdateButton: ReactNode;
+  extraNotice?: ReactNode;
   onRetryJoin: () => void;
   onForceExit: () => void;
   isSpectatorMode: boolean;
@@ -43,6 +45,7 @@ export function SpectatorHUD({
   controller,
   seatRequestTimedOut,
   spectatorUpdateButton,
+  extraNotice,
   onRetryJoin,
   onForceExit,
   isSpectatorMode,
@@ -82,6 +85,16 @@ export function SpectatorHUD({
     isSpectatorMode,
     isMember,
   ]);
+
+  const mergedNotice = useMemo(() => {
+    if (!extraNotice && !notice) return null;
+    return (
+      <VStack gap={3} align="stretch">
+        {extraNotice}
+        {notice}
+      </VStack>
+    );
+  }, [extraNotice, notice]);
 
   useEffect(() => {
     if (!host.enabled || !host.autoApprove) return;
@@ -125,7 +138,7 @@ export function SpectatorHUD({
   return (
     <HandAreaSection
       hostPanel={hostPanel}
-      spectatorNotice={notice}
+      spectatorNotice={mergedNotice}
       handNode={renderedHand}
     />
   );

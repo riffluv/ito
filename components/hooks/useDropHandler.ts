@@ -31,6 +31,7 @@ interface UseDropHandlerProps {
   dealReady: boolean;
   dealGuardActive?: boolean;
   presenceReady?: boolean;
+  interactionEnabled?: boolean;
 }
 
 export function useDropHandler({
@@ -45,6 +46,7 @@ export function useDropHandler({
   dealReady,
   dealGuardActive = false,
   presenceReady = true,
+  interactionEnabled = true,
 }: UseDropHandlerProps) {
   const soundManager = useSoundManager();
   const { playSuccessSound, playInvalidSound } = useDropSounds(roomId);
@@ -58,6 +60,7 @@ export function useDropHandler({
     playInvalidSound,
     dealReady,
     dealGuardActive,
+    interactionEnabled,
   });
 
   const logDropRejection = useCallback(
@@ -671,6 +674,7 @@ type DropEligibilityOptions = {
   playInvalidSound: () => void;
   dealReady: boolean;
   dealGuardActive: boolean;
+  interactionEnabled: boolean;
 };
 
 type DropValidationResult =
@@ -691,6 +695,7 @@ function useDropEligibility({
   playInvalidSound,
   dealReady,
   dealGuardActive,
+  interactionEnabled,
 }: DropEligibilityOptions) {
   const hasClueText = useMemo(() => {
     if (typeof me?.clue1 !== "string") return false;
@@ -698,6 +703,7 @@ function useDropEligibility({
   }, [me?.clue1]);
 
   const canDrop = useMemo(() => {
+    if (!interactionEnabled) return false;
     if (roomStatus !== "clue") return false;
     if (!presenceReady) return false;
     if (!hasNumber) return false;
@@ -705,10 +711,34 @@ function useDropEligibility({
     if (dealGuardActive) return false;
     if (!hasClueText) return false;
     return true;
-  }, [roomStatus, presenceReady, hasNumber, dealReady, hasClueText, dealGuardActive]);
+  }, [
+    interactionEnabled,
+    roomStatus,
+    presenceReady,
+    hasNumber,
+    dealReady,
+    hasClueText,
+    dealGuardActive,
+  ]);
 
   const ensureCanDrop = useCallback(
     (pid: string): DropValidationResult => {
+      if (!interactionEnabled) {
+        traceAction("interaction.drop.blocked", {
+          roomId,
+          playerId: meId,
+          reason: "readonly-tab",
+        });
+        playInvalidSound();
+        notify({
+          id: `${roomId}-readonly-tab`,
+          title: "別タブで操作中",
+          description: "操作する場合はアクティブなタブに切り替えてください。",
+          type: "info",
+          duration: 1600,
+        });
+        return { ok: false, outcome: "error", reason: "readonly-tab" };
+      }
       if (dealGuardActive) {
         traceAction("interaction.drop.blocked", {
           roomId,
@@ -795,7 +825,17 @@ function useDropEligibility({
 
       return { ok: true };
     },
-    [canDrop, dealGuardActive, dealReady, me, meId, playInvalidSound, roomId, presenceReady]
+    [
+      canDrop,
+      dealGuardActive,
+      dealReady,
+      interactionEnabled,
+      me,
+      meId,
+      playInvalidSound,
+      roomId,
+      presenceReady,
+    ]
   );
 
   return { canDrop, ensureCanDrop };

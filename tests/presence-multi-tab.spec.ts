@@ -88,9 +88,17 @@ const createRoomAsHost = async (page: Page, hostName: string, roomName: string) 
   await page.getByRole("button", { name: "作成" }).click();
 
   const enterRoom = page.getByRole("button", { name: "へやへ すすむ" });
-  await expect(enterRoom).toBeVisible({ timeout: 30_000 });
-  await enterRoom.click();
-  await page.waitForURL(/\/rooms\/[^/]+$/, { timeout: 45_000 });
+  const roomUrlPattern = /\/rooms\/[^/]+$/;
+  const entry = await Promise.race([
+    enterRoom.waitFor({ state: "visible", timeout: 30_000 }).then(() => "button"),
+    page.waitForURL(roomUrlPattern, { timeout: 45_000 }).then(() => "url"),
+  ]).catch(() => null);
+  if (entry === "button") {
+    await enterRoom.click();
+    await page.waitForURL(roomUrlPattern, { timeout: 45_000 });
+  } else if (entry !== "url") {
+    await page.waitForURL(roomUrlPattern, { timeout: 45_000 });
+  }
 
   const url = new URL(page.url());
   const roomId = url.pathname.split("/rooms/")[1] ?? "";
@@ -148,6 +156,16 @@ test("同一ユーザーの複数タブでオンライン人数が崩れない",
     await waitForPhase(p2Tab, "waiting", 60_000);
 
     await waitForOnlineCount(page, 2, 60_000);
+
+    const readonlyMessage = "このタブは閲覧専用です";
+    await expect(p2.page.getByText(readonlyMessage)).toBeVisible({ timeout: 45_000 });
+    await expect(p2Tab.getByText(readonlyMessage)).toBeHidden({ timeout: 10_000 });
+    await expect(p2.page.getByLabel("連想ワード")).toBeDisabled({ timeout: 20_000 });
+    await expect(p2Tab.getByLabel("連想ワード")).toBeEnabled({ timeout: 20_000 });
+
+    await p2.page.getByRole("button", { name: "このタブで操作する" }).click();
+    await expect(p2.page.getByText(readonlyMessage)).toBeHidden({ timeout: 45_000 });
+    await expect(p2Tab.getByText(readonlyMessage)).toBeVisible({ timeout: 45_000 });
 
     await p2Tab.close();
     await page.waitForTimeout(1500);

@@ -70,6 +70,7 @@ type UseClueInputOptions = {
   roomStatus?: string;
   player: (PlayerDoc & { id: string }) | null | undefined;
   inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement>;
+  interactionEnabled?: boolean;
   onFeedback?: (payload: ClueFeedback | null) => void;
 };
 
@@ -78,6 +79,7 @@ export function useClueInput({
   roomStatus,
   player,
   inputRef,
+  interactionEnabled = true,
   onFeedback,
 }: UseClueInputOptions) {
   const [text, setText] = useState<string>(player?.clue1 || "");
@@ -88,7 +90,8 @@ export function useClueInput({
     () => deferredText.trim(),
     [deferredText]
   );
-  const clueEditable = roomStatus === "waiting" || roomStatus === "clue";
+  const clueEditable =
+    interactionEnabled && (roomStatus === "waiting" || roomStatus === "clue");
   const ready = !!player?.ready;
   const hasText = trimmedText.length > 0;
   const displayHasText = deferredTrimmedText.length > 0;
