@@ -19,8 +19,17 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - name: Install dependencies
         run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
       - name: Lint
         run: npm run lint
@@ -30,3 +39,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: E2E (Firebase emulators)
+        env:
+          NEXT_PUBLIC_FEATURE_SAFE_UPDATE: "1"
+          NEXT_PUBLIC_FIREBASE_USE_EMULATOR: "true"
+          NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST: localhost
+          NEXT_PUBLIC_FIRESTORE_EMULATOR_PORT: "8080"
+          NEXT_PUBLIC_AUTH_EMULATOR_HOST: localhost
+          NEXT_PUBLIC_AUTH_EMULATOR_PORT: "9099"
+          NEXT_PUBLIC_DATABASE_EMULATOR_HOST: localhost
+          NEXT_PUBLIC_DATABASE_EMULATOR_PORT: "9000"
+        run: >
+          npx firebase emulators:exec --only firestore,auth,database
+          "npx playwright test --workers=1
+          tests/safe-update-flow.spec.ts
+          tests/safe-update-room.spec.ts
+          tests/host-dirty-disconnect.spec.ts
+          tests/presence-offline-recover.spec.ts"
