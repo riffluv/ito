@@ -115,6 +115,7 @@ Sentry には **低カーディナリティの Ops メトリクス**を送出す
 
 #### 送出メトリクス（Sentry Metrics）
 - `ops.room.join.status`（tag: `status=idle|joining|retrying|joined`）
+- `ops.room.join.retrying`（retrying 専用）
 - `ops.room.access.error`（tag: `code`, `kind`）
 - `ops.room.access.recovered`（tag: `code`）
 - `ops.room.sync.health`（tag: `health=initial|ok|stale|recovering|blocked|paused`）
@@ -131,6 +132,7 @@ Sentry には **低カーディナリティの Ops メトリクス**を送出す
    - 例: 10分で 5 件以上 → warning
 3. **Join リトライの増加**
    - 指標: `ops.room.join.status` の `status=retrying`
+   - または `ops.room.join.retrying`
    - 例: 10分で 10 件以上 → warning
 4. **アクセスエラー増加**
    - 指標: `ops.room.access.error`

@@ -1846,6 +1846,19 @@ export function useRoomSnapshot(
         attempt: joinAttemptRef.current,
       },
     });
+    if (joinStatus === "retrying") {
+      reportOpsEvent({
+        name: "room.join.retrying",
+        metric: "ops.room.join.retrying",
+        level: "warning",
+        tags: { status: "retrying" },
+        extra: {
+          roomId,
+          phase: room?.status ?? null,
+          attempt: joinAttemptRef.current,
+        },
+      });
+    }
     lastJoinStatusRef.current = joinStatus;
   }, [joinStatus, roomId, room?.status]);
 
