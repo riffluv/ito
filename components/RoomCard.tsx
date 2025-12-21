@@ -54,6 +54,8 @@ export const RoomCard = memo(function RoomCard({
       role="group"
       position="relative"
       cursor={isWaiting ? "default" : "not-allowed"}
+      data-room-id={id}
+      data-room-card="true"
       data-locked={locked ? "true" : "false"}
       _hover={{}}
       onPointerEnter={handlePrefetch}
@@ -171,7 +173,12 @@ export const RoomCard = memo(function RoomCard({
               <HStack justify="space-between" w="100%">
                 <HStack gap={1.5}>
                   <Users size={14} color="var(--colors-textMuted)" />
-                  <Text fontSize="sm" color="fgMuted" fontWeight={500}>
+                  <Text
+                    fontSize="sm"
+                    color="fgMuted"
+                    fontWeight={500}
+                    data-room-count="true"
+                  >
                     {count}人
                   </Text>
                 </HStack>

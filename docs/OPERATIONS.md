@@ -104,6 +104,22 @@
 - RTDB presence が安定している前提で `NEXT_PUBLIC_LOBBY_VERIFY_SINGLE` / `NEXT_PUBLIC_LOBBY_VERIFY_MULTI` は既定 OFF。必要なときだけ一時的に有効化する。  
 - Firestore へのフォールバック集計を完全停止したい場合は `NEXT_PUBLIC_DISABLE_FS_FALLBACK=1` を設定する（その間のロビー人数は 0 固定になる）。本番で presence が健全なときだけ使用する。  
 
+#### 5.1.1 ロビー人数のE2E
+- `tests/lobby-presence-count.spec.ts` が **「ホスト1人 → 参加者追加 → 参加者の多重タブ → 離脱」** の流れでロビー人数が崩れないことを検証する。
+- 実行は Firebase Emulator で行う（`--only firestore,auth,database`）。
+
+#### 5.1.2 ロビー/Presenceのスケール時メモ
+- **RTDBは常時接続が前提**。切断・再接続は `onDisconnect` によりクリーンアップされるため、オフライン/クラッシュ時でも presence は回復しやすい（Firebase SDKの前提）。  
+- ロビー人数は **RTDBの鮮度しきい値**で判定される。過剰に短くするとフラッピング、長くすると離脱反映が遅くなるため、変更は慎重に。  
+  - `NEXT_PUBLIC_LOBBY_STALE_MS` / `NEXT_PUBLIC_LOBBY_ZERO_FREEZE_MS` を調整する場合は **本番に近い環境でE2E確認**する。  
+- ルーム一覧の取得は `useOptimizedRooms` のクールダウンを持つため、反映が遅い場合はリフレッシュボタンで強制取得できる。  
+  - 調整用: `NEXT_PUBLIC_LOBBY_RECENT_WINDOW_MS` / `NEXT_PUBLIC_LOBBY_FETCH_DEBUG=1`
+
+#### 5.1.3 ロビー調査の手元指標
+- `window.__ITO_LOBBY_METRICS__` にロビー関連の簡易メトリクスが蓄積される。  
+  - 例: `fallback_single` / `fallback_multi`（Firestore フォールバックにかかった時間）  
+  - 200件を超えると古い順に削除される。  
+
 ### 5.2 Audio Ready / 結果サウンド再生（2025-11）
 - `SoundProvider` 起動時に Web Audio のウォームアップと「勝利/敗北」の prewarm を完了したら `window.__AUDIO_READY__` と内部 ready promise を解決する実装に更新。  
 - 結果サウンドは新 API `playResultSound({ outcome, delayMs?, reason? })` を経由させる。ready 待ち・一意制御・ユーザー設定（normal/epic）マッピング・タブ遅延での解錠までを内部で担当。  
