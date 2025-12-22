@@ -107,6 +107,7 @@ export default function WaitingArea({
         aria-label={dropZoneEnabled ? "カード待機ゾーン" : undefined}
         data-drop-enabled={dropZoneEnabled ? "true" : undefined}
         data-drop-over={dropZoneEnabled ? "true" : undefined}
+        data-testid="waiting-area"
         css={dropZoneCss}
       >
         {displayMode === "minimal"

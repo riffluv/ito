@@ -312,6 +312,30 @@ export function PixiHudStage({ children, zIndex = 20, enabled = true }: PixiHudS
     [waitForRendererReady]
   );
 
+  useEffect(() => {
+    if (!enabled || typeof document === "undefined") {
+      return () => {};
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      renderOnce("visibility.resume")
+        .then((ok) => {
+          if (!ok) {
+            traceAction("pixi.hud.visibilityRecover");
+            requestRestart();
+          }
+        })
+        .catch(() => {
+          traceAction("pixi.hud.visibilityRecover");
+          requestRestart();
+        });
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [enabled, renderOnce, requestRestart]);
+
   const pauseHud = useCallback(() => {
     const currentApp = appRef.current;
     if (currentApp) {

@@ -200,11 +200,14 @@ export function useBoardSlots({
   ]);
 
   const pendingLookup = useMemo<ReadonlySet<string>>(() => {
+    if (roomStatus !== "clue") {
+      return EMPTY_PLAYER_ID_SET;
+    }
     if (pendingIndexById === EMPTY_PENDING_INDEX_MAP || pendingIndexById.size === 0) {
       return EMPTY_PLAYER_ID_SET;
     }
     return new Set(pendingIndexById.keys());
-  }, [pendingIndexById]);
+  }, [pendingIndexById, roomStatus]);
 
   const placedLookup = useMemo<ReadonlySet<string>>(() => {
     if (!Array.isArray(activeProposal) || activeProposal.length === 0) {

@@ -88,6 +88,8 @@ function WaitingAreaCardComponent({
       aria-grabbed={isDragging ? "true" : "false"}
       aria-label={player.name ? `${player.name}のカード` : "カード"}
       data-dragging={isDragging ? "true" : undefined}
+      data-waiting-card="true"
+      data-player-name={player.name || "匿名"}
       {...(draggable ? listeners : {})}
       {...(draggable ? attributes : {})}
     >

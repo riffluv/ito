@@ -961,6 +961,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [roomStatus]);
 
+
   const { resultFlipMap, handleResultCardFlip } = useResultFlipState(
     roomStatus,
     orderList
@@ -1351,6 +1352,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       setPending,
     ]
   );
+
+  useEffect(() => {
+    if (roomStatus === "waiting") {
+      resetOptimisticState("forced-sync");
+    }
+  }, [roomStatus, resetOptimisticState]);
 
   const applyOptimisticReorder = useCallback(
     (playerId: string, targetIndex: number) => {
