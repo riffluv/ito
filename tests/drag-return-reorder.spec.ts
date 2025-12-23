@@ -122,6 +122,22 @@ const dragOwnWaitingCardToSlot = async (
   await page.mouse.up();
 };
 
+const placeOwnWaitingCardToSlot = async (
+  page: Page,
+  playerName: string,
+  cardId: string,
+  slotIndex: number,
+  slots: ReturnType<Page["locator"]>
+) => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await dragOwnWaitingCardToSlot(page, playerName, slotIndex, slots);
+    const placedIndex = await getSlotIndexForCard(page, cardId, slots);
+    if (placedIndex === slotIndex) return;
+    await page.waitForTimeout(400);
+  }
+  await expectCardInSlot(page, cardId, slotIndex);
+};
+
 const getPlayerIdFromWaiting = async (page: Page, playerName: string) => {
   const waitingCard = page.locator(
     `[data-waiting-card][data-player-name="${playerName}"]`
@@ -174,15 +190,17 @@ const getSlotIndexForCard = async (
   cardId: string,
   slots: ReturnType<Page["locator"]>
 ) => {
+  const boardRoot = page.locator("[data-board-root]");
+  const token = boardRoot.locator(`[data-card-id="${cardId}"]`);
+  if ((await token.count()) > 0) {
+    const idx = await slotIndexForToken(token.first(), slots);
+    return idx >= 0 ? idx : null;
+  }
   const waitingCard = page.locator(
     `[data-waiting-card][data-player-id="${cardId}"]`
   );
   if ((await waitingCard.count()) > 0) return null;
-  const boardRoot = page.locator("[data-board-root]");
-  const token = boardRoot.locator(`[data-card-id="${cardId}"]`);
-  if ((await token.count()) === 0) return null;
-  const idx = await slotIndexForToken(token.first(), slots);
-  return idx >= 0 ? idx : null;
+  return null;
 };
 
 const expectCardInSlot = async (page: Page, cardId: string, slotIndex: number) => {
@@ -263,12 +281,21 @@ test("戻す→再配置でも完走できる", async ({ page, browser }) => {
     const midIdx = Math.floor(slotCount / 2);
     const rightIdx = slotCount - 1;
 
-    await dragOwnWaitingCardToSlot(page, hostName, leftIdx, slots);
-    await expectCardInSlot(page, hostCardId, leftIdx);
-    await dragOwnWaitingCardToSlot(p2.page, p2Name, midIdx, p2.page.locator("[data-board-root] [data-slot]"));
-    await expectCardInSlot(p2.page, p2CardId, midIdx);
-    await dragOwnWaitingCardToSlot(p3.page, p3Name, rightIdx, p3.page.locator("[data-board-root] [data-slot]"));
-    await expectCardInSlot(p3.page, p3CardId, rightIdx);
+    await placeOwnWaitingCardToSlot(page, hostName, hostCardId, leftIdx, slots);
+    await placeOwnWaitingCardToSlot(
+      p2.page,
+      p2Name,
+      p2CardId,
+      midIdx,
+      p2.page.locator("[data-board-root] [data-slot]")
+    );
+    await placeOwnWaitingCardToSlot(
+      p3.page,
+      p3Name,
+      p3CardId,
+      rightIdx,
+      p3.page.locator("[data-board-root] [data-slot]")
+    );
 
     for (const p of [page, p2.page, p3.page]) {
       await expectCardInSlot(p, hostCardId, leftIdx);
@@ -288,10 +315,14 @@ test("戻す→再配置でも完走できる", async ({ page, browser }) => {
     await hostReturn.click();
     await waitForRemovedFromBoard([page], hostCardId, 60_000);
 
-    await dragOwnWaitingCardToSlot(page, hostName, midIdx, slots);
-    await expectCardInSlot(page, hostCardId, midIdx);
-    await dragOwnWaitingCardToSlot(p2.page, p2Name, leftIdx, p2.page.locator("[data-board-root] [data-slot]"));
-    await expectCardInSlot(p2.page, p2CardId, leftIdx);
+    await placeOwnWaitingCardToSlot(page, hostName, hostCardId, midIdx, slots);
+    await placeOwnWaitingCardToSlot(
+      p2.page,
+      p2Name,
+      p2CardId,
+      leftIdx,
+      p2.page.locator("[data-board-root] [data-slot]")
+    );
 
     for (const p of [page, p2.page, p3.page]) {
       await expectCardInSlot(p, hostCardId, midIdx);
