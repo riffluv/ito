@@ -129,11 +129,28 @@ const placeOwnWaitingCardToSlot = async (
   slotIndex: number,
   slots: ReturnType<Page["locator"]>
 ) => {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  const waitForPlacement = async () => {
+    await expect
+      .poll(async () => getSlotIndexForCard(page, cardId, slots), {
+        timeout: 12_000,
+      })
+      .toBe(slotIndex);
+  };
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     await dragOwnWaitingCardToSlot(page, playerName, slotIndex, slots);
-    const placedIndex = await getSlotIndexForCard(page, cardId, slots);
-    if (placedIndex === slotIndex) return;
-    await page.waitForTimeout(400);
+    try {
+      await waitForPlacement();
+      return;
+    } catch {
+      const waitingCard = page.locator(
+        `[data-waiting-card][data-player-id="${cardId}"]`
+      );
+      if ((await waitingCard.count()) === 0) {
+        break;
+      }
+      await page.waitForTimeout(400);
+    }
   }
   await expectCardInSlot(page, cardId, slotIndex);
 };
