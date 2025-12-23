@@ -103,6 +103,7 @@ import { PRUNE_PROPOSAL_DEBOUNCE_MS } from '@/lib/constants/uiTimings';
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 
 const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
+const ROUND_PREPARING_HOLD_MS = 1200;
 const HOST_UNAVAILABLE_GRACE_MS = Math.max(
   10_000,
   Math.min(PRESENCE_STALE_MS, 30_000)
@@ -706,6 +707,44 @@ export function RoomLayout(props: RoomLayoutProps) {
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
   const roundPreparing = room?.ui?.roundPreparing === true;
+  const [roundPreparingHold, setRoundPreparingHold] = useState(false);
+  const roundPreparingHoldUntilRef = useRef(0);
+  const roundPreparingHoldTimerRef = useRef<number | null>(null);
+  const clearRoundPreparingHoldTimer = useCallback(() => {
+    if (roundPreparingHoldTimerRef.current !== null) {
+      window.clearTimeout(roundPreparingHoldTimerRef.current);
+      roundPreparingHoldTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => () => clearRoundPreparingHoldTimer(), [clearRoundPreparingHoldTimer]);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setRoundPreparingHold(roundPreparing);
+      return;
+    }
+    if (roundPreparing) {
+      roundPreparingHoldUntilRef.current = Date.now() + ROUND_PREPARING_HOLD_MS;
+      clearRoundPreparingHoldTimer();
+      roundPreparingHoldTimerRef.current = window.setTimeout(() => {
+        roundPreparingHoldTimerRef.current = null;
+        setRoundPreparingHold(false);
+      }, ROUND_PREPARING_HOLD_MS);
+      setRoundPreparingHold(true);
+      return;
+    }
+    const remaining = roundPreparingHoldUntilRef.current - Date.now();
+    if (remaining > 0) {
+      clearRoundPreparingHoldTimer();
+      roundPreparingHoldTimerRef.current = window.setTimeout(() => {
+        roundPreparingHoldTimerRef.current = null;
+        setRoundPreparingHold(false);
+      }, remaining);
+      setRoundPreparingHold(true);
+    } else {
+      clearRoundPreparingHoldTimer();
+      setRoundPreparingHold(false);
+    }
+  }, [roundPreparing, clearRoundPreparingHoldTimer]);
   const ledgerOrderList = useMemo(() => {
     if (!Array.isArray(orderList)) return [];
     return (orderList as (string | null | undefined)[])
@@ -2357,18 +2396,17 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   const meHasPlacedCard = submittedPlayerIds.includes(meId);
   const playerCount = playersWithOptimistic.length;
-  const meIsReady = me?.ready === true;
   let baseOverlayMessage: string | null = null;
   if (room && isMember) {
     const status = room.status ?? null;
     if (status === "waiting") {
       baseOverlayMessage = `メンバー待機中（参加人数：${playerCount}人）`;
     } else if (status === "clue") {
-      if (meHasPlacedCard) {
-        baseOverlayMessage = "みんなで話し合って順番を決めよう！";
-      } else if (meIsReady) {
-        baseOverlayMessage = "上の空きスロットにカードをドラッグだ！";
-      }
+      baseOverlayMessage = "連想ワード入力中";
+    } else if (status === "reveal") {
+      baseOverlayMessage = "判定中…";
+    } else if (status === "finished") {
+      baseOverlayMessage = "結果を確認中…";
     }
   }
   const displayRoomName = stripMinimalTag(room?.name) || "";
@@ -2582,14 +2620,11 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   const showRejoinOverlay =
     (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
-  const prioritizedTransitionMessage = isMember ? transitionMessage : null;
   let phaseMessage: string | null = null;
   if (showRejoinOverlay) {
     phaseMessage = "ルームへ再参加中です...";
-  } else if (roundPreparing) {
+  } else if (roundPreparing || roundPreparingHold) {
     phaseMessage = "カードを配布しています…";
-  } else if (prioritizedTransitionMessage) {
-    phaseMessage = prioritizedTransitionMessage;
   } else if (baseOverlayMessage) {
     phaseMessage = baseOverlayMessage;
   } else if (forcedExitReason === "game-in-progress") {

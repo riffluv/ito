@@ -1215,7 +1215,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       )}
 
       {/* 状況アナウンス */}
-      {(inlineFeedback || phaseMessage) && (
+      {phaseMessage && (
         <Box
           position="fixed"
           bottom={phaseMessageBottom}
@@ -1235,7 +1235,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             whiteSpace="nowrap"
             animation={`${phaseMessagePulse} 1.7s ease-in-out infinite`}
           >
-            {inlineFeedback ? inlineFeedback.message : phaseMessage}
+            {phaseMessage}
           </Text>
         </Box>
       )}
