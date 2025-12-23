@@ -52,17 +52,58 @@ const installDisplayNameForContext = async (context: BrowserContext, displayName
 const createRoomAsHost = async (page: Page, hostName: string, roomName: string) => {
   await installDisplayNameForPage(page, hostName);
   await ensureE2EEmulators(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
   await page.getByRole("button", { name: "新しい部屋を作成" }).first().click();
 
-  const roomInput = page.getByPlaceholder("れい: 友達とあそぶ");
+  const createDialog = page.getByRole("dialog", { name: "へやを つくる" });
+  await expect(createDialog).toBeVisible({ timeout: 20_000 });
+
+  const roomInput = createDialog.getByPlaceholder("れい: 友達とあそぶ");
   await expect(roomInput).toBeVisible({ timeout: 20_000 });
   await roomInput.fill(roomName);
-  await page.getByRole("button", { name: "作成" }).click();
 
-  const enterRoom = page.getByRole("button", { name: "へやへ すすむ" });
-  await expect(enterRoom).toBeVisible({ timeout: 30_000 });
-  await enterRoom.click();
-  await page.waitForURL(/\/rooms\/[^/]+$/, { timeout: 45_000 });
+  const roomUrl = /\/rooms\/[^/]+$/;
+  const createdDialog = page.getByRole("dialog", { name: /へやが できました/ });
+  const createButton = createDialog.getByRole("button", { name: "作成" });
+
+  let navigated = false;
+  for (let attempt = 0; attempt < 3 && !navigated; attempt += 1) {
+    await createButton.click({ force: true });
+
+    const race = await Promise.race([
+      page
+        .waitForURL(roomUrl, { timeout: 8_000 })
+        .then(() => "navigated")
+        .catch(() => null),
+      createdDialog
+        .waitFor({ state: "visible", timeout: 8_000 })
+        .then(() => "created")
+        .catch(() => null),
+    ]);
+
+    if (race === "navigated") {
+      navigated = true;
+      break;
+    }
+
+    if (race === "created") {
+      const enterRoom = createdDialog.getByRole("button", { name: "へやへ すすむ" });
+      await expect(enterRoom).toBeVisible({ timeout: 30_000 });
+      await Promise.all([
+        enterRoom.click(),
+        page.waitForURL(roomUrl, { timeout: 45_000 }),
+      ]);
+      navigated = true;
+      break;
+    }
+
+    await page.waitForTimeout(500);
+  }
+
+  if (!navigated) {
+    throw new Error("Failed to navigate to room after creation");
+  }
 
   const url = new URL(page.url());
   const roomId = url.pathname.split("/rooms/")[1] ?? "";

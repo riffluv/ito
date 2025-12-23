@@ -41,6 +41,11 @@
 - Jest: `npm run test -- safeUpdateMachine.test.ts`（自動適用成功 / 手動適用成功 / 失敗→再試行 の 3 シナリオをカバー）
 - 手動検証前後でテストを実行し、FSM の主要シナリオが崩れていないことを確認する。
 
+### 6.1 Playwright（Safe Update E2E）
+- `tests/safe-update-room.spec.ts` は **本番ビルドのみ** で実行する（`npm run dev` では apply timeout が発生しやすい）。
+- 実行例:
+  - `E2E_SAFE_UPDATE_BUILD=1 PLAYWRIGHT_WEB_SERVER_COMMAND="npm run build && npm run start -- -p 3100" npx firebase emulators:exec --only firestore,auth,database "npx playwright test --workers=1 tests/safe-update-room.spec.ts"`
+
 ## 7. 部屋滞在中の抑止ガイド
 - **部屋にいる間（waiting 含む全フェーズ）** は `holdInGameAutoApply()` を送って自動適用を抑止する。
 - **部屋を退出したタイミング（RoomPage アンマウント）** で `releaseInGameAutoApply()` を呼んで解除する。

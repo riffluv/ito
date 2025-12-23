@@ -27,6 +27,7 @@ export type GameCardProps = {
   onClick?: MouseEventHandler<HTMLDivElement>;
   isInteractive?: boolean;
   flipPreset?: "reveal" | "result";
+  dataCardId?: string;
 };
 
 import {
@@ -57,6 +58,7 @@ export function GameCard({
   onClick,
   isInteractive = false,
   flipPreset = "reveal",
+  dataCardId,
 }: GameCardProps) {
   // スタイル取得
   const styleOverrides = getDragonQuestStyleOverrides(state as GameCardState, waitingInCentral);
@@ -122,6 +124,7 @@ export function GameCard({
         className={styles.root}
         bg="transparent"
         position="relative"
+        data-card-id={dataCardId}
         style={{
           perspective: "1000px",
           transform: "translateZ(0)",
@@ -197,6 +200,7 @@ export function GameCard({
   return (
     <Box
       className={styles.root}
+      data-card-id={dataCardId}
       css={cardSizeCss()}
       p={{ base: 3, md: "13px" }}
       // flip状態(CardFaces)と見た目を揃える

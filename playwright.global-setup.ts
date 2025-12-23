@@ -124,6 +124,8 @@ async function warmUpNextCompilation(url: string) {
 
 export default async function globalSetup() {
   await waitForServer(baseURL, 120_000);
-  await waitForNextAssetsReady(baseURL, 150_000);
+  if (process.env.PLAYWRIGHT_SKIP_ASSET_WAIT !== "1" && process.env.E2E_SAFE_UPDATE_BUILD !== "1") {
+    await waitForNextAssetsReady(baseURL, 150_000);
+  }
   await warmUpNextCompilation(baseURL);
 }

@@ -81,7 +81,7 @@ function CardRendererBase(props: CardRendererProps) {
     ]
   );
 
-  return <GameCard key={id} {...cardViewModel} />;
+  return <GameCard key={id} dataCardId={id} {...cardViewModel} />;
 }
 
 export const CardRenderer = memo(CardRendererBase);

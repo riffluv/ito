@@ -48,6 +48,42 @@
 4. `npm run build` を実行し、ビルドエラーや lint 警告を確認。  
 5. Service Worker のキャッシュ対象（`public/sw.js` の `CORE_ASSETS`）に変更がないか確認。追加アセットがある場合は忘れずに追記。  
 
+### 3.1 公開前（投げ銭/一般公開）チェックリスト
+**目的**: ドラッグ操作・同期・完走のコア体験が崩れていないことを確認する。
+
+1. `git status --porcelain=v1` が空であること（未追跡/未コミットが残っていないこと）。
+2. `npm run typecheck` を実行。
+3. E2E（Emulator）を **各 spec 2回連続** で実行（workers=1 固定）。
+   - 実行テンプレ:
+     - `npx firebase emulators:exec --only firestore,auth,database "npx playwright test --workers=1 <spec>"`
+     - 同じ `<spec>` を 2 回連続で実行する（フレーク検出）。
+
+#### 公開前 必須E2E（ドラッグ/同期/完走）
+- `tests/multiplayer-happy-flow.spec.ts`（3人完走）
+- `tests/multiplayer-slot-sync.spec.ts`（3人ドラッグ同期＋リロード耐性）
+- `tests/drag-pointer-priority.spec.ts`（ドラッグ中の挙動/キャンセル）
+- `tests/drag-slot-conflict.spec.ts`（同一スロット競合の整合性）
+- `tests/drag-return-reorder.spec.ts`（戻す→再配置→完走）
+- `tests/showtime-result-flow.spec.ts`（演出・結果サウンドの完走）
+- `tests/finish-reset-next-round.spec.ts`（finished→waiting→次ラウンド）
+- `tests/reset-waiting-card-visibility.spec.ts`（リセット後の待機カード表示）
+- `tests/disconnect-offline-continue.spec.ts`（ブラウザ閉じ想定でも完走）
+- `tests/leave-button-continue.spec.ts`（退出ボタンでも完走）
+
+#### 追加で安心したい場合
+- `tests/slot-frame-persistence.spec.ts`（ドラッグ中の枠消失防止）
+- `tests/roomMachine.spec.ts`（FSM 系の基盤確認）
+- `tests/hostActions.nextRound.spec.ts` / `tests/hostActions.preparing.spec.ts`（ホスト操作）
+- `tests/safe-update-room.spec.ts`（Safe Update を触った場合 / **本番ビルドのみ**）
+  - `npm run dev` では apply timeout が出やすいので、`E2E_SAFE_UPDATE_BUILD=1` を付けたうえで
+    `PLAYWRIGHT_WEB_SERVER_COMMAND="npm run build && npm run start -- -p 3100"` で実行する
+  - dev 環境の `safeUpdate.apply.timeout` アラートは **調査対象外**（本番挙動とは別）
+
+#### 手動スモーク（5〜10分）
+- 3人で入室 → お題決定 → 全員提出 → 並べ替え → せーの → 完走
+- 1人が「退出」または「ブラウザ閉じ」 → 残りで完走できること
+- 1人がリロードしても盤面が崩れないこと
+
 ---
 
 ## 4. デプロイフロー（Vercel 想定）
