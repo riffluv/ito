@@ -18,13 +18,64 @@ export type NotifyOptions = {
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error ?? "unknown");
 
+const normalizeTitle = (value: string) =>
+  value.replace(/\s+/g, "").replace(/🏆/g, "").trim();
+
+const SUPPRESSED_TITLES = new Set([
+  "勝利！",
+  "失敗！",
+  "カードを場に置きました",
+  "カードをその位置に置きました",
+  "カードを戻しました",
+]);
+
+const TITLE_COOLDOWNS = new Map<string, number>([
+  ["今はここに置けません", 1200],
+  ["自分のカードをドラッグしてください", 1200],
+  ["数字が割り当てられていません", 1200],
+  ["その位置には置けません", 1200],
+]);
+
+const notifyCooldowns = new Map<string, number>();
+
+const shouldSuppressNotification = (options: NotifyOptions & { title: string }) => {
+  const meta = options.meta;
+  const normalizedTitle = normalizeTitle(options.title || "通知");
+  if (SUPPRESSED_TITLES.has(normalizedTitle)) {
+    return true;
+  }
+  if (meta && typeof meta.suppress === "boolean" && meta.suppress) {
+    return true;
+  }
+  const metaCooldown =
+    meta && typeof meta.cooldownMs === "number" ? meta.cooldownMs : undefined;
+  const cooldownMs = metaCooldown ?? TITLE_COOLDOWNS.get(normalizedTitle);
+  if (typeof cooldownMs === "number" && cooldownMs > 0) {
+    const key =
+      meta && typeof meta.cooldownKey === "string"
+        ? meta.cooldownKey
+        : normalizedTitle;
+    const now = Date.now();
+    const last = notifyCooldowns.get(key) ?? 0;
+    if (now - last < cooldownMs) {
+      return true;
+    }
+    notifyCooldowns.set(key, now);
+  }
+  return false;
+};
+
 export function notify(opts: NotifyOptions | string): void {
   const o = typeof opts === "string" ? { title: opts } : opts;
+  const safeTitle = o.title && o.title.trim().length > 0 ? o.title : "通知";
+  if (shouldSuppressNotification({ ...o, title: safeTitle })) {
+    return;
+  }
   // Defer notification creation to avoid React warnings when called during render/effects
   queueMicrotask(() => {
     dragonQuestNotify({
       id: o.id !== undefined && o.id !== null ? String(o.id) : undefined,
-      title: o.title || "通知",
+      title: safeTitle,
       description: o.description,
       type: o.type || "info",
       duration: o.duration,

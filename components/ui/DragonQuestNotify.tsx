@@ -32,6 +32,7 @@ const NOTIFICATION_ICON_MAP: Record<DragonQuestNotification["type"], string> = {
 };
 
 const DEFAULT_DURATION_MS = 5500;
+const MAX_VISIBLE_NOTIFICATIONS = 3;
 
 const playNotificationSound = (type: DragonQuestNotification["type"]) => {
   playSound(NOTIFICATION_SOUND_MAP[type] ?? "notify_success");
@@ -107,6 +108,15 @@ class NotificationStore {
       };
       this.notifications[existingIndex] = entry;
     } else {
+      while (this.notifications.length >= MAX_VISIBLE_NOTIFICATIONS) {
+        const oldest = this.notifications.shift();
+        if (!oldest) break;
+        const timer = this.timers.get(oldest.id);
+        if (timer) {
+          window.clearTimeout(timer);
+          this.timers.delete(oldest.id);
+        }
+      }
       entry = {
         ...notification,
         id,
@@ -204,80 +214,37 @@ function NotificationItem({
   const contentRef = useRef<HTMLDivElement>(null);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const prefersReduced = useReducedMotionPreference();
-  const mountedRef = useRef(false);
-  const lastTimestampRef = useRef(notification.timestamp);
   const accentColor = getNotificationColor(notification.type);
 
   useEffect(() => {
     if (!containerRef.current || !contentRef.current) return undefined;
     const container = containerRef.current;
-    const content = contentRef.current;
 
     if (prefersReduced) {
-      gsap.set(container, { opacity: 1, x: 0, scale: 1 });
-      gsap.set(content, { opacity: 1 });
+      gsap.set(container, { opacity: 1, x: 0, y: 0, scale: 1 });
       return undefined;
     }
 
-    // Octopath Traveler-style HD-2D entrance
-    gsap.set(container, { opacity: 0, x: 80, scale: 1.08 });
-    gsap.set(content, { opacity: 0.3 });
+    // JRPG log-style entrance: subtle slide + fade
+    gsap.set(container, { opacity: 0, x: 24, y: -6, scale: 1 });
 
     const tl = gsap.timeline();
     tlRef.current = tl;
     tl.to(container, {
       opacity: 1,
       x: 0,
-      scale: 1,
-      duration: 0.46, // AI感除去: 0.5 → 0.46
+      y: 0,
+      duration: 0.32,
       ease: "power2.out",
-    }).to(
-      content,
-      {
-        opacity: 1,
-        duration: 0.21, // AI感除去: 0.18 → 0.21
-        ease: "power1.out",
-      },
-      "-=0.32"
-    );
+    });
 
     return () => {
       tlRef.current?.kill();
       tlRef.current = null;
       gsap.killTweensOf(container);
-      gsap.killTweensOf(content);
-      gsap.set(container, { clearProps: "transform,opacity,x,scale" });
-      gsap.set(content, { clearProps: "opacity" });
+      gsap.set(container, { clearProps: "transform,opacity,x,y,scale" });
     };
   }, [prefersReduced]);
-
-  useEffect(() => {
-    if (!contentRef.current || prefersReduced) {
-      mountedRef.current = true;
-      lastTimestampRef.current = notification.timestamp;
-      return;
-    }
-
-    if (!mountedRef.current) {
-      mountedRef.current = true;
-      lastTimestampRef.current = notification.timestamp;
-      return;
-    }
-
-    if (lastTimestampRef.current === notification.timestamp) return;
-    lastTimestampRef.current = notification.timestamp;
-
-    const content = contentRef.current;
-    gsap.killTweensOf(content, "x");
-    gsap.to(content, {
-      keyframes: [
-        { x: -6, duration: 0.06, ease: "power2.inOut" },
-        { x: 5, duration: 0.09, ease: "power2.inOut" },
-        { x: -3, duration: 0.07, ease: "power2.inOut" },
-        { x: 0, duration: 0.14, ease: "power3.out" },
-      ],
-    });
-  }, [notification.timestamp, prefersReduced]);
 
   useEffect(() => {
     const duration = notification.duration ?? DEFAULT_DURATION_MS;
@@ -291,14 +258,13 @@ function NotificationItem({
       return;
     }
 
-    // Octopath Traveler-style HD-2D exit: float up + fade out
+    // JRPG log-style exit: gentle fade up
     const container = containerRef.current;
     gsap.to(container, {
-      y: -30,
+      y: -14,
       opacity: 0,
-      scale: 0.95,
-      duration: 0.37, // AI感除去: 0.35 → 0.37
-      ease: "power2.in",
+      duration: 0.28,
+      ease: "power1.in",
       onComplete: () => onRemove(notification.id),
     });
   };
@@ -308,20 +274,19 @@ function NotificationItem({
       <Box
         ref={contentRef}
         position="relative"
-        bg="rgba(12,14,20,0.92)"
-        border="2px solid"
-        borderColor={accentColor}
-        borderRadius={0}
-        minW="320px"
-        maxW="400px"
-        px={5}
-        py={3.5}
+        bg="rgba(8,10,15,0.92)"
+        border="1px solid"
+        borderColor="rgba(255,255,255,0.18)"
+        borderLeft="3px solid"
+        borderLeftColor={accentColor}
+        borderRadius="2px"
+        minW="260px"
+        maxW="360px"
+        px={4}
+        py={3}
         css={{
-          boxShadow:
-            "0 4px 16px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)",
-          backdropFilter: "blur(8px)",
-          background:
-            "linear-gradient(137deg, rgba(12,14,20,0.95) 0%, rgba(18,20,28,0.92) 100%)", // AI感除去: 135deg → 137deg
+          boxShadow: "0 3px 10px rgba(0,0,0,0.55)",
+          backdropFilter: "blur(6px)",
         }}
       >
         <Box display="flex" alignItems="flex-start" gap={3}>
@@ -343,13 +308,12 @@ function NotificationItem({
 
           <Box flex={1} minW={0}>
             <Text
-              fontSize="md"
+              fontSize="sm"
               fontWeight={600}
               color="rgba(255,255,255,0.95)"
-              textShadow="0 1px 2px rgba(0,0,0,0.5)"
-              letterSpacing="0.3px"
-              fontFamily="system-ui, -apple-system, sans-serif"
-              lineHeight={1.5}
+              letterSpacing="0.2px"
+              fontFamily="var(--font-family-mono)"
+              lineHeight={1.45}
               mb={notification.description ? 1.5 : 0}
             >
               {notification.title}
@@ -357,12 +321,11 @@ function NotificationItem({
 
             {notification.description && (
               <Text
-                fontSize="sm"
+                fontSize="xs"
                 color="rgba(255,255,255,0.7)"
-                textShadow="0 1px 2px rgba(0,0,0,0.4)"
-                fontFamily="system-ui, -apple-system, sans-serif"
+                fontFamily="var(--font-family-mono)"
                 lineHeight={1.6}
-                letterSpacing="0.2px"
+                letterSpacing="0.1px"
               >
                 {notification.description}
               </Text>
@@ -370,9 +333,9 @@ function NotificationItem({
           </Box>
 
           <Box
-            fontSize="lg"
+            fontSize="md"
             color="rgba(255,255,255,0.5)"
-            fontFamily="system-ui, sans-serif"
+            fontFamily="var(--font-family-mono)"
             cursor="pointer"
             _hover={{ color: "rgba(255,255,255,0.9)" }}
             fontWeight={300}
@@ -407,7 +370,13 @@ export function DragonQuestNotifyContainer() {
   if (notifications.length === 0) return null;
 
   return (
-    <Box position="fixed" top="24px" right="24px" zIndex="toast" css={{ pointerEvents: "auto" }}>
+    <Box
+      position="fixed"
+      top="20px"
+      right="20px"
+      zIndex="toast"
+      css={{ pointerEvents: "auto", maxWidth: "calc(100vw - 40px)" }}
+    >
       {notifications.map((notification) => (
         <NotificationItem key={notification.id} notification={notification} onRemove={handleRemove} />
       ))}

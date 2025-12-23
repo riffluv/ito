@@ -983,7 +983,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       try {
         await removeCardFromProposal(roomId, playerId);
         playCardPlace();
-        notify({ title: "カードを戻しました", type: "info", duration: 900 });
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
         playDropInvalid();
@@ -1015,33 +1014,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     },
     [roomId, updatePendingState, playCardPlace, playDropInvalid]
   );
-
-  const finishedToastRef = useRef(false);
-  useEffect(() => {
-    if (roomStatus === "finished") {
-      if (!finishedToastRef.current) {
-        finishedToastRef.current = true;
-        const failedAt = realtimeResult?.failedAt ?? null;
-        if (typeof failedAt === "number") {
-          notify({
-            id: `${roomId}-game-result`,
-            title: "失敗！",
-            type: "error",
-            duration: 2000,
-          });
-        } else {
-          notify({
-            id: `${roomId}-game-result`,
-            title: "勝利！",
-            type: "success",
-            duration: 2000,
-          });
-        }
-      }
-    } else {
-      finishedToastRef.current = false;
-    }
-  }, [roomStatus, realtimeResult?.failedAt, roomId]);
 
   const orderListSet = useMemo(() => {
     if (!orderListKey && (!orderList || orderList.length === 0)) {

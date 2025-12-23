@@ -281,7 +281,6 @@ export function useDropHandler({
       let previousPending: (string | null)[] = [];
       let inserted = false;
       let didPlaySound = false;
-      let stageNotifyMarked = false;
       let stageSoundMarked = false;
       let stageResolutionMarked = false;
       const playOnce = () => {
@@ -293,8 +292,6 @@ export function useDropHandler({
           session.markStage("client.drop.t3_soundPlayedMs", { channel: "success" });
         }
       };
-      let notifiedSuccess = false;
-
       setPending((prev) => {
         previousPending = prev.slice();
         if (prev.includes(pid)) {
@@ -315,15 +312,6 @@ export function useDropHandler({
         optimistic: optimisticMode,
         placed: inserted,
       });
-
-      if (optimisticMode && inserted) {
-        notify({ title: "カードを場に置きました", type: "success" });
-        notifiedSuccess = true;
-        if (!stageNotifyMarked) {
-          stageNotifyMarked = true;
-          session.markStage("client.drop.t1_notifyShownMs", { origin: "optimistic" });
-        }
-      }
 
       const request = addCardToProposal(roomId, meId);
       if (inserted) {
@@ -361,13 +349,6 @@ export function useDropHandler({
             playerId: meId,
             optimistic: optimisticMode,
           });
-          if (!notifiedSuccess) {
-            notify({ title: "カードを場に置きました", type: "success" });
-            if (!stageNotifyMarked) {
-              stageNotifyMarked = true;
-              session.markStage("client.drop.t1_notifyShownMs", { origin: "post" });
-            }
-          }
         })
         .catch((err: unknown) => {
           if (!stageResolutionMarked) {
@@ -437,7 +418,6 @@ const onDropAtPosition = useCallback(
       let previous: (string | null)[] = [];
       let inserted = false;
       let didPlaySound = false;
-      let stageNotifyMarked = false;
       let stageSoundMarked = false;
       let stageResolutionMarked = false;
       const playOnce = () => {
@@ -452,8 +432,6 @@ const onDropAtPosition = useCallback(
           });
         }
       };
-      let notifiedSuccess = false;
-
       setPending((prev) => {
         previous = prev.slice();
         const next = [...prev];
@@ -481,18 +459,6 @@ const onDropAtPosition = useCallback(
         optimistic: optimisticMode,
         placed: inserted,
       });
-
-      if (optimisticMode && inserted) {
-        notify({ title: "カードを場に置きました", type: "success" });
-        notifiedSuccess = true;
-        if (!stageNotifyMarked) {
-          stageNotifyMarked = true;
-          session.markStage("client.drop.t1_notifyShownMs", {
-            origin: "optimistic",
-            index: String(targetIndex),
-          });
-        }
-      }
 
       const request = scheduleAddCardToProposalAtPosition(roomId, meId, targetIndex);
       if (inserted) {
@@ -537,16 +503,6 @@ const onDropAtPosition = useCallback(
             optimistic: optimisticMode,
             index: targetIndex,
           });
-          if (!notifiedSuccess) {
-            notify({ title: "カードをその位置に置きました", type: "success" });
-            if (!stageNotifyMarked) {
-              stageNotifyMarked = true;
-              session.markStage("client.drop.t1_notifyShownMs", {
-                origin: "post",
-                index: String(targetIndex),
-              });
-            }
-          }
         })
         .catch((err: unknown) => {
           if (!stageResolutionMarked) {

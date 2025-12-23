@@ -48,31 +48,33 @@ export function DragonQuestLoading({
 
   // 画面のスクロール制御とGSAPフェードイン
   useEffect(() => {
-    const container = containerRef.current;
+    if (!isVisible) return () => undefined;
 
-    if (!isVisible) {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      return () => undefined;
+    const container = containerRef.current;
+    const body = document.body;
+    const root = document.documentElement;
+    const prevBodyOverflow = body.style.overflow;
+    const prevRootOverflow = root.style.overflow;
+
+    body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+
+    if (container) {
+      // 純粋なGSAP制御に統一
+      gsap.set(container, { opacity: 0 });
+      gsap.to(container, {
+        opacity: 1,
+        duration: 0.23, // AI感除去: 0.2 → 0.23
+        ease: "none",
+      });
     }
 
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    if (!container) return () => undefined;
-
-    // 純粋なGSAP制御に統一
-    gsap.set(container, { opacity: 0 });
-    gsap.to(container, {
-      opacity: 1,
-      duration: 0.23, // AI感除去: 0.2 → 0.23
-      ease: "none",
-    });
-
     return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      gsap.killTweensOf(container);
+      body.style.overflow = prevBodyOverflow;
+      root.style.overflow = prevRootOverflow;
+      if (container) {
+        gsap.killTweensOf(container);
+      }
     };
   }, [isVisible]);
 

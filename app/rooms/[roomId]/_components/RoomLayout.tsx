@@ -2085,6 +2085,18 @@ export function RoomLayout(props: RoomLayoutProps) {
       }),
     [players, clueTargetIds]
   );
+  const cluesReadyToastStateRef = useRef<{ round: number; ready: boolean }>({
+    round: -1,
+    ready: false,
+  });
+  const cluesReadyToastTimerRef = useRef<number | null>(null);
+  const clearCluesReadyToastTimer = useCallback(() => {
+    if (cluesReadyToastTimerRef.current) {
+      window.clearTimeout(cluesReadyToastTimerRef.current);
+      cluesReadyToastTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => () => clearCluesReadyToastTimer(), [clearCluesReadyToastTimer]);
 
   // 在室外IDが proposal に混入している場合の自動クリーンアップ（clue中のみ、軽いデバウンス）
   const pruneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2123,35 +2135,62 @@ export function RoomLayout(props: RoomLayoutProps) {
   }, [room?.status, room?.order?.proposal, room?.round, eligibleIdsSignature, roomId, eligibleIds, room]);
 
   useEffect(() => {
-    if (!isHost || !allCluesReady) {
+    if (!room) {
+      clearCluesReadyToastTimer();
+      return;
+    }
+
+    const round = room?.round || 0;
+    if (cluesReadyToastStateRef.current.round !== round) {
+      cluesReadyToastStateRef.current = { round, ready: allCluesReady };
+      clearCluesReadyToastTimer();
+      return;
+    }
+
+    if (!isHost) {
+      cluesReadyToastStateRef.current.ready = allCluesReady;
+      clearCluesReadyToastTimer();
       return;
     }
 
     const status = room?.status;
-    if (status !== "clue") {
+    if (status !== "clue" || room?.ui?.roundPreparing || room?.ui?.revealPending) {
+      cluesReadyToastStateRef.current.ready = allCluesReady;
+      clearCluesReadyToastTimer();
       return;
     }
 
-    const mode = room?.options?.resolveMode || "sequential";
-    const id = `clues-ready-${mode}-${roomId}-${room?.round || 0}`;
-    try {
-      notify({
-        id,
-        type: "success",
-        title: "全員の連想ワードが揃いました",
-        description:
-          "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
-        duration: 6000,
-      });
-    } catch (error) {
-      logDebug("room-page", "notify-clues-ready-failed", error);
+    if (!cluesReadyToastStateRef.current.ready && allCluesReady) {
+      const mode = room?.options?.resolveMode || "sequential";
+      const id = `clues-ready-${mode}-${roomId}-${round}`;
+      clearCluesReadyToastTimer();
+      cluesReadyToastTimerRef.current = window.setTimeout(() => {
+        try {
+          notify({
+            id,
+            type: "success",
+            title: "全員の連想ワードが揃いました",
+            description:
+              "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
+            duration: 6000,
+          });
+        } catch (error) {
+          logDebug("room-page", "notify-clues-ready-failed", error);
+        }
+      }, 420);
     }
+
+    cluesReadyToastStateRef.current.ready = allCluesReady;
   }, [
     allCluesReady,
+    clearCluesReadyToastTimer,
     isHost,
+    room,
     room?.options?.resolveMode,
     room?.round,
     room?.status,
+    room?.ui?.revealPending,
+    room?.ui?.roundPreparing,
     roomId,
   ]);
 
