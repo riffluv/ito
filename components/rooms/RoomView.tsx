@@ -9,6 +9,7 @@ import MinimalChat from "@/components/ui/MinimalChat";
 import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import { DebugMetricsHUD } from "@/components/ui/DebugMetricsHUD";
 import { PixiGuideButtonsAuto } from "@/components/ui/pixi/PixiGuideButtons";
+import { RoomExperiencePrewarm } from "@/components/rooms/RoomExperiencePrewarm";
 import { UI_TOKENS } from "@/theme/layout";
 import { Dialog, Box, Text, VStack, HStack } from "@chakra-ui/react";
 import { lazy, Suspense } from "react";
@@ -44,6 +45,11 @@ export function RoomView({
       {overlays.joinStatusBanner}
       {overlays.safeUpdateBannerNode}
       {overlays.versionMismatchOverlay}
+      <RoomExperiencePrewarm
+        roomId={roomId}
+        roomStatus={room.status}
+        disabled={isSpectatorMode}
+      />
       {showNotifyBridge ? <RoomNotifyBridge roomId={roomId} /> : null}
       <GameLayout
         variant="immersive"
