@@ -11,6 +11,17 @@
         }
       }
     },
+    "presenceSessions": {
+      "$roomId": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          "$sessionId": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "newData.hasChildren(['online','connectedAt']) || newData.val() === null"
+          }
+        }
+      }
+    },
     "roomSync": {
       "$roomId": {
         ".read": "auth != null",

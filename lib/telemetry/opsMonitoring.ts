@@ -19,6 +19,14 @@ type OpsEventPayload = {
   extra?: Record<string, unknown>;
 };
 
+const resolveAppEnv = () =>
+  process.env.NEXT_PUBLIC_APP_ENV ||
+  process.env.SENTRY_ENVIRONMENT ||
+  process.env.NODE_ENV ||
+  "unknown";
+
+const shouldSendOpsEvent = () => resolveAppEnv() === "production";
+
 function getSentryGlobal(): SentryGlobal | null {
   const globalScope = globalThis as typeof globalThis & { Sentry?: SentryGlobal };
   return globalScope.Sentry ?? null;
@@ -48,6 +56,9 @@ export function reportOpsEvent({
 }: OpsEventPayload): void {
   try {
     recordMetricDistribution(metric, 1, sanitizeTags(tags));
+    if (!shouldSendOpsEvent()) {
+      return;
+    }
     const sentry = getSentryGlobal();
     sentry?.captureMessage?.(`[ops] ${name}`, {
       level,

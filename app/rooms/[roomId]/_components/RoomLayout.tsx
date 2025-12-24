@@ -108,6 +108,32 @@ const HOST_UNAVAILABLE_GRACE_MS = Math.max(
   10_000,
   Math.min(PRESENCE_STALE_MS, 30_000)
 );
+const ROUND_FLOW_METRIC_KEYS = [
+  "startAt",
+  "startSource",
+  "roundPreparingAt",
+  "roundPreparingDoneAt",
+  "roundPreparingMs",
+  "clueAt",
+  "showtimeStartAt",
+  "showtimeRevealAt",
+  "revealAt",
+  "finishedAt",
+  "startToClueMs",
+  "clueToShowtimeMs",
+  "showtimeToRevealMs",
+  "revealToFinishedMs",
+  "startToFinishedMs",
+] as const;
+type RoundFlowTimestampKey =
+  | "startAt"
+  | "roundPreparingAt"
+  | "roundPreparingDoneAt"
+  | "clueAt"
+  | "showtimeStartAt"
+  | "showtimeRevealAt"
+  | "revealAt"
+  | "finishedAt";
 
 const SPECTATOR_HOST_ERROR_MESSAGES: Record<string, string> = {
   "auth-required": "認証情報が無効です。再度ログインしてください。",
@@ -360,12 +386,113 @@ export function RoomLayout(props: RoomLayoutProps) {
     [clearShowtimeIntent, markShowtimeIntent]
   );
 
+  const roundFlowRef = useRef<{
+    round: number | null;
+    startAt: number | null;
+    startSource: string | null;
+    roundPreparingAt: number | null;
+    roundPreparingDoneAt: number | null;
+    clueAt: number | null;
+    showtimeStartAt: number | null;
+    showtimeRevealAt: number | null;
+    revealAt: number | null;
+    finishedAt: number | null;
+  }>({
+    round: null,
+    startAt: null,
+    startSource: null,
+    roundPreparingAt: null,
+    roundPreparingDoneAt: null,
+    clueAt: null,
+    showtimeStartAt: null,
+    showtimeRevealAt: null,
+    revealAt: null,
+    finishedAt: null,
+  });
+  const recordRoundFlowMetric = useCallback(
+    (key: string, value: number | string | null) => {
+      setMetric("roundFlow", key, value);
+    },
+    []
+  );
+  const resetRoundFlowMetrics = useCallback(
+    (nextRound: number | null) => {
+      roundFlowRef.current = {
+        round: nextRound,
+        startAt: null,
+        startSource: null,
+        roundPreparingAt: null,
+        roundPreparingDoneAt: null,
+        clueAt: null,
+        showtimeStartAt: null,
+        showtimeRevealAt: null,
+        revealAt: null,
+        finishedAt: null,
+      };
+      recordRoundFlowMetric("round", nextRound);
+      ROUND_FLOW_METRIC_KEYS.forEach((key) => recordRoundFlowMetric(key, null));
+    },
+    [recordRoundFlowMetric]
+  );
+  const getFlowNow = useCallback(() => {
+    if (typeof performance === "undefined") return null;
+    return performance.now();
+  }, []);
+  const ensureRoundFlowStart = useCallback(
+    (source: string, at: number) => {
+      const state = roundFlowRef.current;
+      if (state.startAt !== null) return;
+      state.startAt = at;
+      state.startSource = source;
+      recordRoundFlowMetric("startAt", Math.round(at));
+      recordRoundFlowMetric("startSource", source);
+    },
+    [recordRoundFlowMetric]
+  );
+  const setFlowDuration = useCallback(
+    (key: string, start: number | null, end: number | null) => {
+      if (start === null || end === null) return;
+      recordRoundFlowMetric(key, Math.max(0, Math.round(end - start)));
+    },
+    [recordRoundFlowMetric]
+  );
+  const markFlowTimestamp = useCallback(
+    (key: RoundFlowTimestampKey, at: number) => {
+      const state = roundFlowRef.current;
+      if (state[key] !== null) return;
+      state[key] = at;
+      recordRoundFlowMetric(key, Math.round(at));
+    },
+    [recordRoundFlowMetric]
+  );
+  useEffect(() => {
+    const nextRound = typeof room?.round === "number" ? room.round : null;
+    if (roundFlowRef.current.round !== nextRound) {
+      resetRoundFlowMetrics(nextRound);
+    }
+  }, [room?.round, resetRoundFlowMetrics]);
+
   const recordShowtimePlayback = useCallback(
     (
       type: ShowtimeEventType,
       context: ShowtimePlaybackContext,
       meta: { origin: "intent" | "subscription" | "fallback"; intentId?: string | null; eventId?: string | null }
     ) => {
+      const flowNow = getFlowNow();
+      if (flowNow !== null) {
+        if (type === "round:start") {
+          markFlowTimestamp("showtimeStartAt", flowNow);
+          ensureRoundFlowStart("showtime", flowNow);
+          setFlowDuration("clueToShowtimeMs", roundFlowRef.current.clueAt, flowNow);
+        } else if (type === "round:reveal") {
+          markFlowTimestamp("showtimeRevealAt", flowNow);
+          setFlowDuration(
+            "showtimeToRevealMs",
+            roundFlowRef.current.showtimeStartAt,
+            flowNow
+          );
+        }
+      }
       lastShowtimePlayRef.current = { type, ts: Date.now() };
       traceAction("debug.showtime.event.play", {
         roomId,
@@ -382,7 +509,13 @@ export function RoomLayout(props: RoomLayoutProps) {
       });
       void showtime.play(type, context);
     },
-    [roomId]
+    [
+      ensureRoundFlowStart,
+      getFlowNow,
+      markFlowTimestamp,
+      roomId,
+      setFlowDuration,
+    ]
   );
 
   const publishIntentPlayback = useCallback(
@@ -745,6 +878,59 @@ export function RoomLayout(props: RoomLayoutProps) {
       setRoundPreparingHold(false);
     }
   }, [roundPreparing, clearRoundPreparingHoldTimer]);
+  const prevRoundPreparingRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    const prev = prevRoundPreparingRef.current;
+    prevRoundPreparingRef.current = roundPreparing;
+    const now = getFlowNow();
+    if (now === null) return;
+    if (roundPreparing && !prev) {
+      markFlowTimestamp("roundPreparingAt", now);
+      ensureRoundFlowStart("roundPreparing", now);
+      return;
+    }
+    if (!roundPreparing && prev) {
+      markFlowTimestamp("roundPreparingDoneAt", now);
+      setFlowDuration(
+        "roundPreparingMs",
+        roundFlowRef.current.roundPreparingAt,
+        now
+      );
+    }
+  }, [roundPreparing, ensureRoundFlowStart, getFlowNow, markFlowTimestamp, setFlowDuration]);
+  const prevStatusForFlowRef = useRef<RoomDoc["status"] | null>(null);
+  useEffect(() => {
+    const status = room?.status ?? null;
+    const prev = prevStatusForFlowRef.current;
+    if (status === prev) return;
+    prevStatusForFlowRef.current = status;
+    const now = getFlowNow();
+    if (now === null) return;
+    if (status === "clue") {
+      markFlowTimestamp("clueAt", now);
+      ensureRoundFlowStart("clue", now);
+      setFlowDuration("startToClueMs", roundFlowRef.current.startAt, now);
+    }
+    if (status === "reveal") {
+      markFlowTimestamp("revealAt", now);
+      if (roundFlowRef.current.showtimeRevealAt === null) {
+        setFlowDuration(
+          "showtimeToRevealMs",
+          roundFlowRef.current.showtimeStartAt,
+          now
+        );
+      }
+    }
+    if (status === "finished") {
+      markFlowTimestamp("finishedAt", now);
+      setFlowDuration(
+        "revealToFinishedMs",
+        roundFlowRef.current.revealAt ?? roundFlowRef.current.showtimeRevealAt,
+        now
+      );
+      setFlowDuration("startToFinishedMs", roundFlowRef.current.startAt, now);
+    }
+  }, [room?.status, ensureRoundFlowStart, getFlowNow, markFlowTimestamp, setFlowDuration]);
   const ledgerOrderList = useMemo(() => {
     if (!Array.isArray(orderList)) return [];
     return (orderList as (string | null | undefined)[])
