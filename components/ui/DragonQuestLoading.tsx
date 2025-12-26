@@ -7,6 +7,7 @@ import {
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { lockScroll } from "@/lib/ui/scrollLock";
 
 interface DragonQuestLoadingProps {
   isVisible: boolean;
@@ -51,13 +52,7 @@ export function DragonQuestLoading({
     if (!isVisible) return () => undefined;
 
     const container = containerRef.current;
-    const body = document.body;
-    const root = document.documentElement;
-    const prevBodyOverflow = body.style.overflow;
-    const prevRootOverflow = root.style.overflow;
-
-    body.style.overflow = "hidden";
-    root.style.overflow = "hidden";
+    const releaseScroll = lockScroll({ lockRoot: true });
 
     if (container) {
       // 純粋なGSAP制御に統一
@@ -70,8 +65,7 @@ export function DragonQuestLoading({
     }
 
     return () => {
-      body.style.overflow = prevBodyOverflow;
-      root.style.overflow = prevRootOverflow;
+      releaseScroll();
       if (container) {
         gsap.killTweensOf(container);
       }

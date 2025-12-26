@@ -5,6 +5,7 @@ import { Box, useMediaQuery } from "@chakra-ui/react";
 import React, { ReactNode, lazy, Suspense } from "react";
 import MobileBottomSheet from "./MobileBottomSheet";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
+import { lockScroll } from "@/lib/ui/scrollLock";
 // ⚡ PERFORMANCE: Three.js を遅延ロード
 const ThreeBackground = lazy(() =>
   import("./ThreeBackground").then((mod) => ({ default: mod.ThreeBackground }))
@@ -62,13 +63,9 @@ export function GameLayout({
     : undefined;
 
   React.useEffect(() => {
-    if (typeof document === "undefined") {
-      return () => {};
-    }
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const release = lockScroll();
     return () => {
-      document.body.style.overflow = previousOverflow; // クリーンアップ
+      release();
     };
   }, []);
 

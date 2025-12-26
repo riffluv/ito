@@ -5,6 +5,7 @@ import {
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
 import { playResultSound } from "@/lib/audio/resultSound";
 import type { VictoryRaysController } from "@/lib/pixi/victoryRays";
+import { lockScroll } from "@/lib/ui/scrollLock";
 import { UI_TOKENS } from "@/theme/layout";
 import { Box, Text, chakra } from "@chakra-ui/react";
 import { gsap } from "gsap";
@@ -469,17 +470,10 @@ export function GameResultOverlay({
     if (mode !== "overlay" || typeof window === "undefined") {
       return undefined;
     }
-    const root = document.documentElement;
-    const body = document.body;
-    const prevRootOverflow = root.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-
-    root.style.overflow = "hidden";
-    body.style.overflow = "hidden";
+    const releaseScroll = lockScroll({ lockRoot: true });
 
     return () => {
-      root.style.overflow = prevRootOverflow;
-      body.style.overflow = prevBodyOverflow;
+      releaseScroll();
     };
   }, [mode]);
 

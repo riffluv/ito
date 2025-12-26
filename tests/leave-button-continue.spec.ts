@@ -148,6 +148,11 @@ test("退出ボタンで離脱しても残りで完走できる", async ({ page,
     await expect(p3.page.getByRole("button", { name: "新しい部屋を作成" }).first()).toBeVisible({
       timeout: 30_000,
     });
+    await p3.page.waitForFunction(
+      () => document.body.style.overflow !== "hidden",
+      null,
+      { timeout: 20_000 }
+    );
 
     await expect(page.getByText(playerThreeName)).toHaveCount(0, {
       timeout: 120_000,
