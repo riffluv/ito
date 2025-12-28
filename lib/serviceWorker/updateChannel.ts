@@ -151,7 +151,14 @@ type SafeUpdateEvent =
 
 type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
 
-const APPLY_TIMEOUT_MS = 12_000;
+// Applying an update can take longer than expected when large caches are being purged during SW activation
+// or when a hard-reload fallback is in-flight on slow devices/networks.
+const APPLY_TIMEOUT_MS = 45_000;
+// Some environments appear to keep the waiting SW stuck in `installed` when heavy worker clients are alive.
+// Fall back to a hard reload (which closes those clients) if SKIP_WAITING doesn't progress quickly.
+const APPLY_FALLBACK_RELOAD_MS = 5_000;
+const APPLY_FALLBACK_RELOAD_SESSION_KEY = "ito-safe-update-fallback-reload-count";
+const APPLY_FALLBACK_RELOAD_LIMIT = 2;
 // Shorten auto-apply window to reduce time users can stay on an old build.
 const AUTO_APPLY_DELAY_MS = 15_000;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
@@ -884,6 +891,9 @@ async function handleBroadcastMessage(message: { type?: string; detail?: string 
   const actor = ensureActor();
   if (!actor) return;
   switch (message.type) {
+    case "update-applying":
+      traceAction("safeUpdate.sw.applying", { source: "broadcast" });
+      break;
     case "update-ready":
       await resyncWaitingServiceWorker("broadcast-ready");
       break;
@@ -940,6 +950,22 @@ function startApply(
       applyReason: params.reason,
     };
   }
+
+  const controllerBefore =
+    typeof navigator !== "undefined"
+      ? navigator.serviceWorker?.controller?.scriptURL ?? null
+      : null;
+  const waitingUrl = waiting.scriptURL;
+
+  // Service Worker 更新の適用直前に、重い Worker（OffscreenCanvas など）を止めておく。
+  // これが生きているとブラウザが skipWaiting/activate を進められず apply がタイムアウトするケースがある。
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new Event("ito-safe-update-apply"));
+    } catch {
+      /* noop */
+    }
+  }
   try {
     waiting.postMessage({ type: "SKIP_WAITING" });
   } catch (error) {
@@ -947,6 +973,55 @@ function startApply(
       reason: params.reason,
       safeMode: params.safeMode,
     });
+  }
+
+  if (typeof window !== "undefined" && typeof navigator !== "undefined") {
+    window.setTimeout(() => {
+      try {
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+          return;
+        }
+        if (currentSnapshot.phase !== "applying") {
+          return;
+        }
+        const controllerUrl = navigator.serviceWorker?.controller?.scriptURL ?? null;
+        if (controllerBefore && controllerUrl && controllerUrl !== controllerBefore) {
+          return;
+        }
+        const count = Number(sessionStorage.getItem(APPLY_FALLBACK_RELOAD_SESSION_KEY) ?? "0");
+        if (!Number.isFinite(count) || count >= APPLY_FALLBACK_RELOAD_LIMIT) {
+          return;
+        }
+        void navigator.serviceWorker
+          .getRegistration()
+          .then((reg) => {
+            const waitingNow = reg?.waiting?.scriptURL ?? null;
+            if (!waitingNow || waitingNow !== waitingUrl) {
+              return;
+            }
+            traceAction("safeUpdate.apply.fallbackReload", {
+              reason: params.reason,
+              safeMode: params.safeMode,
+              waitingUrl,
+              controllerBefore,
+              count: count + 1,
+              delayMs: APPLY_FALLBACK_RELOAD_MS,
+            });
+            sessionStorage.setItem(
+              APPLY_FALLBACK_RELOAD_SESSION_KEY,
+              String(count + 1)
+            );
+            window.location.reload();
+          })
+          .catch(() => undefined);
+      } catch (error) {
+        traceError("safeUpdate.apply.fallbackReloadFailed", error, {
+          reason: params.reason,
+          safeMode: params.safeMode,
+          waitingUrl,
+        });
+      }
+    }, APPLY_FALLBACK_RELOAD_MS);
   }
   logSafeUpdateTelemetry(
     "triggered",
@@ -1070,7 +1145,12 @@ export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): b
       return false;
     }
   }
-  actor.send({ type: "APPLY_REQUEST", reason, safeMode, automatic });
+  // `failed` からの再試行は `RETRY` が正規ルート（APPLY_REQUEST だと machine が動かない）。
+  actor.send(
+    phase === "failed"
+      ? { type: "RETRY", reason, safeMode, automatic }
+      : { type: "APPLY_REQUEST", reason, safeMode, automatic }
+  );
   const nextPhase = resolvePhase(actor.getSnapshot());
   return nextPhase === "applying";
 }

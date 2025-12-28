@@ -318,6 +318,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Spectator V2 sessions (viewer + host read-only)
+    // Note: Writes are performed via server routes (Admin SDK). Client writes are rejected by rules.
+    match /spectatorSessions/{sessionId} {
+      allow read: if isAuthenticated()
+        && (
+          (resource.data.viewerUid is string && request.auth.uid == resource.data.viewerUid)
+          || (resource.data.roomId is string && isHost(resource.data.roomId))
+          || isAdmin()
+        );
+
+      allow create, update, delete: if false;
+    }
+
     function isWaiting(roomId) {
       return get(/databases/$(database)/documents/rooms/$(roomId)).data.status == 'waiting';
     }

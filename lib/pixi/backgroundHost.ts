@@ -23,7 +23,7 @@ import {
   type SceneOptionsBase,
 } from "@/lib/pixi/sceneRegistry";
 import { logError, logInfo } from "@/lib/utils/log";
-import { traceError } from "@/lib/utils/trace";
+import { traceAction, traceError } from "@/lib/utils/trace";
 
 type SceneEffects = {
   lightSweep?: () => void;
@@ -1117,3 +1117,27 @@ class HybridPixiBackgroundHost implements BackgroundHostLike {
 }
 
 export const pixiBackgroundHost = new HybridPixiBackgroundHost();
+
+// Safe Update: applying a new Service Worker can stall if a heavy OffscreenCanvas worker keeps running.
+// The SW update channel dispatches this event right before SKIP_WAITING so we can eagerly tear down the background.
+const SAFE_UPDATE_APPLY_EVENT = "ito-safe-update-apply";
+if (typeof window !== "undefined") {
+  const globalFlag = "__itoSafeUpdateBgCleanupBound__";
+  const g = window as typeof window & { [globalFlag]?: boolean };
+  if (!g[globalFlag]) {
+    g[globalFlag] = true;
+    window.addEventListener(
+      SAFE_UPDATE_APPLY_EVENT,
+      () => {
+        try {
+          pixiBackgroundHost.dispose();
+          traceAction("safeUpdate.apply.cleanup.pixiBackground", { ok: true });
+        } catch (error) {
+          traceError("pixiBackground.dispose.safeUpdate", error);
+          traceAction("safeUpdate.apply.cleanup.pixiBackground", { ok: false });
+        }
+      },
+      { passive: true }
+    );
+  }
+}

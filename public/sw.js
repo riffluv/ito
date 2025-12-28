@@ -278,15 +278,11 @@ self.addEventListener("message", (event) => {
   if (!event.data) return;
   const { type } = event.data;
   if (type === "SKIP_WAITING") {
-    event.waitUntil(
-      (async () => {
-        try {
-          await notifyUpdateChannels("update-applying");
-        } finally {
-          await self.skipWaiting();
-        }
-      })()
-    );
+    // Notify is best-effort; never block skipWaiting on cross-client plumbing.
+    // In some scenarios (e.g. heavy worker clients) `clients.matchAll()` can stall, which would keep
+    // the SW stuck in `installed` and make Safe Update time out.
+    void notifyUpdateChannels("update-applying");
+    event.waitUntil(self.skipWaiting());
   }
   if (type === "CLIENTS_CLAIM") {
     event.waitUntil(
@@ -304,14 +300,17 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      // Claim clients first so "Safe Update" can complete quickly even when cache cleanup is slow
+      // (e.g. after visiting heavy routes that cached many assets).
+      await self.clients.claim().catch(() => undefined);
+      await notifyUpdateChannels("update-applied");
+
       const keys = await caches.keys();
       await Promise.all(
         keys
           .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map((key) => caches.delete(key))
       );
-      await self.clients.claim().catch(() => undefined);
-      await notifyUpdateChannels("update-applied");
     })()
   );
 });

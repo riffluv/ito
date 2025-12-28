@@ -59,6 +59,59 @@ const waitForPhase = async (page: Page, phase: string, timeoutMs = 60_000) => {
 test("Safe Update をルーム内で待機→適用できる", async ({ page }) => {
   test.setTimeout(240_000);
 
+  const debug = process.env.E2E_DEBUG_SAFE_UPDATE === "1";
+
+  const dumpSwState = async (label: string) => {
+    if (!debug) return;
+    const info = await page.evaluate(async () => {
+      const reg = await navigator.serviceWorker.getRegistration();
+      return {
+        controllerUrl: navigator.serviceWorker.controller?.scriptURL ?? null,
+        activeUrl: reg?.active?.scriptURL ?? null,
+        activeState: reg?.active?.state ?? null,
+        waitingUrl: reg?.waiting?.scriptURL ?? null,
+        waitingState: reg?.waiting?.state ?? null,
+        installingUrl: reg?.installing?.scriptURL ?? null,
+        installingState: reg?.installing?.state ?? null,
+      };
+    });
+    // eslint-disable-next-line no-console
+    console.log(`[sw:${label}]`, info);
+  };
+
+  if (debug) {
+    page.on("console", async (msg) => {
+      const type = msg.type();
+      const text = msg.text();
+      const shouldLog =
+        text.includes("[trace:") ||
+        text.includes("safeUpdate") ||
+        text.includes("sw.") ||
+        type === "error";
+      if (!shouldLog) return;
+      try {
+        const args = await Promise.all(
+          msg.args().map(async (arg) => {
+            try {
+              return await arg.jsonValue();
+            } catch {
+              return String(arg);
+            }
+          })
+        );
+        // eslint-disable-next-line no-console
+        console.log(`[browser:${type}]`, ...args);
+      } catch {
+        // eslint-disable-next-line no-console
+        console.log(`[browser:${type}]`, text);
+      }
+    });
+    page.on("pageerror", (error) => {
+      // eslint-disable-next-line no-console
+      console.log("[pageerror]", error);
+    });
+  }
+
   const id = Math.random().toString(36).slice(2, 8);
   const hostName = `e2e-host-${id}`;
   const roomName = `e2e-room-${id}`;
@@ -85,6 +138,7 @@ test("Safe Update をルーム内で待機→適用できる", async ({ page }) 
     () => navigator.serviceWorker?.controller?.scriptURL ?? ""
   );
   expect(initialUrl.length).toBeGreaterThan(0);
+  await dumpSwState("room:initial");
 
   const nextVersion = `e2e-${Date.now()}`;
   await page.evaluate(async (version) => {
@@ -102,6 +156,7 @@ test("Safe Update をルーム内で待機→適用できる", async ({ page }) 
 
   const updateButton = page.getByRole("button", { name: "更新 (注意)" });
   await expect(updateButton).toBeVisible({ timeout: 60_000 });
+  await dumpSwState("room:waiting-detected");
 
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "退出" }).click();
@@ -112,44 +167,19 @@ test("Safe Update をルーム内で待機→適用できる", async ({ page }) 
 
   const applyButton = page.getByRole("button", { name: "今すぐ適用" });
   await expect(applyButton).toBeVisible({ timeout: 60_000 });
-
-  await page.evaluate(() => {
-    localStorage.removeItem("e2e-sw-controller-change");
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      localStorage.setItem("e2e-sw-controller-change", "1");
-    });
-  });
-
-  const waitForApplyOutcome = async (timeoutMs = 60_000) => {
-    const handle = await page.waitForFunction(
-      (initialScriptUrl) => {
-        const url = navigator.serviceWorker?.controller?.scriptURL ?? "";
-        const changed = Boolean(url && url !== initialScriptUrl);
-        const controllerChanged =
-          window.localStorage.getItem("e2e-sw-controller-change") === "1";
-        const phase = window.__ITO_METRICS__?.safeUpdate?.phase ?? null;
-        if (changed && controllerChanged) return "applied";
-        if (phase === "failed") return "failed";
-        return "";
-      },
-      initialUrl,
-      { timeout: timeoutMs }
-    );
-    return String(await handle.jsonValue());
-  };
+  await dumpSwState("lobby:before-apply");
 
   await applyButton.click();
   await page.waitForLoadState("load");
+  await dumpSwState("lobby:after-apply-click");
 
   await waitForServiceWorkerController(page, 60_000);
-  let outcome = await waitForApplyOutcome(60_000);
-  if (outcome === "failed") {
-    const retryButton = page.getByRole("button", { name: "再試行する" });
-    await expect(retryButton).toBeVisible({ timeout: 30_000 });
-    await retryButton.click();
-    await page.waitForLoadState("load");
-    await waitForServiceWorkerController(page, 60_000);
-    outcome = await waitForApplyOutcome(60_000);
-  }
-  expect(outcome).toBe("applied");
+  await page.waitForFunction(
+    (expectedVersion) => {
+      const url = navigator.serviceWorker?.controller?.scriptURL ?? "";
+      return url.includes(`v=${expectedVersion}`);
+    },
+    nextVersion,
+    { timeout: 120_000 }
+  );
 });

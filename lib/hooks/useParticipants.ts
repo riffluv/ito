@@ -142,6 +142,8 @@ export function useParticipants(
   const presenceStallTimerRef = useRef<number | null>(null);
 
   // Firestore: players 購読（タブ非表示時は遅延開始、429時はバックオフ）
+  // auth 未確定のタイミングで購読すると permission-denied で購読が死ぬ可能性があるため、
+  // uid が確定してから購読を開始する。
   useEffect(() => {
     const unsubRef = { current: null as null | (() => void) };
     const backoffUntilRef = { current: 0 };
@@ -149,6 +151,7 @@ export function useParticipants(
 
     const visibilityCleanupRef = { current: null as null | (() => void) };
     let startVisibilityCleanup: null | (() => void) = null;
+    let cancelIdleStart: (() => void) | null = null;
 
     const detachVisibilityListener = () => {
       if (typeof document === "undefined") return;
@@ -184,13 +187,29 @@ export function useParticipants(
     };
 
     if (!firebaseEnabled || !roomId) {
+      unstable_batchedUpdates(() => {
+        setPlayers([]);
+        playersRef.current = [];
+        playersSignatureRef.current = "";
+        setError(null);
+        setLoading(false);
+      });
+      return cleanup;
+    }
+
+    if (!uid) {
+      unstable_batchedUpdates(() => {
+        setPlayers([]);
+        playersRef.current = [];
+        playersSignatureRef.current = "";
+        setError(null);
+        setLoading(true);
+      });
       return cleanup;
     }
 
     setLoading(true);
     setError(null);
-
-    let cancelIdleStart: (() => void) | null = null;
 
     const applyPlayersSnapshot = (docs: Array<{ data: () => PlayerDoc; id: string }>) => {
       const working = docs.map((doc) => ({ ...(doc.data() as PlayerDoc), id: doc.id }));
@@ -398,7 +417,7 @@ export function useParticipants(
     );
 
     return cleanup;
-  }, [roomId]);
+  }, [roomId, uid]);
 
   const presenceHydratedRef = useRef(false);
   const presenceHydrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -406,6 +425,8 @@ export function useParticipants(
   );
 
   // RTDB: presence 購読
+  // auth 未確定のタイミングで購読すると permission-denied で購読が死ぬ可能性があるため、
+  // uid が確定してから購読を開始する。
   useEffect(() => {
     presenceHydratedRef.current = false;
     onlineUidsSignatureRef.current = null;
@@ -426,11 +447,10 @@ export function useParticipants(
       unsubscribe?.();
     };
     const presenceAvailable = presenceSupported();
-    if (!roomId || !presenceAvailable) {
+    if (!roomId || !uid || !presenceAvailable) {
       setPresenceReady(false);
       setPresenceDegraded(!presenceAvailable);
       setOnlineUids(undefined);
-      setLoading(false);
       return cleanup;
     }
     const markReady = (uids: string[]) => {
@@ -476,7 +496,7 @@ export function useParticipants(
       cancelIdleSubscribe?.();
       cleanup();
     };
-  }, [roomId]);
+  }, [roomId, uid]);
 
   // 自分の presence アタッチ/デタッチ
   const clearAttachRetryTimer = () => {
