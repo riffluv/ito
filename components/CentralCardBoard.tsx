@@ -1135,6 +1135,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
+    // RESET 押下直後など、FSM が先に waiting を指している間は
+    // Firestore の order/proposal が古いままでも待機カードが消えないようにする。
+    if (roomStatus === "waiting") {
+      return [];
+    }
     if (!orderListKey && !proposalKey) {
       return [];
     }
