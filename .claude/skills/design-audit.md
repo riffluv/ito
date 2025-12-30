@@ -1,18 +1,19 @@
 ---
 name: design-audit
-description: 万能デザイン指示書に基づいてコードをチェックし、AI臭さを排除
+description: UI Core Spec に基づいてコードをチェックし、AI臭さ/Web臭さを排除
 ---
 
 # デザイン監査スキル
 
 ## 目的
-変更されたコードが「万能デザイン指示書.md」の基準を満たしているか検証し、AI臭さを排除する。
+変更されたコードが `docs/UI_CORE_SPEC.md` の基準（AI感/Web感排除）を満たしているか検証する。
 
 ## 実行手順
 
 ### 1. 参照ドキュメント読み込み
-- `万能デザイン指示書.md` を必ず読む
-- 特に Part 2 の「50項目チェックリスト」を重点確認
+- MUST: `docs/UI_CORE_SPEC.md`
+- ALSO: `STYLE_GUIDE.md`, `theme/DESIGN_GUIDE.md`
+- OPTION（テーマが指定されている場合のみ）: `docs/ui_theme/hd2d_pack.md`
 
 ### 2. 変更ファイルの特定
 - git diff または指定されたファイルを対象
@@ -21,30 +22,26 @@ description: 万能デザイン指示書に基づいてコードをチェック�
 ### 3. チェック項目 (優先度高のみ抜粋)
 
 #### 🔴 **CRITICAL (必須)**
-- [ ] 余白が4の倍数だけ → `19px`, `22px` など中途半端な値を使用
-- [ ] 行間が全段落同じ → 見出し/本文/注釈で差をつける
-- [ ] 角丸が全ボタン同じ → 主/副/危険で `3px/7px/10px` など差別化
-- [ ] 影が全カード同一 → 面積×重要度で影の段差をつける
-- [ ] アニメが `ease-in-out` 固定 → `cubic-bezier(.2,1,.3,1)` などカスタム
-- [ ] フォーカスリング既定 → 配色/太さを文脈最適化
-- [ ] CTA周りが密 → 周囲空白を広めに
-- [ ] エラー色が派手過ぎ → 彩度/明度落とす
-- [ ] 長文の最長行が広すぎ → 60-80字目安 `maxW:"68ch"`
-- [ ] CTA押下エフェクト無し → `_active={{ transform:"translateY(1px)" }}`
+- [ ] ボタンが“物体”になっている（face/rim/bevel/cast の4要素）
+- [ ] pressed が沈む（`translateY(1px)`）＋影/ベベルが変わる（色だけ禁止）
+- [ ] focus-visible が二重リングで統一（外2px＋内1px）かつ hover より強い
+- [ ] disabled が opacity だけになっていない（影/ハイライトを消して“死んだ道具”にする）
+- [ ] Primary が 1画面1つ（複数 Primary 乱立を避ける）
+- [ ] pointer: coarse（モバイル）でヒット領域 44〜48 を満たす（見た目が小さくても minH を維持）
+- [ ] モーダルがスケール（ぽよん）に頼っていない（暗転＋輪郭強化で前に出す）
+- [ ] 通知/トーストが右下SaaS配置になっていない（上寄せスタック）
 
 #### 🟡 **IMPORTANT (強く推奨)**
-- [ ] 全フォント偶数刻み → `15px/17px/19px` 混在
-- [ ] グラデが数式的 → ノイズテクスチャ重ね
-- [ ] 余白が上下対称 → `pt:"14px", pb:"22px"` など非対称
-- [ ] ホバー=影だけ → `transform:"translateY(-1px)"` で微小上移動
-- [ ] セクション見出し弱 → 字間/行間/下線で強調
-- [ ] ボタン群が等間隔 → 主だけ+間隔
+- [ ] 余白が均一すぎない（8/14/24 の段差で情報の塊を作れている）
+- [ ] “確定感” がある（短時間の枠点灯など。音頼みにしない）
+- [ ] 入力が“フォーム”ではなく“道具”（凹み + 枠 + focus-visible）
+- [ ] 日本語の崩れ（禁則/約物/括弧）と数字の揺れ（`tabular-nums`）に配慮している
+- [ ] 重い blur / backdrop-filter / 大きいブラー影を乱用していない（特にモバイル）
 
 ### 4. Pixi.js 固有チェック (該当する場合)
 - [ ] `destroy({ children: true })` でクリーンアップ実装
 - [ ] `prefers-reduced-motion` 対応 (アニメーション抑制)
-- [ ] duration は偶数・5刻み回避 (例: `1.17`, `0.83`, `2.34`)
-- [ ] easing は `cubic-bezier` でカスタム指定
+- [ ] duration/easing は tokens or 一貫したセットで運用（場当たりで増殖させない）
 - [ ] usePixiHudLayer + usePixiLayerLayout パターン使用
 
 ### 5. 出力形式
@@ -94,6 +91,9 @@ description: 万能デザイン指示書に基づいてコードをチェック�
 - **prefers-reduced-motion 尊重** 必須
 
 ## 参照
-- `万能デザイン指示書.md` (チェックリスト・Before/After)
+- `docs/UI_CORE_SPEC.md`（UI Core Spec / 唯一の正）
+- `docs/ui_theme/hd2d_pack.md`（テーマ適用時のみ）
+- `STYLE_GUIDE.md`（tokens-first）
+- `theme/DESIGN_GUIDE.md`（Chakra v3 設計）
 - `CLAUDE.md` (プロジェクト方針)
 - 既存実装例: `components/ui/AppButton.tsx`, `components/settings/SettingsModal.tsx`

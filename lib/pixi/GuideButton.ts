@@ -197,7 +197,7 @@ export class GuideButton extends PIXI.Container {
 
     // パーティクル生成（8個 - 8方向放射状の花火）
     if (finalConfig.showParticles) {
-      // 万能デザイン指示書: 可変の微差 - サイズに不均一性
+      // UI Core Spec: 可変の微差 - サイズに不均一性
       const particleSizes = [2.8, 3.2, 2.5, 3.5, 2.6, 3.3, 2.9, 3.1];
       for (let i = 0; i < 8; i++) {
         const particle = new PIXI.Graphics();
@@ -237,7 +237,7 @@ export class GuideButton extends PIXI.Container {
     gsap.set(this.arrow, { y: arrowInitialY, alpha: 0 });
     gsap.set(this.particles, { scale: 0, alpha: 1 });
 
-    // 1. コンテナフェードイン（万能デザイン指示書: 出だし早く→着地やわらか）
+    // 1. コンテナフェードイン（UI Core Spec: 出だし早く→着地やわらか）
     this.timeline.to(this, {
       alpha: 1,
       scale: 1,
@@ -257,7 +257,7 @@ export class GuideButton extends PIXI.Container {
       '-=0.28'
     );
 
-    // 3. パーティクル拡散（8方向放射状の花火 - 万能デザイン指示書: 不等間隔）
+    // 3. パーティクル拡散（8方向放射状の花火 - UI Core Spec: 不等間隔）
     this.timeline.to(
       this.particles,
       {
@@ -265,7 +265,7 @@ export class GuideButton extends PIXI.Container {
         x: (i) => {
           // 8方向放射（角度: 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°）
           const angle = (i * Math.PI * 2) / 8;
-          // 距離に微差（10〜14px - 万能デザイン指示書: 可変の微差）
+          // 距離に微差（10〜14px - UI Core Spec: 可変の微差）
           const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
           return Math.cos(angle) * distance;
         },
@@ -276,10 +276,10 @@ export class GuideButton extends PIXI.Container {
         },
         alpha: 0,
         duration: 0.88,
-        ease: 'cubic-bezier(.25,.85,.45,1)', // 万能デザイン指示書: 出だし早く→着地やわらか
+        ease: 'cubic-bezier(.25,.85,.45,1)', // UI Core Spec: 出だし早く→着地やわらか
         stagger: {
           each: 0.045,
-          from: 'random', // ランダム順で出現（万能デザイン指示書: 不等間隔）
+          from: 'random', // ランダム順で出現（UI Core Spec: 不等間隔）
         },
       },
       '-=0.35'
@@ -376,7 +376,7 @@ export class GuideButton extends PIXI.Container {
       '-=0.3'
     );
 
-    // 3. パーティクル拡散（8方向放射状の花火 - 万能デザイン指示書: 不等間隔）
+    // 3. パーティクル拡散（8方向放射状の花火 - UI Core Spec: 不等間隔）
     this.timeline.to(
       this.particles,
       {
@@ -384,7 +384,7 @@ export class GuideButton extends PIXI.Container {
         x: (i) => {
           // 8方向放射（角度: 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°）
           const angle = (i * Math.PI * 2) / 8;
-          // 距離に微差（10〜14px - 万能デザイン指示書: 可変の微差）
+          // 距離に微差（10〜14px - UI Core Spec: 可変の微差）
           const distance = [12, 11, 13, 10.5, 12.5, 11.5, 13.5, 10][i] || 12;
           return Math.cos(angle) * distance;
         },
@@ -395,10 +395,10 @@ export class GuideButton extends PIXI.Container {
         },
         alpha: 0,
         duration: 0.88,
-        ease: 'cubic-bezier(.25,.85,.45,1)', // 万能デザイン指示書: 出だし早く→着地やわらか
+        ease: 'cubic-bezier(.25,.85,.45,1)', // UI Core Spec: 出だし早く→着地やわらか
         stagger: {
           each: 0.045,
-          from: 'random', // ランダム順で出現（万能デザイン指示書: 不等間隔）
+          from: 'random', // ランダム順で出現（UI Core Spec: 不等間隔）
         },
       },
       '-=0.55'

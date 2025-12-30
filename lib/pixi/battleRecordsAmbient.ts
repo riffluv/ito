@@ -5,7 +5,7 @@
  * - 勝利時: 金色の微粒子が上昇 + 淡いグロー脈動
  * - 敗北時: 青白い微粒子が下降 + 静かな脈動
  *
- * 万能デザイン指示書の原則:
+ * UI Core Spec の原則:
  * - 粒子サイズ・速度に微差（不均一）
  * - タイミングに不等間隔
  * - 控えめな主張
@@ -55,7 +55,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
     this.glowLayer.zIndex = -5;
     this.addChild(this.glowLayer);
 
-    // パーティクル生成（24個 - 万能指示書: 微差のある数）
+    // パーティクル生成（24個 - UI Core Spec: 微差のある数）
     this.createParticles(24);
   }
 
@@ -79,7 +79,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
     for (let i = 0; i < count; i++) {
       const particle = new PIXI.Graphics();
 
-      // 微差のあるサイズ（万能指示書: 可変の微差）
+      // 微差のあるサイズ（UI Core Spec: 可変の微差）
       const sizeVariants = [1.5, 2, 2.5, 3, 3.5];
       const size = sizeVariants[i % sizeVariants.length];
 
@@ -116,7 +116,7 @@ export class BattleRecordsAmbient extends PIXI.Container {
 
     // パーティクルアニメーション
     this.particles.forEach((particle, index) => {
-      // 微差のある速度（万能指示書: 不均一）
+      // 微差のある速度（UI Core Spec: 不均一）
       const durationVariants = [8, 10, 12, 14, 16];
       const duration = durationVariants[index % durationVariants.length];
 
