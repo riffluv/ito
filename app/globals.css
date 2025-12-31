@@ -135,9 +135,15 @@
     --card-w-base: clamp(88px, 24vw, 100px);
     --card-h-base: calc(var(--card-w-base) * 7 / 5);
     --card-w-md-at-1920: 120;
+    /* Windows DPI(125%/150%) などで 100vw が縮む場合も、物理サイズが過剰に肥大しないよう
+       clamp の min を別変数に切り出す（min だけを DPI 条件で調整できるようにする）。 */
+    --card-w-md-min-at-1920: var(--card-w-md-at-1920);
+    /* カード内側パディング（md）。幅を DPI 補正したときも「中身の詰まり具合」を維持するため、
+       padding も min と同じ思想で DPI 条件側で調整する。 */
+    --card-pad-md: 13px;
     --card-scale-max: 2;
     --card-w-md: clamp(
-      calc(var(--card-w-md-at-1920) * 1px),
+      calc(var(--card-w-md-min-at-1920) * 1px),
       calc(100vw * var(--card-w-md-at-1920) / 1920),
       calc(var(--card-w-md-at-1920) * var(--card-scale-max) * 1px)
     );
@@ -211,7 +217,12 @@
     :root {
       --dpi-scale: 0.92;
       --adaptive-scale: 0.92;
-      --card-text-scale: 0.9;
+      /* 125% DPI では 1CSSpx の物理サイズが大きくなるため、カード内テキストも同系統で補正 */
+      --card-text-scale: 0.8;
+      /* 1920px@100% の 120px を、DPI125% 時に物理サイズが近くなるように min だけ補正 */
+      --card-w-md-min-at-1920: 96;
+      /* 13px / 1.25 ≒ 10.4px */
+      --card-pad-md: 10px;
       --card-gap:     clamp(0.25rem, 1cqi, 0.75rem);
       --card-padding: clamp(0.5rem,  2cqi, 1rem);
       --card-min:     clamp(4rem,    4.5cqi, 5.5rem);
@@ -225,7 +236,12 @@
     :root {
       --dpi-scale: 0.88;
       --adaptive-scale: 0.88;
-      --card-text-scale: 0.86;
+      /* 150% DPI でも、FHD(1920)@100% の見え方（改行/収まり）を維持する */
+      --card-text-scale: 0.67;
+      /* 1920px@100% の 120px を、DPI150% 時に物理サイズが近くなるように min だけ補正 */
+      --card-w-md-min-at-1920: 80;
+      /* 13px / 1.5 ≒ 8.7px */
+      --card-pad-md: 9px;
       --card-gap:     clamp(0.2rem, 0.9cqi, 0.6rem);
       --card-padding: clamp(0.4rem, 1.8cqi, 0.8rem);
       --card-min:     clamp(3.5rem, 4cqi,    5rem);

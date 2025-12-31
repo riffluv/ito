@@ -202,7 +202,7 @@ export function GameCard({
       className={styles.root}
       data-card-id={dataCardId}
       css={cardSizeCss()}
-      p={{ base: 3, md: "13px" }}
+      p={{ base: 3, md: "var(--card-pad-md, 13px)" }}
       // flip状態(CardFaces)と見た目を揃える
       borderRadius="7px"
       border={`${styleOverrides.borderWidth} solid`}
@@ -292,9 +292,17 @@ export function GameCard({
                 : UI_TOKENS.TEXT_SHADOWS.none
           }
           width="100%"
-          maxWidth={typeof number === "number" ? "100%" : "calc(100% - 6px)"}
+          maxWidth={
+            typeof number === "number"
+              ? "100%"
+              : "calc(100% - (6px * var(--card-text-scale)))"
+          }
           textAlign="center"
-          padding={typeof number === "number" ? "0" : "0 0.2rem"}
+          padding={
+            typeof number === "number"
+              ? "0"
+              : "0 calc(0.2rem * var(--card-text-scale))"
+          }
           wordBreak={
             typeof number === "number" ? "keep-all" : clue === WAITING_LABEL ? "keep-all" : "break-word"
           }

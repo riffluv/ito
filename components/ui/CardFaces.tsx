@@ -125,7 +125,7 @@ export function CardFaceFront({
 
       height="100%"
 
-      p={{ base: 3, md: "13px" }}
+      p={{ base: 3, md: "var(--card-pad-md, 13px)" }}
 
       // HD-2D風: 角丸を微差で調整（7px = 8pxより少し小さく、手触り感）
       borderRadius="7px"
@@ -186,11 +186,11 @@ export function CardFaceFront({
 
           width="100%"
 
-          maxWidth="calc(100% - 6px)"
+          maxWidth="calc(100% - (6px * var(--card-text-scale)))"
 
           textAlign="center"
 
-          padding="0 0.2rem"
+          padding="0 calc(0.2rem * var(--card-text-scale))"
 
           wordBreak={clue === WAITING_LABEL ? "keep-all" : "break-word"}
 
@@ -311,7 +311,7 @@ export function CardFaceBack({
 
       height="100%"
 
-      p={{ base: 3, md: "13px" }}
+      p={{ base: 3, md: "var(--card-pad-md, 13px)" }}
 
       // HD-2D風: 角丸を微差で調整（7px = 8pxより少し小さく、手触り感）
       borderRadius="7px"

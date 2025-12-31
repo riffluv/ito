@@ -106,9 +106,9 @@ export function CardText({
     lineHeight: isNumber ? 1.2 : 1.3, // ディセンダー対応
     textShadow: waitingInCentral ? "none" : textShadow,
     width: "100%",
-    maxWidth: "calc(100% - 8px)",
+    maxWidth: "calc(100% - (8px * var(--card-text-scale)))",
     textAlign: "center" as const,
-    padding: "0 0.25rem",
+    padding: "0 calc(0.25rem * var(--card-text-scale))",
     wordBreak: isNumber ? ("keep-all" as const) : ("break-word" as const),
     whiteSpace: isNumber ? ("nowrap" as const) : ("normal" as const),
     overflowWrap: isNumber ? ("normal" as const) : ("anywhere" as const),
