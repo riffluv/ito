@@ -103,12 +103,28 @@ const decideClueAndSubmitCard = async (page: Page, clue: string) => {
   const decideButton = page.getByRole("button", { name: "決定" });
   await expect(decideButton).toBeVisible({ timeout: 20_000 });
   await expect(decideButton).toBeEnabled({ timeout: 20_000 });
+  const submitClueResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/rooms/") &&
+      response.url().endsWith("/submit-clue") &&
+      response.status() === 200,
+    { timeout: 30_000 }
+  );
   await decideButton.click();
+  await submitClueResponse;
 
   const submitButton = page.getByRole("button", { name: "出す" });
   await expect(submitButton).toBeVisible({ timeout: 20_000 });
   await expect(submitButton).toBeEnabled({ timeout: 20_000 });
+  const proposalResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/rooms/") &&
+      response.url().endsWith("/proposal") &&
+      response.status() === 200,
+    { timeout: 30_000 }
+  );
   await submitButton.click();
+  await proposalResponse;
 };
 
 test("退出ボタンで離脱しても残りで完走できる", async ({ page, browser }) => {
@@ -149,10 +165,19 @@ test("退出ボタンで離脱しても残りで完走できる", async ({ page,
       timeout: 30_000,
     });
     await p3.page.waitForFunction(
-      () => document.body.style.overflow !== "hidden",
+      () => {
+        if (document.body.style.overflow === "hidden") return false;
+        if (document.documentElement.style.overflow === "hidden") return false;
+
+        const bodyOverflow = getComputedStyle(document.body).overflowY;
+        const rootOverflow = getComputedStyle(document.documentElement).overflowY;
+        const blocked = (value: string) => value === "hidden" || value === "clip";
+        return !blocked(bodyOverflow) && !blocked(rootOverflow);
+      },
       null,
       { timeout: 20_000 }
     );
+    await expect(p3.page.getByText(roomName, { exact: true })).toBeVisible({ timeout: 30_000 });
 
     await expect(page.getByText(playerThreeName)).toHaveCount(0, {
       timeout: 120_000,
@@ -163,7 +188,7 @@ test("退出ボタンで離脱しても残りで完走できる", async ({ page,
       decideClueAndSubmitCard(p2.page, "みかん"),
     ]);
 
-    const seinoButton = page.locator("button", { hasText: "せーの" }).first();
+    const seinoButton = page.getByRole("button", { name: /せーの/ }).first();
     await expect(seinoButton).toBeVisible({ timeout: 120_000 });
     await expect(seinoButton).toBeEnabled({ timeout: 120_000 });
     await seinoButton.click();

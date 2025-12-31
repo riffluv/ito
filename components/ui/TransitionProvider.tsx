@@ -1,10 +1,12 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useEffect } from "react";
 import type { TransitionOptions } from "../../hooks/transition/types";
 import { usePageTransition } from "../../hooks/usePageTransition";
 import { DragonQuestLoading } from "./DragonQuestLoading";
 import { PageTransition } from "./PageTransition";
+import { usePathname } from "next/navigation";
+import { forceReleaseAllScrollLocks } from "@/lib/ui/scrollLock";
 
 // 遷移コンテキスト
 const TransitionContext = createContext<ReturnType<typeof usePageTransition> | null>(null);
@@ -15,8 +17,16 @@ interface TransitionProviderProps {
 
 export function TransitionProvider({ children }: TransitionProviderProps) {
   const transition = usePageTransition();
+  const pathname = usePathname();
   const direction =
     (transition.direction as TransitionOptions["direction"] | undefined) ?? "slideLeft";
+
+  useEffect(() => {
+    if (transition.isLoading) return;
+    if (typeof pathname !== "string") return;
+    if (pathname.startsWith("/rooms/") || pathname.startsWith("/r/")) return;
+    forceReleaseAllScrollLocks();
+  }, [pathname, transition.isLoading]);
 
   return (
     <TransitionContext.Provider value={transition}>

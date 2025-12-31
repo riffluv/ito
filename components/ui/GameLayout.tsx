@@ -191,7 +191,7 @@ export function GameLayout({
               display="flex"
               alignItems="center"
               justifyContent="space-between"
-              px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
+              px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : "var(--ui-header-pad-x)"}
               bg="surfaceSubtle"
               borderBottomWidth="1px"
               borderColor="borderDefault"
@@ -234,7 +234,7 @@ export function GameLayout({
               <Box
                 w="100%"
                 h="100%"
-                px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
+                px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : "var(--ui-main-pad)"}
                 py={shouldUseTouchTabletLayout ? { base: 4, md: 5 } : { base: 3, md: 5 }} // 縦パディング縮小でタイトな感じに
                 position="relative"
                 display="flex"
@@ -249,12 +249,6 @@ export function GameLayout({
                     WebkitOverflowScrolling: "touch",
                     overscrollBehaviorY: "contain",
                   }),
-                  // DPI 150%対応：更なるコンパクト化
-                  "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-                    {
-                      padding: "0.4rem 1.2rem !important", // パディング縮小
-                      gap: "0.6rem !important", // 要素間を更に詰める
-                    },
                 }}
                 zIndex={10}
                 bg="transparent"
@@ -272,7 +266,7 @@ export function GameLayout({
               bottom={`calc(${UNIFIED_LAYOUT.HAND_AREA_HEIGHT} + 16px)`}
               // チャットと同じように左端に寄せて衝突を完全回避
               left={{ base: "12px", md: "16px" }}
-              width={{ base: "220px", md: "240px" }}
+              width={{ base: "220px", md: "var(--ui-sidebar-w)" }}
               zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
               css={{ pointerEvents: "none" }}
             >
@@ -291,7 +285,7 @@ export function GameLayout({
               bottom={{ base: "clamp(220px, 28dvh, 360px)", md: "clamp(240px, 26dvh, 380px)" }}
               // さらに画面の外側（右端）へ寄せる
               right={{ base: "12px", md: "16px" }}
-              width={{ base: "min(88vw, 320px)", md: "300px" }}
+              width={{ base: "min(88vw, 320px)", md: "var(--ui-right-panel-w)" }}
               zIndex={UNIFIED_LAYOUT.Z_INDEX.PANEL}
               css={{
                 pointerEvents: "none",
@@ -322,7 +316,7 @@ export function GameLayout({
             p={0}
             display="flex"
             justifyContent="center"
-            px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : { base: 4, md: 8 }}
+            px={shouldUseTouchTabletLayout ? { base: 4, md: 6 } : "var(--ui-main-pad)"}
           >
             <Box
               w="100%"
@@ -356,7 +350,7 @@ export function GameLayout({
           "sidebar main-area chat"
           "hand hand hand"
         `}
-        gridTemplateColumns={{ base: "1fr", xl: "240px 1fr 280px" }} // ガイドライン: 軽い非対称 (240px != 280px)
+        gridTemplateColumns={{ base: "1fr", xl: "var(--ui-sidebar-w) 1fr var(--ui-right-panel-w)" }} // ガイドライン: 軽い非対称 (240px != 280px)
         gridTemplateRows={{
           base: "auto minmax(0, 1fr) auto",
           xl: `auto minmax(0, 1fr) ${UNIFIED_LAYOUT.HAND_AREA_HEIGHT}`,
@@ -389,7 +383,7 @@ export function GameLayout({
           borderColor={UI_TOKENS.COLORS.whiteAlpha30}
           display="flex"
           alignItems="center"
-          px={{ base: 4, md: 8 }}
+          px="var(--ui-header-pad-x)"
           paddingTop={SAFE_AREA_TOP}
           boxShadow={`0 1px 0 ${UI_TOKENS.COLORS.whiteAlpha05}`}
         >
@@ -412,8 +406,8 @@ export function GameLayout({
         <Box
           gridArea="main-area"
           bg={UI_TOKENS.COLORS.panelBg}
-          paddingInline={{ base: 4, md: 6, lg: 8, xl: 7 }} // ガイドライン: 左右非対称 (7 != 8)
-          paddingTop={{ base: 4, md: 6, lg: 8, xl: 7 }}
+          paddingInline="var(--ui-main-pad)"
+          paddingTop="var(--ui-main-pad)"
           paddingBottom={0}
           overflowY="hidden"
           display="flex"
@@ -441,7 +435,7 @@ export function GameLayout({
         <Box
           gridArea="hand"
           bg="transparent"
-          padding={{ base: 4, md: 6 }}
+          padding="var(--ui-main-pad)"
           paddingBottom={shouldUseTouchTabletLayout ? `calc(${SAFE_AREA_BOTTOM} + 1rem)` : SAFE_AREA_BOTTOM}
           display="flex"
           alignItems="center"
@@ -457,11 +451,6 @@ export function GameLayout({
             [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
               height: UNIFIED_LAYOUT.DPI_125.HAND_AREA_HEIGHT,
             },
-            "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-              {
-                height: "clamp(140px, 12dvh, 180px) !important", // 更にコンパクト
-                padding: "0.6rem 0.8rem !important", // パディング縮小
-              },
           }}
         >
           {handArea || <Box h="1px" w="100%" />}

@@ -143,6 +143,43 @@
     );
     --card-h-md: calc(var(--card-w-md) * 7 / 5);
 
+    /* UIサイズ（設計基準: FHD=1920px / DPI100%）
+       カードと同じ思想で「画面に対する占有率」を維持しつつ、
+       PCではブレークポイント乱立を避けて自然にスケールさせる。 */
+    --ui-scale-min: 0.6;
+    --ui-scale-max: var(--card-scale-max, 2);
+
+    /* ゲーム画面: サイドバー/右パネル */
+    --ui-sidebar-w-at-1920: 240;
+    --ui-right-panel-w-at-1920: 280;
+    --ui-sidebar-w: clamp(
+      calc(var(--ui-sidebar-w-at-1920) * var(--ui-scale-min) * 1px),
+      calc(100vw * var(--ui-sidebar-w-at-1920) / 1920),
+      calc(var(--ui-sidebar-w-at-1920) * var(--ui-scale-max) * 1px)
+    );
+    --ui-right-panel-w: clamp(
+      calc(var(--ui-right-panel-w-at-1920) * var(--ui-scale-min) * 1px),
+      calc(100vw * var(--ui-right-panel-w-at-1920) / 1920),
+      calc(var(--ui-right-panel-w-at-1920) * var(--ui-scale-max) * 1px)
+    );
+
+    /* ゲーム画面: 余白（FHD基準） */
+    --ui-header-pad-x-at-1920: 32;
+    --ui-header-pad-x: clamp(
+      calc(var(--ui-header-pad-x-at-1920) * var(--ui-scale-min) * 1px),
+      calc(100vw * var(--ui-header-pad-x-at-1920) / 1920),
+      calc(var(--ui-header-pad-x-at-1920) * var(--ui-scale-max) * 1px)
+    );
+    --ui-main-pad-at-1920: 28;
+    --ui-main-pad: clamp(
+      calc(var(--ui-main-pad-at-1920) * var(--ui-scale-min) * 1px),
+      calc(100vw * var(--ui-main-pad-at-1920) / 1920),
+      calc(var(--ui-main-pad-at-1920) * var(--ui-scale-max) * 1px)
+    );
+
+    /* メインメニュー: 主要コンテナ（7xl=1280px基準、上限は読みやすさ優先） */
+    --ui-menu-max-w: clamp(1280px, calc(100vw * 1280 / 1920), 1760px);
+
     /* ゲームカード関連（コンテナクエリ単位に対応） */
     --card-gap:     clamp(0.375rem, 1.5cqi, 1rem);
     --card-padding: clamp(0.75rem,  2.5cqi, 1.25rem);

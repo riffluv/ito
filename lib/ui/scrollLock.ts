@@ -68,3 +68,18 @@ export const lockScroll = (options: ScrollLockOptions = {}) => {
     releaseBodyLock();
   };
 };
+
+export const forceReleaseAllScrollLocks = () => {
+  bodyLockCount = 0;
+  rootLockCount = 0;
+
+  if (typeof document !== "undefined") {
+    if (document.body) {
+      document.body.style.overflow = prevBodyOverflow ?? "";
+    }
+    document.documentElement.style.overflow = prevRootOverflow ?? "";
+  }
+
+  prevBodyOverflow = null;
+  prevRootOverflow = null;
+};

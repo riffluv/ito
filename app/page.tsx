@@ -592,7 +592,7 @@ export default function MainMenu() {
           },
         }}
       >
-        <Container maxW="7xl" position="relative" zIndex={1}>
+        <Container maxW="var(--ui-menu-max-w)" px="var(--ui-main-pad)" position="relative" zIndex={1}>
           <VStack gap={{ base: "47px", lg: "61px" }} align="center">
             <VStack gap="19px" align="center" textAlign="center" maxW="4xl">
               <Box>
@@ -872,7 +872,8 @@ export default function MainMenu() {
 
       {/* ルーム一覧（ロビーエリア） */}
       <Container
-        maxW="7xl"
+        maxW="var(--ui-menu-max-w)"
+        px="var(--ui-main-pad)"
         py={{ base: scaleForDpi("2.7rem"), md: scaleForDpi("3.9rem") }}
         css={{
           "@container (max-width: 600px)": {
