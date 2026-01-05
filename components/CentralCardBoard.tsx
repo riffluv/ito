@@ -37,6 +37,7 @@ import {
 } from "@/lib/game/proposalScheduler";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { finalizeReveal, removeCardFromProposal } from "@/lib/game/room";
+import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
@@ -1135,44 +1136,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
-    // RESET 押下直後など、FSM が先に waiting を指している間は
-    // Firestore の order/proposal が古いままでも待機カードが消えないようにする。
-    if (roomStatus === "waiting") {
-      return [];
-    }
-    if (!orderListKey && !proposalKey) {
-      return [];
-    }
-
-    const normalizedOrder = (orderList || []).map((id) =>
-      typeof id === "string" && id.length > 0 ? id : null
-    );
-
-    // reveal/finished は履歴どおり表示（localHide では切り替えない）
-    if (roomStatus === "finished" || roomStatus === "reveal") {
-      return normalizedOrder;
-    }
-
-    // 進行中は在室メンバーのみ反映（スロット位置を保持）
-    if (Array.isArray(proposal)) {
-      const sanitized = proposal.map((id) =>
-        typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
-          ? id
-          : null
-      );
-      if (sanitized.some(Boolean)) return sanitized;
-    }
-
-    // リビール直前のフォロー（在室メンバーに限定）
-    if (normalizedOrder.some(Boolean)) {
-      const filteredOrder = normalizedOrder.filter(
-        (id): id is string =>
-          typeof id === "string" && id.length > 0 && eligibleIdSet.has(id)
-      );
-      if (filteredOrder.length > 0) return filteredOrder;
-    }
-
-    return [];
+    return computeBoardActiveProposal({
+      status: roomStatus,
+      orderList,
+      proposal,
+      eligibleIdSet,
+      orderListKey,
+      proposalKey,
+    });
   }, [
     roomStatus,
     orderList,

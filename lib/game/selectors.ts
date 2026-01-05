@@ -104,7 +104,6 @@ export function prioritizeHostId(opts: {
   return [hostId, ...eligibleIds.filter((id) => id !== hostId)];
 }
 
-
 // 正規化ヘルパー
 const normalizeIdArray = (arr: unknown): (string | null)[] =>
   Array.isArray(arr)
@@ -138,6 +137,67 @@ export function computeVisibleProposal(opts: {
     (id): id is string => typeof id === "string" && eligible.has(id)
   );
   if (filteredOrder.length > 0) return filteredOrder;
+  return [];
+}
+
+/**
+ * CentralCardBoard 用: proposal を「スロット配列」として表示するための純粋関数。
+ * - waiting は常に空（RESET直後に古い proposal が見えてチラつくのを防ぐ）
+ * - reveal/finished は order.list（履歴）をそのまま返す
+ * - clue 中は eligible だけ残し、proposal のスロット位置は維持する
+ * - proposal が空なら order.list へフォールバック（eligible のみに限定して返す）
+ */
+export function computeBoardActiveProposal(opts: {
+  status: RoomStatus | undefined;
+  orderList?: readonly string[] | null;
+  proposal?: readonly (string | null)[] | readonly string[] | null;
+  eligibleIdSet: ReadonlySet<string>;
+  orderListKey?: string | null;
+  proposalKey?: string | null;
+}): (string | null)[] {
+  const status = opts.status;
+
+  if (status === "waiting") {
+    return [];
+  }
+
+  const hasAnySnapshot =
+    typeof opts.orderListKey === "string" || typeof opts.proposalKey === "string"
+      ? Boolean(opts.orderListKey) || Boolean(opts.proposalKey)
+      : (Array.isArray(opts.orderList) && opts.orderList.length > 0) ||
+        (Array.isArray(opts.proposal) && opts.proposal.length > 0);
+
+  if (!hasAnySnapshot) {
+    return [];
+  }
+
+  const normalizedOrder = normalizeIdArray(opts.orderList || []);
+
+  if (status === "reveal" || status === "finished") {
+    return normalizedOrder;
+  }
+
+  const eligible = opts.eligibleIdSet;
+
+  if (Array.isArray(opts.proposal)) {
+    const normalizedProposal = normalizeIdArray(opts.proposal);
+    const sanitized = normalizedProposal.map((id) =>
+      typeof id === "string" && eligible.has(id) ? id : null
+    );
+    if (sanitized.some(Boolean)) {
+      return sanitized;
+    }
+  }
+
+  if (normalizedOrder.some(Boolean)) {
+    const filteredOrder = normalizedOrder.filter(
+      (id): id is string => typeof id === "string" && eligible.has(id)
+    );
+    if (filteredOrder.length > 0) {
+      return filteredOrder;
+    }
+  }
+
   return [];
 }
 
