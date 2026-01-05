@@ -157,5 +157,9 @@
     "deny": [],
     "ask": []
   },
-  "spinnerTipsEnabled": true
+  "spinnerTipsEnabled": true,
+  "enabledMcpjsonServers": [
+    "serena",
+    "context7"
+  ]
 }
