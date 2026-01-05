@@ -200,10 +200,7 @@ service cloud.firestore {
           // ホスト/管理者の通常更新（ベースライン）
           ((isHost(roomId) || isAdmin())
             && isValidHostAssignment(roomId))
-          // 一般参加者: clue中のみ、order.* と lastActiveAt だけを変更（差分ベース）
-          || (getRoomStatus(roomId) == 'clue'
-            && onlyOrderAndLastActiveChanged()
-            && orderChangeKeysAreSafe())
+          // サーバー主導: order 変更は API（Admin SDK）経由のみ許可
           // カスタムお題モード時、参加者によるお題更新を許可
           || canParticipantUpdateCustomTopic(roomId)
           // ゲーム終了後のMVP投票
@@ -304,16 +301,11 @@ service cloud.firestore {
     }
 
       match /roomProposals/{roomId} {
-        allow read: if isAuthenticated();
+        allow read: if isAuthenticated() && canWriteProposal(roomId);
 
-        allow create: if isAuthenticated()
-          && canWriteProposal(roomId)
-          && isValidRoomProposalDoc(request.resource.data);
-
-      allow update: if isAuthenticated()
-        && canWriteProposal(roomId)
-        && isValidRoomProposalDoc(request.resource.data)
-        && isValidRoomProposalDoc(resource.data);
+        // サーバー主導: proposal は API（Admin SDK）経由のみ許可
+        allow create: if false;
+        allow update: if false;
 
       allow delete: if false;
     }
@@ -406,18 +398,6 @@ service cloud.firestore {
         );
     }
 
-    // トップレベル差分: order と lastActiveAt 以外は変えていないこと
-    function onlyOrderAndLastActiveChanged() {
-      return resource.data.diff(request.resource.data).changedKeys().hasOnly(['order','lastActiveAt']);
-    }
-    // order の差分: proposal のみ（互換で total 同時更新も可）
-    function orderChangeKeysAreSafe() {
-      // CRITICAL FIX: Allow proposal updates even when order is null or partial
-      return !('order' in resource.data)
-        || resource.data.order == null
-        || request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal'])
-        || request.resource.data.order.diff(resource.data.order).changedKeys().hasOnly(['proposal','total']);
-    }
   }
 }
 
