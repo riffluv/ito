@@ -34,6 +34,10 @@ env.local
 *.har
 downloaded-logs-*.json
 
+# Proposal drafts (keep out of repo)
+本部向け_概要資料_提案概要_1-2p.md
+本部向け_概要資料_個人情報_運用_責任範囲.md
+
 # Local task sync artifacts
 tasksync/
 

@@ -170,6 +170,39 @@ function dispatchRoomSyncPatch(value: unknown): RoomSyncPatch | null {
   return patch;
 }
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const isRetriableNetworkError = (error: unknown): boolean => {
+  const code = (error as ApiError | undefined)?.code;
+  if (code === "timeout") return true;
+  return error instanceof TypeError;
+};
+
+async function postJsonWithRetry<T>(
+  url: string,
+  body: Record<string, unknown>,
+  options?: { retries?: number; baseDelayMs?: number }
+): Promise<T> {
+  const retries = Math.max(0, options?.retries ?? 0);
+  const baseDelayMs = Math.max(0, options?.baseDelayMs ?? 120);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await postJson<T>(url, body);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries || !isRetriableNetworkError(error)) {
+        throw error;
+      }
+      const delayMs = baseDelayMs * (attempt + 1);
+      traceAction("api.retry", { url, attempt: attempt + 1, delayMs });
+      await sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
 export async function apiCreateRoom(payload: {
   roomName: string;
   displayName: string;
@@ -332,13 +365,13 @@ export async function apiMutateProposal(params: {
   targetIndex?: number | null;
 }): Promise<{ status: "ok" | "noop" | "missing-deal" }> {
   const token = await getIdTokenOrThrow("proposal-mutate");
-  return postJson(`/api/rooms/${params.roomId}/proposal`, {
+  return postJsonWithRetry(`/api/rooms/${params.roomId}/proposal`, {
     token,
     playerId: params.playerId,
     action: params.action,
     targetIndex: params.targetIndex ?? null,
     clientVersion: APP_VERSION,
-  });
+  }, { retries: 2, baseDelayMs: 140 });
 }
 
 export async function apiCommitPlay(roomId: string, playerId: string): Promise<void> {

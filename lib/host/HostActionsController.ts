@@ -209,6 +209,18 @@ export function createHostActionsController(
     return null;
   };
 
+  const fetchRoomSnapshot = async (roomId: string): Promise<RoomDoc | null> => {
+    if (!db) return null;
+    try {
+      const ref = doc(db, "rooms", roomId);
+      const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
+      return (snap.data() as RoomDoc | undefined) ?? null;
+    } catch (error) {
+      traceError("ui.host.room.read", error, { roomId });
+      return null;
+    }
+  };
+
   const quickStartWithTopic = async (
     req: QuickStartRequest
   ): Promise<QuickStartResult> => {
@@ -362,21 +374,61 @@ export function createHostActionsController(
         relaxForNonWaiting: relaxForNonWaiting ? "1" : "0",
       });
 
-      await apiStartGame(roomId, {
-        allowFromFinished,
-        allowFromClue,
-        requestId: startRequestId,
-        sessionId,
-        autoDeal: true,
-        topicType: effectiveType,
-        customTopic: customTopic ?? topic ?? undefined,
-        presenceUids:
-          Array.isArray(presenceInfo?.onlineUids) && presenceInfo.onlineUids.length > 0
-            ? presenceInfo.onlineUids.filter(
-                (id): id is string => typeof id === "string" && id.trim().length > 0
-              )
-            : undefined,
-      });
+      const runStart = () =>
+        apiStartGame(roomId, {
+          allowFromFinished,
+          allowFromClue,
+          requestId: startRequestId,
+          sessionId,
+          autoDeal: true,
+          topicType: effectiveType,
+          customTopic: customTopic ?? topic ?? undefined,
+          presenceUids:
+            Array.isArray(presenceInfo?.onlineUids) && presenceInfo.onlineUids.length > 0
+              ? presenceInfo.onlineUids.filter(
+                  (id): id is string => typeof id === "string" && id.trim().length > 0
+                )
+              : undefined,
+        });
+
+      const confirmStarted = async () => {
+        const room = await fetchRoomSnapshot(roomId);
+        return (
+          room?.status === "clue" &&
+          typeof room.startRequestId === "string" &&
+          room.startRequestId === startRequestId
+        );
+      };
+
+      try {
+        await runStart();
+      } catch (error) {
+        if (!isTransientNetworkError(error)) {
+          throw error;
+        }
+        traceAction("ui.host.quickStart.retry", {
+          roomId,
+          requestId: startRequestId,
+          message: getErrorMessage(error),
+        });
+        await sleep(650);
+        try {
+          await runStart();
+        } catch (retryError) {
+          const code = (retryError as Partial<ApiError> | null)?.code;
+          if (
+            (code === "rate_limited" || isTransientNetworkError(retryError)) &&
+            (await confirmStarted())
+          ) {
+            traceAction("ui.host.quickStart.retry.applied", {
+              roomId,
+              requestId: startRequestId,
+            });
+          } else {
+            throw retryError;
+          }
+        }
+      }
 
       try {
         postRoundReset(roomId);
@@ -546,12 +598,52 @@ export function createHostActionsController(
 
     const sessionId = await resolveSessionId();
 
-    await resetRoomWithPrune(req.roomId, keep, {
-      notifyChat: true,
-      recallSpectators: req.recallSpectators ?? true,
-      requestId: resetRequestId,
-      sessionId,
-    });
+    const runReset = () =>
+      resetRoomWithPrune(req.roomId, keep, {
+        notifyChat: true,
+        recallSpectators: req.recallSpectators ?? true,
+        requestId: resetRequestId,
+        sessionId,
+      });
+
+    const confirmResetApplied = async () => {
+      const room = await fetchRoomSnapshot(req.roomId);
+      return (
+        room?.status === "waiting" &&
+        typeof room.resetRequestId === "string" &&
+        room.resetRequestId === resetRequestId
+      );
+    };
+
+    try {
+      await runReset();
+    } catch (error) {
+      if (!isTransientNetworkError(error)) {
+        throw error;
+      }
+      traceAction("ui.room.reset.retry", {
+        roomId: req.roomId,
+        requestId: resetRequestId,
+        message: getErrorMessage(error),
+      });
+      await sleep(650);
+      try {
+        await runReset();
+      } catch (retryError) {
+        const code = (retryError as Partial<ApiError> | null)?.code;
+        if (
+          (code === "rate_limited" || isTransientNetworkError(retryError)) &&
+          (await confirmResetApplied())
+        ) {
+          traceAction("ui.room.reset.retry.applied", {
+            roomId: req.roomId,
+            requestId: resetRequestId,
+          });
+        } else {
+          throw retryError;
+        }
+      }
+    }
 
     try {
       postRoundReset(req.roomId);
