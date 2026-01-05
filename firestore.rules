@@ -75,14 +75,6 @@ service cloud.firestore {
         && (!('seatHistory' in deal) || deal.seatHistory == null || (deal.seatHistory is map && deal.seatHistory.size() <= 64));
     }
 
-    function isValidRoomProposalDoc(data) {
-      return data is map
-        && data.keys().hasOnly(['proposal', 'seed', 'updatedAt'])
-        && (!('proposal' in data) || data.proposal == null || (data.proposal is list && data.proposal.size() <= 16))
-        && (!('seed' in data) || data.seed == null || safeText(data.seed, 1, 64))
-        && (!('updatedAt' in data) || isTimestampValue(data.updatedAt));
-    }
-
     function isValidUiMap(ui) {
       return ui is map
         && ui.keys().hasOnly(['recallOpen', 'revealPending', 'revealBeginAt', 'roundPreparing'])
