@@ -19,7 +19,8 @@ import { setMetric, readMetrics } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
+import { UI_TOKENS } from "@/theme/layout";
 import {
   Box,
   Dialog,
@@ -38,6 +39,7 @@ import { DiamondNumberCard } from "./DiamondNumberCard";
 import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import { KEYBOARD_KEYS } from "./hints/constants";
 import { SeinoButton } from "./SeinoButton";
+import { SEINO_BUTTON_STYLES } from "./seinoButtonStyles";
 
 type HostPanelIconProps = {
   src: string;
@@ -62,38 +64,38 @@ const HostPanelIcon = ({ src, alt }: HostPanelIconProps) => (
 // オレンジ系アンビエント（ゲーム開始ボタン用）
 const orangeGlowStart = keyframes`
   0% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,145,65,0.3);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("18px")} rgba(255,145,65,0.3);
   }
   32% {
-    box-shadow: 0 0 0 2px rgba(230,105,35,0.85), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.24), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 22px rgba(255,155,75,0.42);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(230,105,35,0.85), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.24), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("22px")} rgba(255,155,75,0.42);
   }
   61% {
-    box-shadow: 0 0 0 2px rgba(240,115,45,0.88), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.26), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 26px rgba(255,165,85,0.52);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(240,115,45,0.88), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.26), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("26px")} rgba(255,165,85,0.52);
   }
   87% {
-    box-shadow: 0 0 0 2px rgba(225,100,30,0.82), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,150,70,0.38);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(225,100,30,0.82), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.23), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("20px")} rgba(255,150,70,0.38);
   }
   100% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,145,65,0.3);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("18px")} rgba(255,145,65,0.3);
   }
 `;
 
 // オレンジ系アンビエント（次のゲーム用 - 少し控えめ）
 const orangeGlowNext = keyframes`
   0% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 14px rgba(255,145,65,0.25);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("14px")} rgba(255,145,65,0.25);
   }
   38% {
-    box-shadow: 0 0 0 2px rgba(230,105,35,0.84), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 18px rgba(255,155,75,0.35);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(230,105,35,0.84), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.23), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("18px")} rgba(255,155,75,0.35);
   }
   69% {
-    box-shadow: 0 0 0 2px rgba(235,110,40,0.86), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.24), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,160,80,0.4);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(235,110,40,0.86), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.24), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("20px")} rgba(255,160,80,0.4);
   }
   91% {
-    box-shadow: 0 0 0 2px rgba(225,100,30,0.82), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.23), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 16px rgba(255,150,70,0.3);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(225,100,30,0.82), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.23), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("16px")} rgba(255,150,70,0.3);
   }
   100% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 14px rgba(255,145,65,0.25);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("14px")} rgba(255,145,65,0.25);
   }
 `;
 
@@ -104,7 +106,7 @@ const phaseMessagePulse = keyframes`
   }
   50% {
     opacity: 1;
-    transform: translateY(-1.5px);
+    transform: translateY(${scaleForDpi("-1.5px")});
   }
   100% {
     opacity: 0.6;
@@ -119,7 +121,7 @@ const subtleTextPulse = keyframes`
   }
   50% {
     opacity: 1;
-    transform: translateY(-1px);
+    transform: translateY(${scaleForDpi("-1px")});
   }
   100% {
     opacity: 0.6;
@@ -146,10 +148,12 @@ type DefaultTopicTypeChangeEvent = CustomEvent<{ defaultTopicType?: string }>;
  */
 const FOOTER_BUTTON_BASE_STYLES = {
   // サイズ
-  px: "14px",
-  py: "10px",
-  w: "68px",
-  minW: "68px",
+  px: scaleForDpi("14px"),
+  py: scaleForDpi("10px"),
+  w: scaleForDpi("68px"),
+  minW: scaleForDpi("68px"),
+  h: scaleForDpi("36px"),
+  minH: scaleForDpi("36px"),
 
   // 背景・枠線
   bg: "rgba(28,32,42,0.95)",
@@ -159,14 +163,15 @@ const FOOTER_BUTTON_BASE_STYLES = {
   // タイポグラフィ
   fontWeight: "900",
   fontFamily: "'Courier New', monospace",
-  fontSize: "15px",
+  fontSize: scaleForDpi("15px"),
   letterSpacing: "0.06em",
-  textShadow: "1px 1px 0 rgba(0,0,0,0.9)",
+  textShadow: `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,0.9)`,
+  lineHeight: "1",
 
   // 立体感演出
   boxShadow:
-    "3px 3px 0 rgba(0,0,0,.65), inset 2px 2px 0 rgba(255,255,255,0.15), inset -2px -2px 0 rgba(0,0,0,0.4), 0 0 0 2px rgba(255,255,255,0.88)",
-  transform: "translate(.5px,-.5px)",
+    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.65), inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(255,255,255,0.15), inset ${scaleForDpi("-2px")} ${scaleForDpi("-2px")} 0 rgba(0,0,0,0.4), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`,
+  transform: `translate(${scaleForDpi("0.5px")}, ${scaleForDpi("-0.5px")})`,
 
   // レイアウト
   display: "flex",
@@ -179,14 +184,14 @@ const FOOTER_BUTTON_BASE_STYLES = {
   // インタラクション状態
   _hover: {
     bg: "rgba(38,42,52,0.98)",
-    transform: "translate(0,-1px)",
+    transform: `translate(0, ${scaleForDpi("-1px")})`,
     boxShadow:
-      "4px 4px 0 rgba(0,0,0,.7), inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.95)",
+      `${scaleForDpi("4px")} ${scaleForDpi("4px")} 0 rgba(0,0,0,.7), inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(255,255,255,0.2), inset ${scaleForDpi("-2px")} ${scaleForDpi("-2px")} 0 rgba(0,0,0,0.5), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
   },
   _active: {
-    transform: "translate(1px,1px)",
+    transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
     boxShadow:
-      "2px 2px 0 rgba(0,0,0,.75), inset 2px 2px 0 rgba(255,255,255,0.1), inset -2px -2px 0 rgba(0,0,0,0.6), 0 0 0 2px rgba(255,255,255,0.82)",
+      `${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.75), inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(255,255,255,0.1), inset ${scaleForDpi("-2px")} ${scaleForDpi("-2px")} 0 rgba(0,0,0,0.6), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
   },
   _disabled: {
     bg: "rgba(28,32,42,0.5)",
@@ -194,60 +199,7 @@ const FOOTER_BUTTON_BASE_STYLES = {
     filter: "grayscale(0.8)",
     cursor: "not-allowed",
     boxShadow:
-      "2px 2px 0 rgba(0,0,0,.4), inset 1px 1px 0 rgba(255,255,255,0.05), inset -1px -1px 0 rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.3)",
-  },
-} as const;
-
-/**
- * せーの！ボタンスタイル（ゲーム開始・次のゲームボタンと共通）
- *
- * 設計方針:
- * - SeinoButtonと完全に統一されたデザイン
- * - オレンジ系のドラクエ風デザイン
- * - 立体感のある演出
- */
-const SEINO_BUTTON_STYLES = {
-  minW: "211px",
-  px: "34px",
-  py: "19px",
-  position: "relative" as const,
-  bg: "rgba(255,128,45,0.93)",
-  color: "white",
-  border: "3px solid rgba(255,255,255,0.92)",
-  borderRadius: 0,
-  fontWeight: "800",
-  fontFamily: "monospace",
-  fontSize: "26px",
-  letterSpacing: "0.023em",
-  textShadow: "2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)",
-  boxShadow:
-    "0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28)",
-  _before: {
-    content: '""',
-    position: "absolute" as const,
-    top: "3px",
-    left: "4px",
-    right: "3px",
-    bottom: "3px",
-    background:
-      "linear-gradient(178deg, rgba(255,255,255,0.12) 0%, transparent 48%, rgba(0,0,0,0.18) 100%)",
-    pointerEvents: "none" as const,
-  },
-  _hover: {
-    bg: "rgba(255,145,65,0.96)",
-    color: "white",
-    textShadow: "2px 3px 0px rgba(0,0,0,0.92), 1px 2px 3px rgba(0,0,0,0.65)",
-    borderColor: "rgba(255,255,255,0.95)",
-    transform: "translateY(-3px)",
-    boxShadow:
-      "0 0 0 2px rgba(235,110,35,0.85), 6px 8px 0 rgba(0,0,0,.48), 5px 7px 0 rgba(0,0,0,.4), inset 0 2px 0 rgba(255,255,255,.28)",
-  },
-  _active: {
-    bg: "rgba(235,110,30,0.95)",
-    color: "rgba(255,255,255,0.91)",
-    boxShadow:
-      "0 0 0 2px rgba(200,85,20,0.82), 2px 3px 0 rgba(0,0,0,.46), inset 0 2px 0 rgba(255,255,255,.14)",
-    transform: "translateY(1px)",
+      `${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.4), inset ${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(255,255,255,0.05), inset ${scaleForDpi("-1px")} ${scaleForDpi("-1px")} 0 rgba(0,0,0,0.3), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.3)`,
   },
 } as const;
 
@@ -843,7 +795,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           gap="10px"
         >
           {/* 🌕 満月スピナー */}
-          <HD2DLoadingSpinner size="38px" />
+          <HD2DLoadingSpinner size={scaleForDpi("38px")} />
 
           {/* 📜 テキスト: 儀式感のある黄金テキスト */}
           <Text
@@ -880,17 +832,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           <Box
             position="fixed"
             bottom={{
-              base: "clamp(120px, 18vh, 220px)",
-              md: "clamp(130px, 16vh, 240px)",
+              base: `clamp(${scaleForDpi("120px")}, 18vh, ${scaleForDpi("220px")})`,
+              md: `clamp(${scaleForDpi("130px")}, 16vh, ${scaleForDpi("240px")})`,
             }}
             left="50%"
             transform="translateX(-50%)"
             zIndex={55}
-            css={{
-              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                bottom: "clamp(100px, 15vh, 180px)",
-              },
-            }}
           >
             {isHost ? (
               <AppButton
@@ -951,17 +898,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           <Box
             position="fixed"
             bottom={{
-              base: "clamp(120px, 18vh, 220px)",
-              md: "clamp(130px, 16vh, 240px)",
+              base: `clamp(${scaleForDpi("120px")}, 18vh, ${scaleForDpi("220px")})`,
+              md: `clamp(${scaleForDpi("130px")}, 16vh, ${scaleForDpi("240px")})`,
             }}
             left="50%"
             transform="translateX(-50%)"
             zIndex={55}
-            css={{
-              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                bottom: "clamp(100px, 15vh, 180px)",
-              },
-            }}
           >
             <AppButton
               {...SEINO_BUTTON_STYLES}
@@ -985,43 +927,34 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {!hideHandUI && (
         <Flex
           position="fixed"
-          bottom={{ base: "20px", md: "24px" }}
+          bottom={{ base: scaleForDpi("20px"), md: scaleForDpi("24px") }}
           left="50%"
           transform="translateX(-50%)"
           zIndex={50}
           data-guide-target="mini-hand-dock"
-          gap={{ base: "10px", md: "14px" }}
+          gap={{ base: scaleForDpi("10px"), md: scaleForDpi("14px") }}
           align="center"
           justify="center"
           flexWrap="nowrap"
           maxW="95vw"
           pointerEvents={interactionDisabled ? "none" : "auto"}
-          css={{
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              bottom: "16px",
-              gap: "8px",
-            },
-          }}
         >
           {/* 数字カード（大きく・モダン） */}
           <Box
             flexShrink={0}
             transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
             transformOrigin="left center"
-            mr={{ base: "14px", md: "20px" }}
-            css={{
-              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                transform: "scale(1.0)",
-                marginRight: "12px",
-              },
-            }}
+            mr={{ base: scaleForDpi("14px"), md: scaleForDpi("20px") }}
           >
             {/* revealゲート中は上位の条件でDOM未描画 */}
             <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
           </Box>
 
           {/* 入力エリア（常時表示・シームレス） */}
-          <HStack gap={{ base: "8px", md: "10px" }} flexWrap="nowrap">
+          <HStack
+            gap={{ base: scaleForDpi("8px"), md: scaleForDpi("10px") }}
+            flexWrap="nowrap"
+          >
             <Input
               ref={inputRef}
               aria-label="連想ワード"
@@ -1035,29 +968,23 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               bg="rgba(18,22,32,0.85)"
               color="rgba(255,255,255,0.98)"
               fontFamily="'Courier New', monospace"
-              fontSize={{ base: "14px", md: "16px" }}
+              fontSize={{ base: scaleForDpi("14px"), md: scaleForDpi("16px") }}
               fontWeight="700"
               letterSpacing="0.02em"
               border="none"
-              borderRadius="3px"
-              boxShadow="inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.25)"
-              minH={{ base: "44px", md: "48px" }}
-              w={{ base: "200px", md: "280px" }}
+              borderRadius={scaleForDpi("3px")}
+              boxShadow={`inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.5), 0 0 0 ${scaleForDpi("1px")} rgba(255,255,255,0.25)`}
+              h={scaleForDpi("40px")}
+              minH={scaleForDpi("40px")}
+              w={{ base: scaleForDpi("200px"), md: scaleForDpi("280px") }}
               transition="box-shadow 150ms ease"
               disabled={!clueEditable || preparing}
-              css={{
-                [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                  minHeight: "40px",
-                  width: "220px",
-                  fontSize: "14px",
-                },
-              }}
               _placeholder={{
                 color: "rgba(255,255,255,0.35)",
               }}
               _focus={{
                 boxShadow:
-                  "inset 2px 2px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.4)",
+                  `inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.5), 0 0 0 ${scaleForDpi("1px")} rgba(255,255,255,0.4)`,
                 bg: "rgba(22,26,36,0.9)",
                 outline: "none",
               }}
@@ -1075,7 +1002,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 onClick={handleDecide}
                 disabled={preparing || !canDecide || interactionDisabled}
                 w="auto"
-                minW="60px"
+                minW={scaleForDpi("60px")}
               >
                 決定
               </AppButton>
@@ -1089,7 +1016,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 onClick={handleClear}
                 disabled={clearButtonDisabled || interactionDisabled}
                 w="auto"
-                minW="60px"
+                minW={scaleForDpi("60px")}
               >
                 クリア
               </AppButton>
@@ -1103,7 +1030,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 onClick={handleSubmit}
                 disabled={!effectiveCanClickProposalButton || interactionDisabled}
                 w="auto"
-                minW="70px"
+                minW={scaleForDpi("70px")}
               >
                 {actionLabel}
               </AppButton>
@@ -1243,17 +1170,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       {/* 右端: 共通ボタン (設定・退出のみ) */}
       <Box
         position="fixed"
-        bottom={{ base: "16px", md: "20px" }}
-        right={{ base: "32px", md: "32px" }}
+        bottom={{ base: scaleForDpi("16px"), md: scaleForDpi("20px") }}
+        right={{ base: scaleForDpi("32px"), md: scaleForDpi("32px") }}
         zIndex={50}
-        css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            bottom: "14px",
-            right: "32px",
-          },
-        }}
       >
-        <HStack gap="10px" align="center">
+        <HStack gap={scaleForDpi("10px")} align="center">
           {/* 非ホストでもカスタムモード時は"ペン"を表示（待機/連想フェーズのみ） */}
           {!isHost &&
             isCustomModeSelectable &&
@@ -1267,26 +1188,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   }}
                   disabled={interactionDisabled}
                   size="sm"
-                  w="40px"
-                  h="40px"
+                  w={scaleForDpi("40px")}
+                  h={scaleForDpi("40px")}
                   bg="rgba(28,32,42,0.95)"
                   color="rgba(255,255,255,0.92)"
                   borderWidth="0"
                   borderRadius="0"
                   fontFamily="'Courier New', monospace"
-                  fontSize="16px"
-                  boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
+                  fontSize={scaleForDpi("16px")}
+                  boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
                   _hover={{
                     bg: "rgba(38,42,52,0.98)",
                     color: "rgba(255,255,255,1)",
-                    transform: "translate(0,-1px)",
+                    transform: `translate(0, ${scaleForDpi("-1px")})`,
                     boxShadow:
-                      "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
+                      `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
                   }}
                   _active={{
-                    transform: "translate(1px,1px)",
+                    transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
                     boxShadow:
-                      "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
+                      `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
                   }}
                   transition="176ms cubic-bezier(.2,1,.3,1)"
                 >
@@ -1301,26 +1222,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 aria-label="設定"
                 onClick={onOpenSettings}
                 size="xs"
-                w="36px"
-                h="36px"
+                w={scaleForDpi("36px")}
+                h={scaleForDpi("36px")}
                 bg="rgba(28,32,42,0.95)"
                 color="rgba(255,255,255,0.92)"
                 borderWidth="0"
                 borderRadius="0"
                 fontFamily="'Courier New', monospace"
-                fontSize="15px"
-                boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
+                fontSize={scaleForDpi("15px")}
+                boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
                 _hover={{
                   bg: "rgba(38,42,52,0.98)",
                   color: "rgba(255,255,255,1)",
-                  transform: "translate(0,-1px)",
+                  transform: `translate(0, ${scaleForDpi("-1px")})`,
                   boxShadow:
-                    "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
+                    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
                 }}
                 _active={{
-                  transform: "translate(1px,1px)",
+                  transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
                   boxShadow:
-                    "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
+                    `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
                 }}
                 transition="175ms cubic-bezier(.2,1,.3,1)"
               >
@@ -1334,26 +1255,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                 aria-label="退出"
                 onClick={onLeaveRoom}
                 size="xs"
-                w="36px"
-                h="36px"
+                w={scaleForDpi("36px")}
+                h={scaleForDpi("36px")}
                 bg="rgba(28,32,42,0.95)"
                 color="rgba(255,255,255,0.92)"
                 borderWidth="0"
                 borderRadius="0"
                 fontFamily="'Courier New', monospace"
-                fontSize="15px"
-                boxShadow="2px 2px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
+                fontSize={scaleForDpi("15px")}
+                boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
                 _hover={{
                   bg: "rgba(52,28,28,0.98)",
                   color: "rgba(255,220,220,1)",
-                  transform: "translate(0,-1px)",
+                  transform: `translate(0, ${scaleForDpi("-1px")})`,
                   boxShadow:
-                    "3px 3px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,180,180,0.95)",
+                    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.95)`,
                 }}
                 _active={{
-                  transform: "translate(1px,1px)",
+                  transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
                   boxShadow:
-                    "1px 1px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,180,180,0.82)",
+                    `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.82)`,
                 }}
                 transition="173ms cubic-bezier(.2,1,.3,1)"
               >

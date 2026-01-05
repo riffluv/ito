@@ -1,10 +1,10 @@
 "use client";
 
 import Tooltip from "@/components/ui/Tooltip";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { Box, Spinner, Text } from "@chakra-ui/react";
 import { gsap } from "gsap";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { keyframes } from "@emotion/react";
 import {
   memo,
@@ -44,17 +44,16 @@ export type PartyStatusTone =
 // HD-2D風：部屋名と統一感のある背景
 const CARD_BACKGROUND = "rgba(12,14,20,0.35)";
 const CARD_HOVER_BACKGROUND = "rgba(18,24,34,0.45)";
-const CARD_BOX_SHADOW = "0 1px 4px rgba(0,0,0,0.12)";
-const CARD_HOVER_BOX_SHADOW = "0 2px 6px rgba(0,0,0,0.18)";
+const CARD_BOX_SHADOW = `0 ${scaleForDpi("1px")} ${scaleForDpi("4px")} rgba(0,0,0,0.12)`;
+const CARD_HOVER_BOX_SHADOW = `0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0,0,0,0.18)`;
 const CARD_FLASH_SHADOW =
-  "0 2px 8px rgba(255,255,255,0.3), 0 4px 16px rgba(255,255,255,0.2), inset 0 1px 0 rgba(255,255,255,0.5)";
+  `0 ${scaleForDpi("2px")} ${scaleForDpi("8px")} rgba(255,255,255,0.3), 0 ${scaleForDpi("4px")} ${scaleForDpi("16px")} rgba(255,255,255,0.2), inset 0 ${scaleForDpi("1px")} 0 rgba(255,255,255,0.5)`;
 const CLUE_FLASH_BRIGHTNESS = 1.28;
-const CARD_HEIGHT = "52px";
-const CARD_HEIGHT_DPI125 = "46px";
-const CARD_AVATAR_SIZE = "44px";
-const CARD_AVATAR_SIZE_DPI125 = "40px";
-const CARD_RADIUS = "3px";
-const CARD_HOVER_LIFT = "-1.5px";
+const CARD_HEIGHT = scaleForDpi("52px");
+const CARD_AVATAR_SIZE = scaleForDpi("44px");
+const CARD_RADIUS = scaleForDpi("3px");
+const CARD_HOVER_LIFT = scaleForDpi("-1.5px");
+const CARD_PASSIVE_LIFT = scaleForDpi("-0.5px");
 const actionableHoverStyle = {
   bg: CARD_HOVER_BACKGROUND,
   transform: `translateY(${CARD_HOVER_LIFT})`,
@@ -63,8 +62,8 @@ const actionableHoverStyle = {
 
 const passiveHoverStyle = {
   bg: CARD_HOVER_BACKGROUND,
-  transform: "translateY(-0.5px)",
-  boxShadow: "0 4px 10px rgba(0,0,0,0.32)",
+  transform: `translateY(${CARD_PASSIVE_LIFT})`,
+  boxShadow: `0 ${scaleForDpi("4px")} ${scaleForDpi("10px")} rgba(0,0,0,0.32)`,
 } as const;
 
 const resetCardVisualState = (node: HTMLDivElement) => {
@@ -293,8 +292,8 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       data-player-id={player.id}
       display="grid"
       gridTemplateColumns="auto 1fr auto"
-      columnGap="11px"
-      rowGap="3px"
+      columnGap={scaleForDpi("11px")}
+      rowGap={scaleForDpi("3px")}
       alignItems="center"
       borderRadius={CARD_RADIUS}
       minH={CARD_HEIGHT}
@@ -302,30 +301,22 @@ export const PartyMemberCard = memo(function PartyMemberCard({
       borderColor="rgba(255,255,255,0.08)"
       bg={CARD_BACKGROUND}
       boxShadow={CARD_BOX_SHADOW}
-      px="13px"
-      py="7px"
+      px={scaleForDpi("13px")}
+      py={scaleForDpi("7px")}
       transition="transform 180ms cubic-bezier(.2,1,.3,1), box-shadow 180ms cubic-bezier(.2,1,.3,1), background 180ms ease"
       css={{
         cursor: canTransfer ? "pointer" : "default",
         pointerEvents: "auto",
         backdropFilter: "blur(12px) saturate(1.18)",
         position: "relative",
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          minHeight: CARD_HEIGHT_DPI125,
-          paddingLeft: "11px",
-          paddingRight: "11px",
-          paddingTop: "6px",
-          paddingBottom: "6px",
-          columnGap: "9px",
-        },
       }}
       _hover={hoverStyle}
       _focus={{ outline: "none" }}
       _focusVisible={{
         outline: "2px solid",
         outlineColor: "focusRing",
-        outlineOffset: "2px",
-        boxShadow: "0 0 0 3px rgba(124, 185, 255, 0.35)",
+        outlineOffset: scaleForDpi("2px"),
+        boxShadow: `0 0 0 ${scaleForDpi("3px")} rgba(124, 185, 255, 0.35)`,
       }}
       tabIndex={canTransfer ? 0 : undefined}
       role={canTransfer ? "button" : undefined}
@@ -345,15 +336,9 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         alignItems="center"
         justifyContent="center"
         position="relative"
-        borderRadius="2px"
+        borderRadius={scaleForDpi("2px")}
         border="1px solid rgba(255,255,255,0.18)"
         bg="rgba(6,10,18,0.6)"
-        css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            width: CARD_AVATAR_SIZE_DPI125,
-            height: CARD_AVATAR_SIZE_DPI125,
-          },
-        }}
       >
         {player.avatar?.startsWith("/avatars/") ? (
           <img
@@ -369,29 +354,24 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           />
         ) : (
           <Text
-            fontSize="xl"
-            filter="drop-shadow(0 1px 3px rgba(0,0,0,0.7))"
+            fontSize={scaleForDpi("20px")}
+            filter={`drop-shadow(0 ${scaleForDpi("1px")} ${scaleForDpi("3px")} rgba(0,0,0,0.7))`}
           >
             {player.avatar || "⚔️"}
           </Text>
         )}
       </Box>
 
-      <Box display="flex" alignItems="center" gap="6px" minW={0} lineHeight="1">
+      <Box display="flex" alignItems="center" gap={scaleForDpi("6px")} minW={0} lineHeight="1">
         {isTransferPending && <Spinner size="xs" color="accent" />}
         <Text
-          fontSize="15px"
+          fontSize={scaleForDpi("15px")}
           fontWeight="600"
           color={isHost ? "rgba(255,220,140,0.95)" : "rgba(255,255,255,0.92)"}
-          textShadow="0 1px 3px rgba(0,0,0,0.8)"
+          textShadow={`0 ${scaleForDpi("1px")} ${scaleForDpi("3px")} rgba(0,0,0,0.8)`}
           fontFamily="system-ui"
           truncate
           title={`${isHost ? "ホスト: " : ""}${player.name}`}
-          css={{
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              fontSize: "13px",
-            },
-          }}
         >
           {player.name}
         </Text>
@@ -402,17 +382,11 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         alignSelf="start"
         display="inline-flex"
         alignItems="center"
-        gap="4px"
-        px="6px"
-        py="3px"
-        borderRadius="2px"
+        gap={scaleForDpi("4px")}
+        px={scaleForDpi("6px")}
+        py={scaleForDpi("3px")}
+        borderRadius={scaleForDpi("2px")}
         css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            paddingLeft: "5px",
-            paddingRight: "5px",
-            paddingTop: "2px",
-            paddingBottom: "2px",
-          },
           background:
             statusMeta.tone === "submitted"
               ? "rgba(34, 197, 94, 0.18)"
@@ -426,12 +400,12 @@ export const PartyMemberCard = memo(function PartyMemberCard({
               : statusMeta.tone === "clue-entered"
               ? "rgba(245, 158, 11, 0.35)"
               : "rgba(100, 116, 139, 0.25)",
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
+          boxShadow: `0 ${scaleForDpi("1px")} ${scaleForDpi("2px")} rgba(0, 0, 0, 0.2)`,
         }}
       >
         <Box
           as="span"
-          fontSize="xs"
+          fontSize={scaleForDpi("12px")}
           lineHeight="1"
           css={{
             filter:
@@ -445,7 +419,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           {statusMeta.icon}
         </Box>
         <Text
-          fontSize="11px"
+          fontSize={scaleForDpi("11px")}
           fontWeight="600"
           letterSpacing="0.02em"
           css={{
@@ -467,7 +441,7 @@ export const PartyMemberCard = memo(function PartyMemberCard({
 
       <Box gridColumn="2 / span 2" display="flex" flexDirection="column" gap="3px" minW={0}>
         <Text
-          fontSize="11px"
+          fontSize={scaleForDpi("11px")}
           color="rgba(200,210,220,0.72)"
           fontStyle={clueRevealed && trimmedClue ? "italic" : "normal"}
           lineHeight="1.2"
@@ -476,20 +450,20 @@ export const PartyMemberCard = memo(function PartyMemberCard({
         >
           {clueDisplay}
         </Text>
-        <Box display="flex" alignItems="center" gap="7px">
+        <Box display="flex" alignItems="center" gap={scaleForDpi("7px")}>
           <Box
             flex={1}
-            h="6px"
-            minH="6px"
+            h={scaleForDpi("6px")}
+            minH={scaleForDpi("6px")}
             bg="rgba(8,12,18,0.85)"
-            borderRadius="1px"
+            borderRadius={scaleForDpi("1px")}
             overflow="hidden"
             border="1px solid rgba(80,110,150,0.22)"
             position="relative"
-            maxW="138px"
+            maxW={scaleForDpi("138px")}
             css={{
               boxShadow:
-                "inset 0 1px 2px rgba(0,0,0,0.6), 0 0.5px 1px rgba(0,0,0,0.4)",
+                `inset 0 ${scaleForDpi("1px")} ${scaleForDpi("2px")} rgba(0,0,0,0.6), 0 ${scaleForDpi("0.5px")} ${scaleForDpi("1px")} rgba(0,0,0,0.4)`,
             }}
           >
             <Box
@@ -506,9 +480,9 @@ export const PartyMemberCard = memo(function PartyMemberCard({
               position="relative"
               css={{
                 boxShadow: isSubmitted
-                  ? "0 0 4px rgba(34,197,94,0.5), inset 0 0.5px 0 rgba(255,255,255,0.2)"
+                  ? `0 0 ${scaleForDpi("4px")} rgba(34,197,94,0.5), inset 0 ${scaleForDpi("0.5px")} 0 rgba(255,255,255,0.2)`
                   : hasClue
-                  ? "0 0 4px rgba(245,158,11,0.4), inset 0 0.5px 0 rgba(255,255,255,0.18)"
+                  ? `0 0 ${scaleForDpi("4px")} rgba(245,158,11,0.4), inset 0 ${scaleForDpi("0.5px")} 0 rgba(255,255,255,0.18)`
                   : "none",
               }}
             />
@@ -529,16 +503,16 @@ export const PartyMemberCard = memo(function PartyMemberCard({
           </Box>
 
           <Box
-            minW="26px"
-            h="16px"
+            minW={scaleForDpi("26px")}
+            h={scaleForDpi("16px")}
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
             <Text
-              fontSize="11px"
+              fontSize={scaleForDpi("11px")}
               color="rgba(180,220,255,0.92)"
-              textShadow="0 1px 3px rgba(0,0,0,0.7)"
+              textShadow={`0 ${scaleForDpi("1px")} ${scaleForDpi("3px")} rgba(0,0,0,0.7)`}
               fontFamily="mono"
               fontWeight="700"
               letterSpacing="0.02em"

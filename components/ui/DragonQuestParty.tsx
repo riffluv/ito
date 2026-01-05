@@ -14,14 +14,14 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 
 const panelFloat = keyframes`
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-1.5px); }
-  100% { transform: translateY(1.2px); }
+  50% { transform: translateY(calc(-1.5px * var(--dpi-scale))); }
+  100% { transform: translateY(calc(1.2px * var(--dpi-scale))); }
 `;
 
 const headerPulse = keyframes`
-  0% { box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08); }
-  40% { box-shadow: 0 3px 9px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12); }
-  100% { box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08); }
+  0% { box-shadow: 0 calc(2px * var(--dpi-scale)) calc(8px * var(--dpi-scale)) rgba(0,0,0,0.6), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.08); }
+  40% { box-shadow: 0 calc(3px * var(--dpi-scale)) calc(9px * var(--dpi-scale)) rgba(0,0,0,0.7), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.12); }
+  100% { box-shadow: 0 calc(2px * var(--dpi-scale)) calc(8px * var(--dpi-scale)) rgba(0,0,0,0.6), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.08); }
 `;
 
 const headerGlint = keyframes`
@@ -33,7 +33,7 @@ const headerGlint = keyframes`
 `;
 
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 
 interface DragonQuestPartyProps {
   players: PartyMember[];
@@ -51,11 +51,10 @@ interface DragonQuestPartyProps {
   suspendTransientUpdates?: boolean;
 }
 
-const PANEL_WIDTH = { base: "232px", md: "268px" };
-const PANEL_WIDTH_DPI125 = { base: "220px", md: "252px" };
-const LIST_MAX_HEIGHT = "calc(100vh - 224px)";
-const LIST_MAX_HEIGHT_DPI125 = "calc(100vh - 200px)";
-const LIST_MAX_HEIGHT_DPI150 = "calc(100vh - 180px)";
+const PANEL_TOP = { base: scaleForDpi("108px"), md: scaleForDpi("120px") };
+const PANEL_LEFT = { base: scaleForDpi("20px"), md: scaleForDpi("24px") };
+const PANEL_WIDTH = { base: scaleForDpi("232px"), md: scaleForDpi("268px") };
+const LIST_MAX_HEIGHT = `calc(100vh - ${scaleForDpi("224px")})`;
 const LIST_GAP = 2;
 
 const shallowEqualPartyMember = (a: PartyMember, b: PartyMember) => {
@@ -416,8 +415,8 @@ function DragonQuestParty({
     return (
       <Box
         position="fixed"
-        top={{ base: "108px", md: "120px" }}
-        left={{ base: "20px", md: "24px" }}
+        top={PANEL_TOP}
+        left={PANEL_LEFT}
         zIndex={60}
         pointerEvents="none"
       />
@@ -444,29 +443,16 @@ function DragonQuestParty({
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "108px", md: "120px" }}
-      left={{ base: "20px", md: "24px" }}
+      top={PANEL_TOP}
+      left={PANEL_LEFT}
       zIndex={60}
       display="flex"
       flexDirection="column"
-      gap="3px"
+      gap={scaleForDpi("3px")}
       w={PANEL_WIDTH}
       maxW={PANEL_WIDTH}
       css={{
         pointerEvents: "none",
-        [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-          top: "96px",
-          left: "16px",
-          width: PANEL_WIDTH_DPI125.base,
-          maxWidth: PANEL_WIDTH_DPI125.base,
-          gap: "2px",
-        },
-        "@media (min-width: 768px)": {
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            width: PANEL_WIDTH_DPI125.md,
-            maxWidth: PANEL_WIDTH_DPI125.md,
-          },
-        },
         ...(prefersReducedMotion
           ? {
               transform: `translateY(${reducedPanelTranslate})`,
@@ -481,28 +467,21 @@ function DragonQuestParty({
       <Box
         display="flex"
         alignItems="center"
-        gap={2}
+        gap={scaleForDpi("8px")}
         minW={0}
-        px="14px"
-        py="8px"
+        px={scaleForDpi("14px")}
+        py={scaleForDpi("8px")}
         bg="rgba(12,14,20,0.45)"
         border="1px solid"
         borderColor="rgba(255,255,255,0.12)"
         borderRadius="0"
-        boxShadow="0 2px 6px rgba(0,0,0,0.15)"
+        boxShadow={`0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0,0,0,0.15)`}
         css={{
           pointerEvents: "auto",
           backdropFilter: "blur(16px) saturate(1.25)",
           position: "relative",
           overflow: "visible",
-          clipPath: "polygon(12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% 100%, 0% 100%, 0% 12px)",
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            paddingLeft: "12px",
-            paddingRight: "12px",
-            paddingTop: "7px",
-            paddingBottom: "7px",
-            gap: "6px",
-          },
+          clipPath: `polygon(${scaleForDpi("12px")} 0%, calc(100% - ${scaleForDpi("12px")}) 0%, 100% ${scaleForDpi("12px")}, 100% 100%, 0% 100%, 0% ${scaleForDpi("12px")})`,
           ...(prefersReducedMotion
             ? {
                 transition:
@@ -535,15 +514,11 @@ function DragonQuestParty({
         {/* フラッグエンブレム */}
         <Box
           position="relative"
-          w="24px"
-          h="24px"
+          w={scaleForDpi("24px")}
+          h={scaleForDpi("24px")}
           flexShrink={0}
           css={{
-            filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.8))",
-            [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-              width: "20px",
-              height: "20px",
-            },
+            filter: `drop-shadow(0 ${scaleForDpi("1px")} ${scaleForDpi("3px")} rgba(0,0,0,0.8))`,
           }}
         >
           <img
@@ -564,20 +539,14 @@ function DragonQuestParty({
           disabled={!displayRoomName}
         >
           <Text
-            fontSize="sm"
+            fontSize={scaleForDpi("14px")}
             fontWeight={600}
             color="rgba(255,255,255,0.95)"
             letterSpacing="0.3px"
-            maxW="160px"
+            maxW={scaleForDpi("160px")}
             truncate
-            textShadow="0 1px 2px rgba(0,0,0,0.6)"
+            textShadow={`0 ${scaleForDpi("1px")} ${scaleForDpi("2px")} rgba(0,0,0,0.6)`}
             fontFamily="system-ui, -apple-system, sans-serif"
-            css={{
-              [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-                fontSize: "13px",
-                maxWidth: "140px",
-              },
-            }}
           >
             {displayRoomName && displayRoomName.trim().length > 0
               ? displayRoomName
@@ -587,7 +556,7 @@ function DragonQuestParty({
 
         {/* 人数表示 */}
         <Text
-          fontSize="xs"
+          fontSize={scaleForDpi("12px")}
           color="rgba(255,255,255,0.65)"
           fontWeight={500}
           flexShrink={0}
@@ -614,20 +583,12 @@ function DragonQuestParty({
           scrollbarColor: enableScroll
             ? "var(--chakra-colors-accent) transparent"
             : undefined,
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            maxHeight: LIST_MAX_HEIGHT_DPI125,
-            paddingRight: enableScroll ? "3px" : 0,
-          },
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            maxHeight: LIST_MAX_HEIGHT_DPI150,
-            paddingRight: enableScroll ? "3px" : 0,
-          },
           "&::-webkit-scrollbar": {
-            width: enableScroll ? "6px" : "0px",
+            width: enableScroll ? scaleForDpi("6px") : "0px",
           },
           "&::-webkit-scrollbar-thumb": {
             background: "var(--chakra-colors-accent)",
-            borderRadius: "3px",
+            borderRadius: scaleForDpi("3px"),
           },
           "&::-webkit-scrollbar-track": {
             background: "transparent",

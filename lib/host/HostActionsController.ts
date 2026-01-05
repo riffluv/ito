@@ -22,6 +22,24 @@ const generateRequestId = () =>
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? "");
+}
+
+function isTransientNetworkError(error: unknown): boolean {
+  const apiError = error as Partial<ApiError> | null;
+  const status = typeof apiError?.status === "number" ? apiError.status : undefined;
+  if (typeof status === "number") return false;
+  const code = typeof apiError?.code === "string" ? apiError.code : undefined;
+  if (code === "timeout") return true;
+  const message = getErrorMessage(error);
+  return Boolean(message.match(/failed to fetch|network|load failed/i));
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type HostSessionProvider = {
   getSessionId?: () => string | null;
   ensureSession?: () => Promise<string | null>;
@@ -616,13 +634,32 @@ export function createHostActionsController(
               (id): id is string => typeof id === "string" && id.trim().length > 0
             )
           : undefined;
-      const result = await apiNextRoundImpl(roomId, {
-        topicType,
-        customTopic,
-        requestId,
-        sessionId,
-        presenceUids,
-      });
+      const run = () =>
+        apiNextRoundImpl(roomId, {
+          topicType,
+          customTopic,
+          requestId,
+          sessionId,
+          presenceUids,
+        });
+
+      let result: Awaited<ReturnType<typeof run>>;
+      try {
+        result = await run();
+      } catch (error) {
+        if (!isTransientNetworkError(error)) {
+          throw error;
+        }
+        // minimized/復帰直後など、一時的な通信断で fetch が落ちることがあるため 1 回だけリトライする（requestId は同一）
+        // server 側は requestId で idempotent なので、二重実行を避けられる。
+        traceAction("ui.host.nextRound.retry", {
+          roomId,
+          requestId,
+          message: getErrorMessage(error),
+        });
+        await sleep(650);
+        result = await run();
+      }
 
       // broadcast でラウンドリセットを通知
       try {
@@ -646,8 +683,20 @@ export function createHostActionsController(
       const url = typeof apiError?.url === "string" ? apiError.url : undefined;
       const method = typeof apiError?.method === "string" ? apiError.method : undefined;
       const details = apiError?.details;
-      const message = error instanceof Error ? error.message : String(error ?? "");
-      traceError("ui.host.nextRound.error", error, { roomId, code });
+      const message = getErrorMessage(error);
+      if (isTransientNetworkError(error)) {
+        traceAction("ui.host.nextRound.networkError", {
+          roomId,
+          requestId,
+          code: code ?? "unknown",
+          status: typeof status === "number" ? String(status) : undefined,
+          url,
+          method,
+          message,
+        });
+      } else {
+        traceError("ui.host.nextRound.error", error, { roomId, code });
+      }
 
       if (code === "forbidden") {
         return {

@@ -318,7 +318,7 @@ export function AppButton({
     position: "relative",
     overflow: "hidden",
     "@media (pointer: coarse)": {
-      minHeight: UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT,
+      minHeight: `calc(${UNIFIED_LAYOUT.BUTTON.MIN_HEIGHT} * var(--dpi-scale))`,
     },
     "&:focus-visible": {
       outline: "2px solid rgba(124, 221, 255, 0.7)", // 指示書: 2-3pxが適切

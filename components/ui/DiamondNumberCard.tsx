@@ -1,4 +1,5 @@
 "use client";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { Text } from "@chakra-ui/react";
 import React, { memo, useEffect, useRef } from "react";
 import { gsap } from "gsap";
@@ -67,18 +68,18 @@ export const DiamondNumberCard = memo(function DiamondNumberCard({ number, isAni
   return (
     <Text
       ref={textRef}
-      fontSize="40px"
+      fontSize={scaleForDpi("40px")}
       fontWeight="700"
       color="rgba(255,255,255,0.95)"
       fontFamily="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif"
-      textShadow="0 2px 4px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6)"
+      textShadow={`0 ${scaleForDpi("2px")} ${scaleForDpi("4px")} rgba(0,0,0,0.8), 0 ${scaleForDpi("4px")} ${scaleForDpi("8px")} rgba(0,0,0,0.6)`}
       flexShrink={0}
       lineHeight="1"
       display="flex"
       alignItems="center"
       justifyContent="center"
-      w="64px"
-      h="44px"
+      w={scaleForDpi("64px")}
+      h={scaleForDpi("44px")}
       letterSpacing="-0.02em"
     >
       {typeof number === "number" ? number : "?"}

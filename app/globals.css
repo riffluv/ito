@@ -212,12 +212,19 @@
     --panel-bg: rgba(8,9,15,0.95);
   }
 
-  /* 125% DPI 以上（Windows/Chrome 環境の実運用を想定） */
-  @media (resolution >= 1.25dppx), (resolution >= 120dpi) {
+  /* Windows 表示スケール補正（設計基準: FHD 1920x1080 + DPI100%）
+     - Windows の 125%/150% は 1CSSpx の物理サイズが肥大化し、固定px UI が破綻する
+     - Retina/スマホ(2x/3x) は対象外（上限を付けて巻き込まない）
+     - 目的: DPI100% の見え方を唯一の真実にする */
+
+  /* 125% 相当（devicePixelRatio ≒ 1.25） */
+  @media (min-resolution: 1.25dppx) and (max-resolution: 1.49dppx),
+    (min-resolution: 120dpi) and (max-resolution: 143dpi),
+    screen and (-webkit-device-pixel-ratio: 1.25) {
     :root {
-      --dpi-scale: 0.92;
-      --adaptive-scale: 0.92;
-      /* 125% DPI では 1CSSpx の物理サイズが大きくなるため、カード内テキストも同系統で補正 */
+      --dpi-scale: 0.8;
+      --adaptive-scale: 0.8;
+      /* カード内テキストも同系統で補正（物理サイズをDPI100相当に揃える） */
       --card-text-scale: 0.8;
       /* 1920px@100% の 120px を、DPI125% 時に物理サイズが近くなるように min だけ補正 */
       --card-w-md-min-at-1920: 96;
@@ -231,13 +238,15 @@
     }
   }
 
-  /* 150% DPI 以上 */
-  @media (resolution >= 1.5dppx), (resolution >= 144dpi) {
+  /* 150% 相当（devicePixelRatio ≒ 1.5） */
+  @media (min-resolution: 1.5dppx) and (max-resolution: 1.99dppx),
+    (min-resolution: 144dpi) and (max-resolution: 191dpi),
+    screen and (-webkit-device-pixel-ratio: 1.5) {
     :root {
-      --dpi-scale: 0.88;
-      --adaptive-scale: 0.88;
+      --dpi-scale: 0.667;
+      --adaptive-scale: 0.667;
       /* 150% DPI でも、FHD(1920)@100% の見え方（改行/収まり）を維持する */
-      --card-text-scale: 0.67;
+      --card-text-scale: 0.667;
       /* 1920px@100% の 120px を、DPI150% 時に物理サイズが近くなるように min だけ補正 */
       --card-w-md-min-at-1920: 80;
       /* 13px / 1.5 ≒ 8.7px */

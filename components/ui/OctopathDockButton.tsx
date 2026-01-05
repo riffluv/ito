@@ -9,6 +9,7 @@ import {
   type ButtonProps,
 } from "@chakra-ui/react";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 
 export type OctopathDockButtonProps = ButtonProps & {
   label?: string;
@@ -37,9 +38,10 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
     const finalDisabled = Boolean(disabled || isLoading);
     const playPress = useSoundEffect("ui_click");
 
-    const baseMinW = minW ?? (compact ? "52px" : "220px");
-    const baseMinH = compact ? "40px" : "48px";
+    const baseMinW = minW ?? (compact ? scaleForDpi("52px") : scaleForDpi("220px"));
+    const baseMinH = compact ? scaleForDpi("36px") : scaleForDpi("48px");
     const resolvedIconSize = iconBoxSize ?? (compact ? 18 : 20);
+    const resolvedIconBoxSize = scaleForDpi(`${resolvedIconSize}px`);
 
     return (
       <ChakraButton
@@ -47,8 +49,9 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
         variant="ghost"
         minW={baseMinW}
         minH={baseMinH}
-        px={compact ? "10px" : "18px"}
-        py={compact ? "6px" : "10px"}
+        h={baseMinH}
+        px={compact ? scaleForDpi("10px") : scaleForDpi("18px")}
+        py={compact ? scaleForDpi("6px") : scaleForDpi("10px")}
         display="flex"
         alignItems="center"
         justifyContent={compact ? "center" : "space-between"}
@@ -62,8 +65,8 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
         fontFamily="'Courier New', monospace"
         fontWeight="900"
         letterSpacing="0.05em"
-        textShadow="2px 2px 0 rgba(0,0,0,0.9)"
-        boxShadow="3px 3px 0 rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,0.88)"
+        textShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.9)`}
+        boxShadow={`${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
         transition="transform 0.17s ease, box-shadow 0.17s ease, filter 0.17s ease"
         filter={finalDisabled ? "grayscale(0.5) brightness(0.7)" : undefined}
         cursor={finalDisabled ? "default" : "pointer"}
@@ -79,20 +82,20 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
           rest.onMouseLeave?.(event);
         }}
         _hover={{
-          transform: finalDisabled ? undefined : "translate(0,-2px)",
+          transform: finalDisabled ? undefined : `translate(0, ${scaleForDpi("-2px")})`,
           boxShadow: finalDisabled
             ? undefined
-            : "4px 5px 0 rgba(0,0,0,.7), 0 0 0 2px rgba(255,255,255,0.95)",
+            : `${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
           background: finalDisabled ? undefined : "rgba(12,13,18,0.98)",
         }}
         _active={{
-          transform: "translate(1px,1px)",
-          boxShadow: "2px 2px 0 rgba(0,0,0,.75), 0 0 0 2px rgba(255,255,255,0.82)",
+          transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
+          boxShadow: `${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
           background: "rgba(5,6,10,1)",
         }}
         _focusVisible={{
           outline: "none",
-          boxShadow: "0 0 0 2px rgba(128, 186, 255, 0.45), 0 0 0 4px rgba(20, 40, 92, 0.5)",
+          boxShadow: `0 0 0 ${scaleForDpi("2px")} rgba(128, 186, 255, 0.45), 0 0 0 ${scaleForDpi("4px")} rgba(20, 40, 92, 0.5)`,
         }}
         _disabled={{
           opacity: 1,
@@ -114,12 +117,12 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
             <Box
               fontSize="lg"
               color="rgba(255,255,255,0.98)"
-              filter="drop-shadow(0 2px 6px rgba(0,0,0,0.6))"
+              filter={`drop-shadow(0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0,0,0,0.6))`}
               display="flex"
               alignItems="center"
               justifyContent="center"
-              w={`${resolvedIconSize}px`}
-              h={`${resolvedIconSize}px`}
+              w={resolvedIconBoxSize}
+              h={resolvedIconBoxSize}
               flexShrink={0}
             >
               {icon}
@@ -159,7 +162,7 @@ export const OctopathDockButton = forwardRef<HTMLButtonElement, OctopathDockButt
               size="xs"
               color="rgba(240, 220, 180, 0.85)"
               position={compact ? "absolute" : "static"}
-              right={compact ? "6px" : undefined}
+              right={compact ? scaleForDpi("6px") : undefined}
             />
           ) : null}
         </Box>

@@ -152,7 +152,7 @@ export const UNIFIED_LAYOUT = {
   // DPIスケール検出（統一化）
   MEDIA_QUERIES: {
     DPI_125: "(min-resolution: 120dpi) and (max-resolution: 143dpi), (min-resolution: 1.25dppx) and (max-resolution: 1.49dppx)",
-    DPI_150: "(min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)",
+    DPI_150: "(min-resolution: 144dpi) and (max-resolution: 191dpi), (min-resolution: 1.5dppx) and (max-resolution: 1.99dppx), screen and (-webkit-device-pixel-ratio: 1.5)",
     // 旧式（後方互換性用）
     WINDOWS_125: "screen and (-webkit-device-pixel-ratio: 1.25)",
     WINDOWS_150: "screen and (-webkit-device-pixel-ratio: 1.5)",

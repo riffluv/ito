@@ -5,18 +5,19 @@ import { gsap } from "gsap";
 import { useEffect, useRef } from "react";
 import Tooltip from "@/components/ui/Tooltip";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 
 const phaseAurora = keyframes`
   0% { transform: translateX(0px) translateY(0px); opacity: 0.55; }
-  45% { transform: translateX(6px) translateY(-3px); opacity: 0.75; }
-  100% { transform: translateX(-5px) translateY(2px); opacity: 0.5; }
+  45% { transform: translateX(calc(6px * var(--dpi-scale))) translateY(calc(-3px * var(--dpi-scale))); opacity: 0.75; }
+  100% { transform: translateX(calc(-5px * var(--dpi-scale))) translateY(calc(2px * var(--dpi-scale))); opacity: 0.5; }
 `;
 
 const phaseVeil = keyframes`
-  0% { transform: rotate(-1.5deg) translateY(-6px); opacity: 0.22; }
-  35% { transform: rotate(-0.2deg) translateY(-2px); opacity: 0.30; }
-  65% { transform: rotate(1.1deg) translateY(-4px); opacity: 0.18; }
-  100% { transform: rotate(-1.5deg) translateY(-6px); opacity: 0.24; }
+  0% { transform: rotate(-1.5deg) translateY(calc(-6px * var(--dpi-scale))); opacity: 0.22; }
+  35% { transform: rotate(-0.2deg) translateY(calc(-2px * var(--dpi-scale))); opacity: 0.30; }
+  65% { transform: rotate(1.1deg) translateY(calc(-4px * var(--dpi-scale))); opacity: 0.18; }
+  100% { transform: rotate(-1.5deg) translateY(calc(-6px * var(--dpi-scale))); opacity: 0.24; }
 `;
 
 const topicGlow = keyframes`
@@ -261,23 +262,22 @@ export function SimplePhaseDisplay({
     <Box
       ref={containerRef}
       position="fixed"
-      top={{ base: "8px", md: "12px" }}
-      left={{ base: "16px", md: "20px" }}
+      top={{ base: scaleForDpi("8px"), md: scaleForDpi("12px") }}
+      left={{ base: scaleForDpi("16px"), md: scaleForDpi("20px") }}
+      right={{ base: scaleForDpi("16px"), md: scaleForDpi("20px") }}
       zIndex={70}
       display="flex"
       flexDirection="column"
-      gap={{ base: "7px", md: "9px" }}
-      maxWidth="min(92vw, 520px)"
+      gap={{ base: scaleForDpi("7px"), md: scaleForDpi("9px") }}
       css={{
         pointerEvents: "none",
-        position: "relative",
         isolation: "isolate",
         '&::before': {
           content: "''",
           position: "absolute",
-          inset: "-18px -24px",
+          inset: `${scaleForDpi("-18px")} ${scaleForDpi("-24px")}`,
           background: 'radial-gradient(circle at 30% 15%, rgba(120, 180, 255, 0.08), transparent 55%)',
-          filter: 'blur(18px)',
+          filter: `blur(${scaleForDpi("18px")})`,
           opacity: 0.8,
           animation: `${phaseAurora} 11.8s ease-in-out infinite`,
           pointerEvents: 'none',
@@ -285,9 +285,9 @@ export function SimplePhaseDisplay({
         '&::after': {
           content: "''",
           position: "absolute",
-          inset: "-10px -18px",
+          inset: `${scaleForDpi("-10px")} ${scaleForDpi("-18px")}`,
           background: 'linear-gradient(137deg, rgba(90,120,220,0.08) 0%, rgba(40,65,160,0.12) 60%, rgba(12, 20, 60, 0.0) 100%)',
-          transform: 'rotate(-1.5deg) translateY(-6px)',
+          transform: `rotate(-1.5deg) translateY(${scaleForDpi("-6px")})`,
           animation: `${phaseVeil} 16.4s cubic-bezier(0.32, 0.22, 0.18, 1) infinite`,
           pointerEvents: 'none',
           mixBlendMode: 'screen',
@@ -299,33 +299,46 @@ export function SimplePhaseDisplay({
       }}
     >
       {/* フェーズアナウンス（シームレス・大きく・真っ白） */}
-      <Box display="flex" alignItems="center" gap={{ base: "9px", md: "11px" }}>
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={{ base: scaleForDpi("9px"), md: scaleForDpi("11px") }}
+        minW={0}
+      >
         <chakra.span
           ref={iconRef}
-          fontSize={{ base: "lg", md: "xl" }}
+          fontSize={{
+            base: "calc(var(--chakra-fontSizes-lg) * var(--dpi-scale))",
+            md: "calc(var(--chakra-fontSizes-xl) * var(--dpi-scale))",
+          }}
           display="inline-block"
           flexShrink={0}
           css={{
-            filter: "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.9)) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7))",
+            filter: `drop-shadow(0 ${scaleForDpi("3px")} ${scaleForDpi("6px")} rgba(0, 0, 0, 0.9)) drop-shadow(0 ${scaleForDpi("6px")} ${scaleForDpi("12px")} rgba(0, 0, 0, 0.7))`,
           }}
         >
           {icon}
         </chakra.span>
         <Text
           ref={textRef}
-          fontSize={{ base: "sm", md: "md" }}
+          fontSize={{
+            base: "calc(var(--chakra-fontSizes-sm) * var(--dpi-scale))",
+            md: "calc(var(--chakra-fontSizes-md) * var(--dpi-scale))",
+          }}
+          truncate
+          minW={0}
           fontWeight={700}
           color="rgb(255, 255, 255)"
-          letterSpacing="0.38px"
+          letterSpacing={scaleForDpi("0.38px")}
           fontFamily="monospace"
           css={{
             textShadow: `
-              0 3px 10px rgba(0, 0, 0, 0.95),
-              0 6px 20px rgba(0, 0, 0, 0.8),
-              1px 1px 0 rgba(0, 0, 0, 0.9),
-              2px 2px 0 rgba(0, 0, 0, 0.7)
+              0 ${scaleForDpi("3px")} ${scaleForDpi("10px")} rgba(0, 0, 0, 0.95),
+              0 ${scaleForDpi("6px")} ${scaleForDpi("20px")} rgba(0, 0, 0, 0.8),
+              ${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0, 0, 0, 0.9),
+              ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0, 0, 0, 0.7)
             `,
-            filter: "drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8))",
+            filter: `drop-shadow(0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0, 0, 0, 0.8))`,
           }}
         >
           {text}
@@ -339,20 +352,20 @@ export function SimplePhaseDisplay({
             ref={topicRef}
             display="inline-flex"
             alignItems="center"
-            gap={{ base: "9px", md: "11px" }}
-            px={{ base: "11px", md: "13px" }}
-            py={{ base: "7px", md: "9px" }}
+            gap={{ base: scaleForDpi("9px"), md: scaleForDpi("11px") }}
+            px={{ base: scaleForDpi("11px"), md: scaleForDpi("13px") }}
+            py={{ base: scaleForDpi("7px"), md: scaleForDpi("9px") }}
             position="relative"
             alignSelf="flex-start"
             css={{
               background: "linear-gradient(137deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.22) 100%)",
               backdropFilter: "blur(10px) saturate(1.2)",
-              borderRadius: "3px",
+              borderRadius: scaleForDpi("3px"),
               border: "1px solid rgba(255, 215, 0, 0.35)",
               boxShadow: `
-                0 4px 16px rgba(0, 0, 0, 0.7),
-                0 8px 32px rgba(0, 0, 0, 0.5),
-                0 0 24px rgba(255, 215, 0, 0.2)
+                0 ${scaleForDpi("4px")} ${scaleForDpi("16px")} rgba(0, 0, 0, 0.7),
+                0 ${scaleForDpi("8px")} ${scaleForDpi("32px")} rgba(0, 0, 0, 0.5),
+                0 0 ${scaleForDpi("24px")} rgba(255, 215, 0, 0.2)
               `,
               overflow: 'hidden',
               '&::after': {
@@ -373,33 +386,39 @@ export function SimplePhaseDisplay({
           >
             <Text
               as="span"
-              fontSize={{ base: "sm", md: "md" }}
+              fontSize={{
+                base: "calc(var(--chakra-fontSizes-sm) * var(--dpi-scale))",
+                md: "calc(var(--chakra-fontSizes-md) * var(--dpi-scale))",
+              }}
               fontWeight={900}
               color="rgb(255, 255, 255)"
-              letterSpacing="0.93px"
+              letterSpacing={scaleForDpi("0.93px")}
               fontFamily="monospace"
               flexShrink={0}
               css={{
                 textShadow: `
-                  0 0 12px rgba(255, 215, 0, 0.8),
-                  0 2px 6px rgba(0, 0, 0, 0.9),
-                  1px 1px 0 rgba(0, 0, 0, 0.85)
+                  0 0 ${scaleForDpi("12px")} rgba(255, 215, 0, 0.8),
+                  0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0, 0, 0, 0.9),
+                  ${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0, 0, 0, 0.85)
                 `,
               }}
             >
               【お題】
             </Text>
             <Text
-              fontSize={{ base: "md", md: "lg" }}
+              fontSize={{
+                base: "calc(var(--chakra-fontSizes-md) * var(--dpi-scale))",
+                md: "calc(var(--chakra-fontSizes-lg) * var(--dpi-scale))",
+              }}
               fontWeight={800}
               color="rgb(255, 248, 220)"
-              letterSpacing="0.57px"
+              letterSpacing={scaleForDpi("0.57px")}
               fontFamily="monospace"
               css={{
                 textShadow: `
-                  0 0 14px rgba(255, 215, 0, 0.7),
-                  0 3px 10px rgba(0, 0, 0, 0.95),
-                  1px 1px 0 rgba(0, 0, 0, 0.9)
+                  0 0 ${scaleForDpi("14px")} rgba(255, 215, 0, 0.7),
+                  0 ${scaleForDpi("3px")} ${scaleForDpi("10px")} rgba(0, 0, 0, 0.95),
+                  ${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0, 0, 0, 0.9)
                 `,
                 lineHeight: "1.3",
                 wordBreak: "break-word",

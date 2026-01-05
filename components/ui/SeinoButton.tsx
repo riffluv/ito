@@ -6,20 +6,22 @@ import { gsap } from "gsap";
 import { keyframes } from "@emotion/react";
 
 import { AppButton } from "@/components/ui/AppButton";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
+import { SEINO_BUTTON_STYLES } from "./seinoButtonStyles";
 
 // せーのボタン固有のフレア
 const orangeGlowSeino = keyframes`
   0% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,145,65,0.4);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("20px")} rgba(255,145,65,0.4);
   }
   35% {
-    box-shadow: 0 0 0 2px rgba(235,110,40,0.88), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.26), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 28px rgba(255,165,85,0.55);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(235,110,40,0.88), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.26), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("28px")} rgba(255,165,85,0.55);
   }
   65% {
-    box-shadow: 0 0 0 2px rgba(245,120,50,0.92), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.28), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 32px rgba(255,175,95,0.65);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(245,120,50,0.92), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.28), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("32px")} rgba(255,175,95,0.65);
   }
   100% {
-    box-shadow: 0 0 0 2px rgba(220,95,25,0.8), 5px 6px 0 rgba(0,0,0,.42), 4px 5px 0 rgba(0,0,0,.38), inset 0 2px 0 rgba(255,255,255,.22), inset 0 -2px 1px rgba(0,0,0,.28), 0 0 20px rgba(255,145,65,0.4);
+    box-shadow: 0 0 0 ${scaleForDpi("2px")} rgba(220,95,25,0.8), ${scaleForDpi("5px")} ${scaleForDpi("6px")} 0 rgba(0,0,0,.42), ${scaleForDpi("4px")} ${scaleForDpi("5px")} 0 rgba(0,0,0,.38), inset 0 ${scaleForDpi("2px")} 0 rgba(255,255,255,.22), inset 0 ${scaleForDpi("-2px")} ${scaleForDpi("1px")} rgba(0,0,0,.28), 0 0 ${scaleForDpi("20px")} rgba(255,145,65,0.4);
   }
 `;
 
@@ -107,7 +109,7 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
     <Box
       ref={containerRef}
       position="fixed"
-      bottom="310px"
+      bottom={scaleForDpi("310px")}
       left="50%"
       zIndex={100}
       display="none"
@@ -115,42 +117,33 @@ export function SeinoButton({ isVisible, disabled, onClick }: SeinoButtonProps) 
       <Box position="relative" transform="translateX(-50%)">
         <Box
           position="absolute"
-          left="-17px"
+          left={scaleForDpi("-17px")}
           top="50%"
           transform="translateY(-51%) rotate(38deg)"
-          w="13px"
-          h="13px"
+          w={scaleForDpi("13px")}
+          h={scaleForDpi("13px")}
           bg="rgba(255,128,45,0.91)"
-          border="3px solid rgba(255,255,255,0.88)"
-          boxShadow="1px 2px 0 rgba(0,0,0,0.55), inset -1px -1px 1px rgba(0,0,0,0.32)"
+          border={`${scaleForDpi("3px")} solid rgba(255,255,255,0.88)`}
+          boxShadow={`${scaleForDpi("1px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.55), inset ${scaleForDpi("-1px")} ${scaleForDpi("-1px")} ${scaleForDpi("1px")} rgba(0,0,0,0.32)`}
         />
         <Box
           position="absolute"
-          right="-18px"
+          right={scaleForDpi("-18px")}
           top="50%"
           transform="translateY(-49%) rotate(52deg)"
-          w="11px"
-          h="11px"
+          w={scaleForDpi("11px")}
+          h={scaleForDpi("11px")}
           bg="rgba(248,115,30,0.88)"
-          border="3px solid rgba(255,255,255,0.91)"
-          boxShadow="2px 1px 0 rgba(0,0,0,0.52), inset -1px -1px 1px rgba(0,0,0,0.3)"
+          border={`${scaleForDpi("3px")} solid rgba(255,255,255,0.91)`}
+          boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,0.52), inset ${scaleForDpi("-1px")} ${scaleForDpi("-1px")} ${scaleForDpi("1px")} rgba(0,0,0,0.3)`}
         />
 
         <AppButton
+          {...SEINO_BUTTON_STYLES}
           size="lg"
           visual="solid"
-          palette="orange"
           onClick={onClick}
           disabled={disabled}
-          minW="211px"
-          px="34px"
-          py="19px"
-          position="relative"
-          fontWeight="800"
-          fontFamily="monospace"
-          fontSize="26px"
-          letterSpacing="0.023em"
-          textShadow="2px 3px 0px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.6)"
           css={{
             animation: `${orangeGlowSeino} 2.9s cubic-bezier(.35,.12,.65,.88) infinite`,
           }}
