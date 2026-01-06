@@ -8,28 +8,17 @@ import type { CentralCardBoardViewProps } from "./CentralCardBoardView";
 import { buildCentralCardBoardViewProps } from "./buildCentralCardBoardViewProps";
 import { isBoardInteractive } from "./boardUiFlags";
 import { useBoardA11yMessage } from "./useBoardA11yMessage";
-import { useBoardActiveProposal } from "./useBoardActiveProposal";
-import { useBoardCardRenderer } from "./useBoardCardRenderer";
 import { useBoardDebugDumpBundle } from "./useBoardDebugDumpBundle";
 import { useBoardDragHandlers } from "./useBoardDragHandlers";
-import { useBoardDropSessionSystem } from "./useBoardDropSessionSystem";
-import { useBoardOptimisticReturning } from "./useBoardOptimisticReturning";
-import { useBoardPlaceholderSlots } from "./useBoardPlaceholderSlots";
-import { useBoardPresenceBundle } from "./useBoardPresenceBundle";
-import { useBoardRevealState } from "./useBoardRevealState";
-import { useBoardRoomKeys } from "./useBoardRoomKeys";
 import { useBoardSlotDescriptors } from "./useBoardSlotDescriptors";
 import { useBoardSlotHoverHandlers } from "./useBoardSlotHoverHandlers";
 import { useCentralCardBoardDropBundle } from "./useCentralCardBoardDropBundle";
 import { useCentralCardBoardInteractionProfile } from "./useCentralCardBoardInteractionProfile";
 import { useCentralCardBoardLocalUiState } from "./useCentralCardBoardLocalUiState";
 import { useCentralCardBoardMagnetAndDragSystem } from "./useCentralCardBoardMagnetAndDragSystem";
-import { useOptimisticProposalState } from "./useOptimisticProposalState";
-import { usePendingPruneEffects } from "./usePendingPruneEffects";
-import { useProposalSyncTrace } from "./useProposalSyncTrace";
+import { useCentralCardBoardPrelude } from "./useCentralCardBoardPrelude";
+import { useCentralCardBoardProposalBundle } from "./useCentralCardBoardProposalBundle";
 import { useRevealDoneFallback } from "./useRevealDoneFallback";
-import { useRevealStatus } from "./useRevealStatus";
-import { useVictoryRaysPrefetch } from "./useVictoryRaysPrefetch";
 
 export type CentralCardBoardViewPropsInput = {
   roomId: string;
@@ -85,15 +74,9 @@ export function useCentralCardBoardViewProps(
     interactionEnabled,
   } = input;
 
-  const { isRevealing, localRevealPending } = useRevealStatus(
-    roomId,
-    roomStatus,
-    uiRevealPending ?? false
-  );
-
-  useVictoryRaysPrefetch();
-
   const {
+    isRevealing,
+    localRevealPending,
     playerMap,
     missingPlayerIds,
     eligibleIdSet,
@@ -104,20 +87,20 @@ export function useCentralCardBoardViewProps(
     dealReadyForMe,
     dealGuardActive,
     playerReadyMap,
-  } = useBoardPresenceBundle({
+    orderListKey,
+    proposalKey,
+    orderListLength,
+  } = useCentralCardBoardPrelude({
+    roomId,
+    roomStatus,
+    uiRevealPending: uiRevealPending ?? false,
     players,
     orderList,
     proposal,
     orderSnapshots,
     eligibleIds,
     meId,
-    roomStatus,
     dealPlayers,
-  });
-
-  const { orderListKey, proposalKey, orderListLength } = useBoardRoomKeys({
-    orderList,
-    proposal,
   });
 
   const {
@@ -190,115 +173,55 @@ export function useCentralCardBoardViewProps(
   });
 
   const {
-    revealAnimating,
     revealIndex,
     realtimeResult,
     finalizeScheduled,
     resultIntroReadyAt,
     resultOverlayAllowed,
-  } = useBoardRevealState({
-    roomId,
-    roomStatus,
-    resolveMode,
-    orderListLength,
-    orderList,
-    orderNumbers,
-    startPending: uiRevealPending || localRevealPending,
-  });
-
-  const { returningTimeoutsRef, returnCardToWaiting } =
-    useBoardOptimisticReturning({
-      roomId,
-      roomStatus,
-      proposal: proposal ?? null,
-      proposalKey,
-      optimisticReturningIds,
-      setOptimisticReturningIds,
-      updatePendingState,
-      playCardPlace,
-      playDropInvalid,
-    });
-
-  usePendingPruneEffects({
-    orderList,
-    orderListKey,
-    proposal,
-    proposalKey,
-    updatePendingState,
-  });
-
-  const { renderCard } = useBoardCardRenderer({
-    roomStatus,
-    orderList,
-    playerMap,
-    pending,
-    proposal,
-    resolveMode,
-    revealIndex,
-    revealAnimating,
-    failed,
-    realtimeResult,
-  });
-
-  const activeProposal = useBoardActiveProposal({
-    status: roomStatus,
-    orderList,
-    proposal,
-    eligibleIdSet,
-    orderListKey,
-    proposalKey,
-  });
-
-  const {
+    returnCardToWaiting,
+    renderCard,
+    activeProposal,
     optimisticProposal,
     boardProposal,
     clearOptimisticProposal,
     applyOptimisticReorder,
     scheduleDropRollback,
     clearDropRollbackTimer,
-  } = useOptimisticProposalState({
-    roomId,
-    roomStatus,
-    activeProposal,
-    serverProposal: proposal,
-    serverProposalKey: proposalKey,
-    pending,
-    pendingRef,
-    setPending,
-    updatePendingState,
-    optimisticReturningIds,
-    setOptimisticReturningIds,
-    returningTimeoutsRef,
-    presenceReady,
-    prefersReducedMotion,
-    onOptimisticProposalChange,
-  });
-
-  const {
     resolvedSlotCount,
     beginDropSession,
     endDropSession,
     paddedBoardProposal,
     dropAnimation,
     updateDropAnimationTarget,
-  } = useBoardDropSessionSystem({
+    placeholderSlots,
+  } = useCentralCardBoardProposalBundle({
+    roomId,
+    roomStatus,
+    resolveMode,
+    orderList,
+    orderListLength,
+    orderListKey,
+    proposalKey,
+    serverProposal: proposal,
+    eligibleIdSet,
+    orderNumbers,
     slotCount,
     availableEligibleCount,
-    boardProposal,
-    prefersReducedMotion,
-  });
-
-  const placeholderSlots = useBoardPlaceholderSlots({
-    boardProposal,
+    playerMap,
+    pending,
+    pendingRef,
+    setPending,
+    updatePendingState,
+    optimisticReturningIds,
+    setOptimisticReturningIds,
     missingPlayerIds,
-    roomId,
-  });
-
-  useProposalSyncTrace({
-    proposalKey,
-    roomId,
-    activeProposal,
-    orderListLength,
+    failed,
+    startPending: uiRevealPending || localRevealPending,
+    presenceReady,
+    prefersReducedMotion,
+    onOptimisticProposalChange,
+    playCardPlace,
+    playDropInvalid,
   });
 
   const { dragSlots, staticSlots, waitingPlayers } = useBoardSlotDescriptors({
