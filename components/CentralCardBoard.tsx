@@ -3,7 +3,6 @@
 import {
   InteractiveBoard,
   MAGNET_IDLE_MARGIN_PX,
-  RETURN_DROP_ZONE_ID,
   StaticBoard,
   boardCollisionDetection,
   createInitialMagnetState,
@@ -19,12 +18,7 @@ import {
   countActiveProposalIds,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
-import {
-  handleReturnDropEffects,
-  handleMoveToCardDropEffects,
-  handleSlotDropEffects,
-} from "@/components/central-board/boardDropEffects";
-import { interpretBoardDrop } from "@/components/central-board/boardDropInterpretation";
+import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useActiveDragCancelFallback } from "@/components/central-board/useActiveDragCancelFallback";
@@ -39,7 +33,6 @@ import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { CardRenderer } from "@/components/ui/CardRenderer";
-import { notify } from "@/components/ui/notify";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import {
@@ -57,13 +50,11 @@ import {
   FLIP_DURATION_MS,
   RESULT_INTRO_DELAY,
 } from "@/lib/ui/motion";
-import { logWarn } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
 import {
-  DragEndEvent,
   DragMoveEvent,
   DragStartEvent,
   KeyboardSensor,
@@ -1066,180 +1057,36 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
   useActiveDragCancelFallback({ activeId, cancel: cancelActiveDrag });
 
-  const onDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-      if (!activeId) {
-        cancelPendingDragMove();
-        return;
-      }
-      traceAction("drag.end", {
-        activeId: String(active.id),
-        overId: over ? String(over.id) : null,
-      });
-      cancelPendingDragMove();
-      const activeRect = getActiveRectWithDelta(active, event.delta);
-      if (activeRect) {
-        lastDragPositionRef.current = {
-          x: activeRect.left + activeRect.width / 2,
-          y: activeRect.top + activeRect.height / 2,
-        };
-      }
-      const overRect = over?.rect ?? null;
-      let magnetResult = createInitialMagnetState();
-      updateDropAnimationTarget(null);
-
-      try {
-        if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
-
-        const activePlayerId = String(active.id);
-        const overId = over ? String(over.id) : null;
-        const boardRect =
-          boardContainerRef.current?.getBoundingClientRect() ?? null;
-        const decision = interpretBoardDrop({
-          activePlayerId,
-          meId,
-          overId,
-          isSameTarget: over ? active.id === over.id : false,
-          boardProposal,
-          pending: pendingRef.current,
-          slotCountDragging,
-          hasOverRect: Boolean(overRect),
-          boardBounds: boardRect
-            ? {
-                left: boardRect.left,
-                right: boardRect.right,
-                bottom: boardRect.bottom,
-              }
-            : null,
-          lastDragPosition: lastDragPositionRef.current,
-          returnDropZoneId: RETURN_DROP_ZONE_ID,
-        });
-
-        if (decision.kind === "return") {
-          handleReturnDropEffects({
-            activePlayerId,
-            allowed: decision.allowed,
-            reason: decision.allowed ? undefined : decision.reason,
-            onOptimisticProposalChange,
-            returnCardToWaiting,
-            playDropInvalid,
-          });
-          return;
-        }
-
-        if (decision.kind === "invalid" && decision.reason === "no-over") {
-          playDropInvalid();
-          notify({
-            title: "この位置には置けません",
-            type: "info",
-            duration: 900,
-          });
-          return;
-        }
-
-        if (decision.kind === "ignore") {
-          return;
-        }
-
-        if (decision.kind === "slot" && overRect) {
-          if (
-            process.env.NODE_ENV === "development" &&
-            decision.clamped &&
-            decision.originalSlotIndex !== decision.slotIndex
-          ) {
-            logWarn("central-card-board", "slot-index-clamped", {
-              originalSlotIndex: decision.originalSlotIndex,
-              slotIndex: decision.slotIndex,
-              maxSlots: decision.maxSlots,
-              slotCountDragging,
-            });
-          }
-
-          const currentMagnetState = getProjectedMagnetState();
-          updateDropAnimationTarget(overRect as RectLike, {
-            magnetSnap: currentMagnetState.shouldSnap,
-          });
-          magnetResult = computeMagnetTransform(overRect, activeRect, {
-            ...magnetConfigRef.current,
-            projectedOffset: {
-              dx: currentMagnetState.dx + (cursorSnapOffset?.x ?? 0),
-              dy: currentMagnetState.dy + (cursorSnapOffset?.y ?? 0),
-            },
-          });
-
-          handleSlotDropEffects({
-            roomId,
-            activePlayerId,
-            slotIndex: decision.slotIndex,
-            operation: decision.operation,
-            onOptimisticProposalChange,
-            updatePendingState,
-            scheduleDropRollback,
-            clearDropRollbackTimer,
-            playCardPlace,
-            playDropInvalid,
-            clearOptimisticProposal,
-            setOptimisticReturningIds,
-            applyOptimisticReorder,
-          });
-          return;
-        }
-
-        if (decision.kind === "invalid" && decision.reason === "target-not-found") {
-          playDropInvalid();
-          return;
-        }
-
-        if (decision.kind === "move-to-card") {
-          handleMoveToCardDropEffects({
-            roomId,
-            activePlayerId,
-            targetIndex: decision.targetIndex,
-            playCardPlace,
-            playDropInvalid,
-            clearOptimisticProposal,
-            setOptimisticReturningIds,
-            applyOptimisticReorder,
-          });
-          return;
-        }
-
-        return;
-      } finally {
-        enqueueMagnetUpdate({ state: magnetResult, immediate: true });
-        clearActive({ delayMagnetReset: true });
-        endDropSession();
-      }
-    },
-    [
-      activeId,
-      boardContainerRef,
-      cancelPendingDragMove,
-      enqueueMagnetUpdate,
-      getProjectedMagnetState,
-      resolveMode,
-      roomStatus,
-      playDropInvalid,
-      playCardPlace,
-      returnCardToWaiting,
-      meId,
-      updatePendingState,
-      roomId,
-      slotCountDragging,
-      clearActive,
-      updateDropAnimationTarget,
-      onOptimisticProposalChange,
-      magnetConfigRef,
-      cursorSnapOffset,
-      clearOptimisticProposal,
-      applyOptimisticReorder,
-      boardProposal,
-      scheduleDropRollback,
-      clearDropRollbackTimer,
-      endDropSession,
-    ]
-  );
+  const onDragEnd = useBoardDragEndHandler({
+    activeId,
+    resolveMode,
+    roomStatus,
+    roomId,
+    meId,
+    boardProposal,
+    pendingRef,
+    slotCountDragging,
+    boardContainerRef,
+    lastDragPositionRef,
+    cursorSnapOffset,
+    magnetConfigRef,
+    getProjectedMagnetState,
+    enqueueMagnetUpdate,
+    updateDropAnimationTarget,
+    clearActive,
+    cancelPendingDragMove,
+    endDropSession,
+    playDropInvalid,
+    playCardPlace,
+    returnCardToWaiting,
+    onOptimisticProposalChange,
+    updatePendingState,
+    scheduleDropRollback,
+    clearDropRollbackTimer,
+    clearOptimisticProposal,
+    setOptimisticReturningIds,
+    applyOptimisticReorder,
+  });
 
   const onDragCancel = useCallback(() => {
     traceAction("drag.cancel");
