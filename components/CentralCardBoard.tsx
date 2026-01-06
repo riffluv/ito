@@ -5,7 +5,10 @@ import {
   MAGNET_IDLE_MARGIN_PX,
   RETURN_DROP_ZONE_ID,
   StaticBoard,
+  boardCollisionDetection,
   createInitialMagnetState,
+  getActiveRectWithDelta,
+  snapshotRect,
   usePlayerPresenceState,
   useResultFlipState,
   useRevealStatus,
@@ -66,15 +69,10 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  closestCenter,
-  pointerWithin,
   useSensor,
   useSensors,
-  type Collision,
-  type CollisionDetection,
   type DropAnimation,
   type DropAnimationKeyframeResolver,
-  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
@@ -140,92 +138,6 @@ const shallowArrayEqual = (
     if (a[i] !== b[i]) return false;
   }
   return true;
-};
-
-const snapshotRect = (rect: RectLike): RectLike => ({
-  left: rect.left,
-  top: rect.top,
-  width: rect.width,
-  height: rect.height,
-});
-
-const translateRect = (
-  rect: RectLike,
-  delta: { x: number; y: number }
-): RectLike => ({
-  left: rect.left + delta.x,
-  top: rect.top + delta.y,
-  width: rect.width,
-  height: rect.height,
-});
-
-const getActiveRectWithDelta = (
-  active: DragMoveEvent["active"] | DragEndEvent["active"],
-  delta?: { x: number; y: number }
-): RectLike | null => {
-  const translated = active.rect.current.translated;
-  if (translated) {
-    return translated as RectLike;
-  }
-  const initial = active.rect.current.initial;
-  if (!initial) return null;
-  if (delta && (delta.x !== 0 || delta.y !== 0)) {
-    return translateRect(initial as RectLike, delta);
-  }
-  return initial as RectLike;
-};
-
-const boardCollisionDetection: CollisionDetection = (args) => {
-  const pointerHits = pointerWithin(args);
-  if (pointerHits.length) {
-    return pointerHits;
-  }
-
-  const { droppableRects, pointerCoordinates } = args;
-  if (pointerCoordinates) {
-    const candidates: { id: UniqueIdentifier; value: number }[] = [];
-    droppableRects.forEach((rect, id) => {
-      const dropCenter = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      };
-      const dx = pointerCoordinates.x - dropCenter.x;
-      const dy = pointerCoordinates.y - dropCenter.y;
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-
-      const axisAllowanceX = Math.max(rect.width * 0.45, 36);
-      const axisAllowanceY = Math.max(rect.height * 0.4, 42);
-      if (absDx > axisAllowanceX || absDy > axisAllowanceY) {
-        return;
-      }
-
-      const radialAllowance = Math.max(
-        Math.min(rect.width, rect.height) * 0.55,
-        52
-      );
-      const distance = Math.hypot(dx, dy);
-      if (distance > radialAllowance) {
-        return;
-      }
-
-      candidates.push({ id, value: distance });
-    });
-
-    if (candidates.length) {
-      candidates.sort((a, b) => a.value - b.value);
-      const best = candidates[0];
-      const collision: Collision = { id: best.id, data: { value: best.value } };
-      return [collision];
-    }
-
-    // マウス/タッチ位置が存在し、近接候補も無い場合は「未ヒット」とみなす
-    // （1人部屋で唯一のスロットが常に選ばれる暴走を防止）
-    return [];
-  }
-
-  // キーボード操作など pointerCoordinates が無い場合のみフォールバック
-  return closestCenter(args);
 };
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({

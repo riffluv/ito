@@ -6,4 +6,6 @@ export { useRevealStatus } from "./useRevealStatus";
 export { useResultFlipState } from "./useResultFlipState";
 export { useDragMagnetController } from "./useDragMagnetController";
 export { RETURN_DROP_ZONE_ID, createInitialMagnetState, MAGNET_IDLE_MARGIN_PX } from "./constants";
+export { boardCollisionDetection } from "./boardCollisionDetection";
+export { getActiveRectWithDelta, snapshotRect } from "./dragRects";
 export type { MagnetSnapshot } from "./types";
