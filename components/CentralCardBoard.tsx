@@ -10,6 +10,7 @@ import {
 import {
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
+import { useBoardActiveProposal } from "@/components/central-board/useBoardActiveProposal";
 import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
 import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
 import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDragMoveHandler";
@@ -42,7 +43,6 @@ import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { ResolveMode } from "@/lib/game/resolveMode";
-import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
@@ -357,23 +357,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     realtimeResult,
   });
 
-  /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
-    return computeBoardActiveProposal({
-      status: roomStatus,
-      orderList,
-      proposal,
-      eligibleIdSet,
-      orderListKey,
-      proposalKey,
-    });
-  }, [
-    roomStatus,
+  const activeProposal = useBoardActiveProposal({
+    status: roomStatus,
     orderList,
     proposal,
+    eligibleIdSet,
     orderListKey,
     proposalKey,
-    eligibleIdSet,
-  ]);
+  });
 
   const {
     optimisticProposal,
