@@ -25,6 +25,8 @@ import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleas
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
+import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
+import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
@@ -99,18 +101,6 @@ interface CentralCardBoardProps {
   presenceReady?: boolean;
   interactionEnabled?: boolean;
 }
-
-const shallowArrayEqual = (
-  a: readonly (string | null)[],
-  b: readonly (string | null)[]
-) => {
-  if (a === b) return true;
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-};
 
 const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   roomId,
@@ -193,7 +183,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     x: number;
     y: number;
   } | null>(null);
-  const pendingRef = useRef<(string | null)[]>([]);
 
   const magnetConfig = useMemo(() => {
     const isTouchLike =
@@ -294,29 +283,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     interactionEnabled,
   });
 
-  const updatePendingState = useCallback(
-    (updater: (prev: (string | null)[]) => (string | null)[]) => {
-      setPending((prev) => {
-        const next = updater(prev);
-        if (next === prev) return prev;
-        return shallowArrayEqual(prev, next) ? prev : next;
-      });
-    },
-    [setPending]
-  );
+  const { pendingRef, updatePendingState } = useBoardPendingState({
+    pending,
+    setPending,
+  });
 
-  useEffect(() => {
-    pendingRef.current = pending;
-  }, [pending]);
-
-  const playerReadyMap = useMemo(() => {
-    const map = new Map<string, boolean>();
-    playerMap.forEach((player, id) => {
-      const clue = typeof player?.clue1 === "string" ? player.clue1.trim() : "";
-      map.set(id, clue.length > 0);
-    });
-    return map;
-  }, [playerMap]);
+  const playerReadyMap = usePlayerReadyMap({ playerMap });
 
   const playDropInvalid = useSoundEffect(undefined);
   const playCardPlace = useSoundEffect("card_place");
