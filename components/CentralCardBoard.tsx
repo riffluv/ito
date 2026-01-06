@@ -24,7 +24,7 @@ import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardD
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
 import { useBoardPlaceholderSlots } from "@/components/central-board/useBoardPlaceholderSlots";
-import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
+import { useBoardDropState } from "@/components/central-board/useBoardDropState";
 import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSlotHoverHandlers";
 import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
 import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetConfig";
@@ -39,7 +39,6 @@ import { useOptimisticReturningIds } from "@/components/central-board/useOptimis
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
-import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
@@ -236,12 +235,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   const {
     pending,
     setPending,
+    pendingRef,
+    updatePendingState,
     isOver,
     setIsOver,
     canDrop,
     onDropAtPosition,
     canDropAtPosition,
-  } = useDropHandler({
+  } = useBoardDropState({
     roomId,
     meId,
     me,
@@ -253,11 +254,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     dealReady: dealReadyForMe,
     dealGuardActive,
     interactionEnabled,
-  });
-
-  const { pendingRef, updatePendingState } = useBoardPendingState({
-    pending,
-    setPending,
   });
 
   const playerReadyMap = usePlayerReadyMap({ playerMap });
