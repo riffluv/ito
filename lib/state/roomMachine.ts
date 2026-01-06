@@ -1,8 +1,4 @@
-import {
-  areAllCluesReady,
-  getClueTargetIds,
-  getPresenceEligibleIds,
-} from "@/lib/game/selectors";
+import { areAllCluesReady } from "@/lib/game/selectors";
 import {
   GameService,
   type ResetRoomKeepIds,
@@ -31,6 +27,7 @@ import {
   type PlayerWithId,
   type SanitizedPlayer,
 } from "./roomMachineUtils";
+import { computeTargetIds } from "./roomMachineDerivations";
 
 export type SpectatorReason = "mid-game" | "waiting-open" | "waiting-closed" | "version-mismatch" | null;
 export type SpectatorStatus =
@@ -144,23 +141,6 @@ type RoomMachineInput = {
   viewerUid?: string | null;
   deps?: Partial<RoomMachineDeps>;
 };
-
-function computeEligibleIds(context: RoomMachineContext): string[] {
-  const baseIds = context.players.map((player) => player.id);
-  return getPresenceEligibleIds({
-    baseIds,
-    onlineUids: context.onlineUids,
-    presenceReady: context.presenceReady,
-  });
-}
-
-function computeTargetIds(context: RoomMachineContext): string[] {
-  const eligible = computeEligibleIds(context);
-  return getClueTargetIds({
-    dealPlayers: context.room?.deal?.players ?? null,
-    eligibleIds: eligible,
-  });
-}
 
 export function createRoomMachine(input: RoomMachineInput) {
   const sanitizedRoom = input.room ? sanitizeRoom(input.room) : null;
