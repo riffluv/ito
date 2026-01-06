@@ -1,13 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
-import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
-import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
-import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
-import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 
 import type { CentralCardBoardViewProps } from "./CentralCardBoardView";
 import { buildCentralCardBoardViewProps } from "./buildCentralCardBoardViewProps";
@@ -17,10 +12,7 @@ import { useBoardActiveProposal } from "./useBoardActiveProposal";
 import { useBoardCardRenderer } from "./useBoardCardRenderer";
 import { useBoardDebugDumpBundle } from "./useBoardDebugDumpBundle";
 import { useBoardDragHandlers } from "./useBoardDragHandlers";
-import { useBoardDragSystem } from "./useBoardDragSystem";
 import { useBoardDropSessionSystem } from "./useBoardDropSessionSystem";
-import { useBoardDropState } from "./useBoardDropState";
-import { useBoardMagnetSystem } from "./useBoardMagnetSystem";
 import { useBoardOptimisticReturning } from "./useBoardOptimisticReturning";
 import { useBoardPlaceholderSlots } from "./useBoardPlaceholderSlots";
 import { useBoardPresenceBundle } from "./useBoardPresenceBundle";
@@ -28,12 +20,15 @@ import { useBoardRevealState } from "./useBoardRevealState";
 import { useBoardRoomKeys } from "./useBoardRoomKeys";
 import { useBoardSlotDescriptors } from "./useBoardSlotDescriptors";
 import { useBoardSlotHoverHandlers } from "./useBoardSlotHoverHandlers";
+import { useCentralCardBoardDropBundle } from "./useCentralCardBoardDropBundle";
+import { useCentralCardBoardInteractionProfile } from "./useCentralCardBoardInteractionProfile";
+import { useCentralCardBoardLocalUiState } from "./useCentralCardBoardLocalUiState";
+import { useCentralCardBoardMagnetAndDragSystem } from "./useCentralCardBoardMagnetAndDragSystem";
 import { useOptimisticProposalState } from "./useOptimisticProposalState";
 import { usePendingPruneEffects } from "./usePendingPruneEffects";
 import { useProposalSyncTrace } from "./useProposalSyncTrace";
 import { useRevealDoneFallback } from "./useRevealDoneFallback";
 import { useRevealStatus } from "./useRevealStatus";
-import { useStreakBannerState } from "./useStreakBannerState";
 import { useVictoryRaysPrefetch } from "./useVictoryRaysPrefetch";
 
 export type CentralCardBoardViewPropsInput = {
@@ -125,42 +120,31 @@ export function useCentralCardBoardViewProps(
     proposal,
   });
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [optimisticReturningIds, setOptimisticReturningIds] = useState<
-    string[]
-  >([]);
-  const prefersReducedMotion = useReducedMotionPreference();
-  const { showStreakBanner, hideStreakBanner } = useStreakBannerState({
+  const {
+    activeId,
+    setActiveId,
+    optimisticReturningIds,
+    setOptimisticReturningIds,
+    cursorSnapOffset,
+    setCursorSnapOffset,
+    prefersReducedMotion,
+    showStreakBanner,
+    hideStreakBanner,
+  } = useCentralCardBoardLocalUiState({
     roomStatus,
     failed,
     currentStreak,
-    prefersReducedMotion,
   });
 
-  const pointerProfile = usePointerProfile();
-  const supportToolsEnabled = useSupportToolsEnabled();
-  const dropDebugEnabled =
-    process.env.NEXT_PUBLIC_UI_DROP_DEBUG === "1" || supportToolsEnabled;
-
-  const [cursorSnapOffset, setCursorSnapOffset] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+  const { pointerProfile, dropDebugEnabled } =
+    useCentralCardBoardInteractionProfile();
 
   const {
     magnetController,
     enqueueMagnetUpdate,
     resetMagnet,
-    scheduleMagnetTarget,
     getProjectedMagnetState,
     magnetConfigRef,
-    releaseMagnet,
-  } = useBoardMagnetSystem({
-    pointerProfile,
-    prefersReducedMotion,
-  });
-
-  const {
     boardContainerRef,
     dragActivationStartRef,
     handleBoardRef,
@@ -170,16 +154,12 @@ export function useCentralCardBoardViewProps(
     setDragBoostEnabled,
     onDragMove: magnetAwareDragMove,
     cancelPendingDragMove,
-  } = useBoardDragSystem({
+  } = useCentralCardBoardMagnetAndDragSystem({
     resolveMode,
     roomStatus,
     pointerProfile,
-    magnetConfigRef,
     cursorSnapOffset,
-    scheduleMagnetTarget,
-    getProjectedMagnetState,
-    enqueueMagnetUpdate,
-    releaseMagnet,
+    prefersReducedMotion,
   });
 
   const {
@@ -192,7 +172,10 @@ export function useCentralCardBoardViewProps(
     canDrop,
     onDropAtPosition,
     canDropAtPosition,
-  } = useBoardDropState({
+    playDropInvalid,
+    playCardPlace,
+    playDragPickup,
+  } = useCentralCardBoardDropBundle({
     roomId,
     meId,
     me,
@@ -205,10 +188,6 @@ export function useCentralCardBoardViewProps(
     dealGuardActive,
     interactionEnabled,
   });
-
-  const playDropInvalid = useSoundEffect(undefined);
-  const playCardPlace = useSoundEffect("card_place");
-  const playDragPickup = useSoundEffect(undefined);
 
   const {
     revealAnimating,
@@ -456,4 +435,3 @@ export function useCentralCardBoardViewProps(
     hideStreakBanner,
   });
 }
-
