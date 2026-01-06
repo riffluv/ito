@@ -7,12 +7,9 @@ import {
   useBoardA11yMessage,
   useBoardActiveProposal,
   useBoardCardRenderer,
-  useBoardClearActive,
   useBoardDebugDumpBundle,
-  useBoardDragCancelHandlers,
-  useBoardDragEndHandler,
+  useBoardDragHandlers,
   useBoardDragSystem,
-  useBoardDragStartHandler,
   useBoardDropState,
   useBoardDropSessionSystem,
   useBoardMagnetSystem,
@@ -369,55 +366,34 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resultIntroReadyAt,
   });
 
-  const onDragStart = useBoardDragStartHandler({
+  const { onDragStart, onDragCancel, onDragEnd } = useBoardDragHandlers({
     beginDropSession,
-    updateBoardBounds,
+    endDropSession,
     updateDropAnimationTarget,
-    resetMagnet,
+    updateBoardBounds,
     dragActivationStartRef,
+    activeId,
     setActiveId,
+    setCursorSnapOffset,
     setDragBoostEnabled,
     playDragPickup,
-    setCursorSnapOffset,
-  });
-
-  const { clearActive } = useBoardClearActive({
     resetMagnet,
     getProjectedMagnetState,
     prefersReducedMotion,
     setIsOver,
-    setActiveId,
-    setCursorSnapOffset,
-  });
-
-  const { onDragCancel } = useBoardDragCancelHandlers({
-    activeId,
-    dragActivationStartRef,
-    updateDropAnimationTarget,
     cancelPendingDragMove,
-    clearActive,
-    endDropSession,
-  });
-
-  const onDragEnd = useBoardDragEndHandler({
-    activeId,
     resolveMode,
     roomStatus,
     roomId,
     meId,
     boardProposal,
     pendingRef,
-    slotCountDragging: resolvedSlotCount,
+    resolvedSlotCount,
     boardContainerRef,
     lastDragPositionRef,
     cursorSnapOffset,
     magnetConfigRef,
-    getProjectedMagnetState,
     enqueueMagnetUpdate,
-    updateDropAnimationTarget,
-    clearActive,
-    cancelPendingDragMove,
-    endDropSession,
     playDropInvalid,
     playCardPlace,
     returnCardToWaiting,
