@@ -8,8 +8,8 @@ import {
   type ResetRoomKeepIds,
   type ResetRoomOptions,
 } from "@/lib/game/service";
-import { sanitizePlayer, sanitizeRoom } from "@/lib/state/sanitize";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { sanitizeRoom } from "@/lib/state/sanitize";
+import type { RoomDoc } from "@/lib/types";
 import {
   assign,
   createMachine,
@@ -17,14 +17,20 @@ import {
   type ActorRefFrom,
   type StateFrom,
 } from "xstate";
-import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { bumpMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { handleGameError } from "@/lib/utils/errorHandling";
 // NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理するため、
 // roomMachine からのフェーズ別制御は削除。部屋にいる間は waiting 含め常に hold される。
 
-type PlayerWithId = (PlayerDoc & { id: string }) | { id: string; ready?: boolean };
-type SanitizedPlayer = PlayerDoc & { id: string };
+import {
+  recordRoomMetrics,
+  resolveStatus,
+  sanitizeOrderList,
+  sanitizePlayers,
+  type PlayerWithId,
+  type SanitizedPlayer,
+} from "./roomMachineUtils";
 
 export type SpectatorReason = "mid-game" | "waiting-open" | "waiting-closed" | "version-mismatch" | null;
 export type SpectatorStatus =
@@ -139,60 +145,6 @@ type RoomMachineInput = {
   deps?: Partial<RoomMachineDeps>;
 };
 
-function sanitizePlayers(
-  players: PlayerWithId[],
-  previous?: SanitizedPlayer[]
-): SanitizedPlayer[] {
-  if (!previous || previous.length === 0) {
-    return players.map((player) => sanitizePlayer(player.id, player));
-  }
-  const prevMap = new Map(previous.map((player) => [player.id, player]));
-  let mutated = previous.length !== players.length;
-  const next = players.map((player) => {
-    const sanitized = sanitizePlayer(player.id, player);
-    const prev = prevMap.get(sanitized.id);
-    if (prev && playerDocsEqual(prev, sanitized)) {
-      return prev;
-    }
-    mutated = true;
-    return sanitized;
-  });
-  return mutated ? next : previous;
-}
-
-function playerDocsEqual(a: SanitizedPlayer, b: SanitizedPlayer): boolean {
-  if (a === b) return true;
-  return (
-    a.id === b.id &&
-    a.name === b.name &&
-    a.avatar === b.avatar &&
-    a.number === b.number &&
-    a.clue1 === b.clue1 &&
-    a.ready === b.ready &&
-    a.orderIndex === b.orderIndex &&
-    (a.uid ?? null) === (b.uid ?? null) &&
-    (a.lastSeen ?? null) === (b.lastSeen ?? null) &&
-    (a.joinedAt ?? null) === (b.joinedAt ?? null)
-  );
-}
-
-function recordRoomMetrics(
-  room: (RoomDoc & { id?: string }) | null,
-  players: SanitizedPlayer[],
-  onlineUids?: string[],
-  presenceReady?: boolean
-): void {
-  if (typeof window === "undefined") return;
-  try {
-    setMetric("room", "status", room?.status ?? "unknown");
-    setMetric("room", "players", players.length);
-    setMetric("room", "online", Array.isArray(onlineUids) ? onlineUids.length : 0);
-    setMetric("room", "presenceReady", presenceReady ? 1 : 0);
-  } catch {
-    // metrics are best-effort and should never break the machine
-  }
-}
-
 function computeEligibleIds(context: RoomMachineContext): string[] {
   const baseIds = context.players.map((player) => player.id);
   return getPresenceEligibleIds({
@@ -208,17 +160,6 @@ function computeTargetIds(context: RoomMachineContext): string[] {
     dealPlayers: context.room?.deal?.players ?? null,
     eligibleIds: eligible,
   });
-}
-
-function sanitizeOrderList(values: string[] | undefined | null): string[] {
-  if (!Array.isArray(values)) return [];
-  return values.filter(
-    (value): value is string => typeof value === "string" && value.trim().length > 0
-  );
-}
-
-function resolveStatus(room: (RoomDoc & { id?: string }) | null): RoomDoc["status"] {
-  return room?.status ?? "waiting";
 }
 
 export function createRoomMachine(input: RoomMachineInput) {
