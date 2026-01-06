@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  InteractiveBoard,
-  StaticBoard,
-  boardCollisionDetection,
-  useRevealStatus,
-} from "@/components/central-board";
+import { useRevealStatus } from "@/components/central-board";
 import {
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
@@ -48,27 +43,12 @@ import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import { UNIFIED_LAYOUT } from "@/theme/layout";
-import { Box, VisuallyHidden } from "@chakra-ui/react";
-import dynamic from "next/dynamic";
+import { CentralCardBoardView } from "@/components/central-board/CentralCardBoardView";
 import React, {
   useMemo,
   useRef,
   useState,
 } from "react";
-
-const GameResultOverlay = dynamic(
-  () =>
-    import("@/components/ui/GameResultOverlay").then(
-      (mod) => mod.GameResultOverlay
-    ),
-  { loading: () => null, ssr: false }
-);
-
-const StreakBanner = dynamic(
-  () => import("@/components/ui/StreakBanner").then((mod) => mod.StreakBanner),
-  { loading: () => null }
-);
 
 interface CentralCardBoardProps {
   roomId: string;
@@ -490,105 +470,55 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   });
 
   return (
-    <Box
-      data-board-root
-      h="100%"
-      display="flex"
-      flexDirection="column"
-      border="none"
-      borderWidth="0"
-      css={{
-        background: "transparent",
-        position: "relative",
-        "@media (pointer: coarse)": {
-          touchAction: "pan-y",
-          WebkitTouchCallout: "none",
-          userSelect: "none",
-          overscrollBehavior: "contain",
-        },
+    <CentralCardBoardView
+      activeBoard={activeBoard}
+      a11yLiveMessage={a11yLiveMessage}
+      interactive={{
+        slots: dragSlots,
+        magnetController,
+        prefersReducedMotion,
+        activeId,
+        isOver,
+        canDrop,
+        sensors,
+        onDragStart,
+        onDragMove: magnetAwareDragMove,
+        onDragEnd,
+        onDragCancel,
+        dropAnimation,
+        renderCard,
+        activeProposal: boardProposal,
+        waitingPlayers,
+        meId,
+        displayMode,
+        roomStatus,
+        boardRef: handleBoardRef,
+        isRevealing,
+        cursorSnapOffset,
       }}
-    >
-      <VisuallyHidden aria-live="polite">
-        {a11yLiveMessage}
-      </VisuallyHidden>
-
-      <Box
-        flex="1"
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="flex-start"
-        overflow="visible"
-        position="relative"
-        minHeight={0}
-        pt={{ base: "8vh", md: "10vh" }}
-        pb={{ base: 2, md: 3 }}
-        css={{
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_125}`]: {
-            paddingTop: "9vh !important",
-            paddingBottom: "0.75rem !important",
-          },
-          [`@media ${UNIFIED_LAYOUT.MEDIA_QUERIES.DPI_150}`]: {
-            paddingTop: "10vh !important",
-            paddingBottom: "0.5rem !important",
-          },
-        }}
-      >
-        {activeBoard ? (
-          <InteractiveBoard
-            slots={dragSlots}
-            magnetController={magnetController}
-            prefersReducedMotion={prefersReducedMotion}
-            activeId={activeId}
-            isOver={isOver}
-            canDrop={canDrop}
-            sensors={sensors}
-            collisionDetection={boardCollisionDetection}
-            onDragStart={onDragStart}
-            onDragMove={magnetAwareDragMove}
-            onDragEnd={onDragEnd}
-            onDragCancel={onDragCancel}
-            dropAnimation={dropAnimation}
-            renderCard={renderCard}
-            activeProposal={boardProposal}
-            waitingPlayers={waitingPlayers}
-            meId={meId}
-            displayMode={displayMode}
-            roomStatus={roomStatus}
-            boardRef={handleBoardRef}
-            isRevealing={isRevealing}
-            cursorSnapOffset={cursorSnapOffset}
-          />
-        ) : (
-          <StaticBoard
-            slots={staticSlots}
-            renderCard={renderCard}
-            isOver={isOver}
-            canDrop={canDrop}
-            roomStatus={roomStatus}
-            waitingPlayers={waitingPlayers}
-            meId={meId}
-            displayMode={displayMode}
-            onDropAtPosition={onDropAtPosition}
-            onSlotEnter={onSlotEnter}
-            onSlotLeave={onSlotLeave}
-            isRevealing={isRevealing}
-          />
-        )}
-      </Box>
-      {roomStatus === "finished" && resultOverlayAllowed && (
-        <GameResultOverlay
-          failed={failed}
-          mode="overlay"
-          revealedAt={revealedAt}
-        />
-      )}
-      <StreakBanner
-        streak={currentStreak}
-        isVisible={showStreakBanner}
-        onComplete={hideStreakBanner}
-      />
-    </Box>
+      static={{
+        slots: staticSlots,
+        renderCard,
+        isOver,
+        canDrop,
+        roomStatus,
+        waitingPlayers,
+        meId,
+        displayMode,
+        onDropAtPosition,
+        onSlotEnter,
+        onSlotLeave,
+        isRevealing,
+      }}
+      showResultOverlay={roomStatus === "finished" && resultOverlayAllowed}
+      failed={failed}
+      revealedAt={revealedAt}
+      streak={{
+        currentStreak,
+        isVisible: showStreakBanner,
+        onComplete: hideStreakBanner,
+      }}
+    />
   );
 };
 
