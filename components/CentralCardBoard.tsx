@@ -29,9 +29,9 @@ import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSl
 import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
 import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetConfig";
 import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
+import { useBoardRevealState } from "@/components/central-board/useBoardRevealState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
-import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
@@ -40,7 +40,6 @@ import { usePendingPruneEffects } from "@/components/central-board/usePendingPru
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
-import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { ResolveMode } from "@/lib/game/resolveMode";
@@ -268,24 +267,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     realtimeResult,
     finalizeScheduled,
     resultIntroReadyAt,
-  } = useRevealAnimation({
+    resultOverlayAllowed,
+  } = useBoardRevealState({
     roomId,
     roomStatus,
-    resolveMode: resolveMode ?? undefined,
+    resolveMode,
     orderListLength,
-    orderData:
-      orderList && orderNumbers
-        ? {
-            list: orderList,
-            numbers: orderNumbers,
-          }
-        : null,
+    orderList,
+    orderNumbers,
     startPending: uiRevealPending || localRevealPending,
-  });
-
-  const resultOverlayAllowed = useResultOverlayAllowed({
-    roomStatus,
-    resultIntroReadyAt,
   });
 
   // optimisticReturningIds のタイムアウトクリア用
