@@ -44,6 +44,7 @@ import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { CentralCardBoardView } from "@/components/central-board/CentralCardBoardView";
+import { buildCentralCardBoardViewProps } from "@/components/central-board/buildCentralCardBoardViewProps";
 import React, {
   useMemo,
   useRef,
@@ -469,56 +470,44 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     realtimeResult,
   });
 
+  const viewProps = buildCentralCardBoardViewProps({
+    activeBoard,
+    a11yLiveMessage,
+    dragSlots,
+    staticSlots,
+    magnetController,
+    prefersReducedMotion,
+    activeId,
+    isOver,
+    canDrop,
+    sensors,
+    onDragStart,
+    onDragMove: magnetAwareDragMove,
+    onDragEnd,
+    onDragCancel,
+    dropAnimation,
+    renderCard,
+    boardProposal,
+    waitingPlayers,
+    meId,
+    displayMode,
+    roomStatus,
+    handleBoardRef,
+    isRevealing,
+    cursorSnapOffset,
+    onDropAtPosition,
+    onSlotEnter,
+    onSlotLeave,
+    showResultOverlay: roomStatus === "finished" && resultOverlayAllowed,
+    failed,
+    revealedAt,
+    currentStreak,
+    showStreakBanner,
+    hideStreakBanner,
+  });
+
   return (
-    <CentralCardBoardView
-      activeBoard={activeBoard}
-      a11yLiveMessage={a11yLiveMessage}
-      interactive={{
-        slots: dragSlots,
-        magnetController,
-        prefersReducedMotion,
-        activeId,
-        isOver,
-        canDrop,
-        sensors,
-        onDragStart,
-        onDragMove: magnetAwareDragMove,
-        onDragEnd,
-        onDragCancel,
-        dropAnimation,
-        renderCard,
-        activeProposal: boardProposal,
-        waitingPlayers,
-        meId,
-        displayMode,
-        roomStatus,
-        boardRef: handleBoardRef,
-        isRevealing,
-        cursorSnapOffset,
-      }}
-      static={{
-        slots: staticSlots,
-        renderCard,
-        isOver,
-        canDrop,
-        roomStatus,
-        waitingPlayers,
-        meId,
-        displayMode,
-        onDropAtPosition,
-        onSlotEnter,
-        onSlotLeave,
-        isRevealing,
-      }}
-      showResultOverlay={roomStatus === "finished" && resultOverlayAllowed}
-      failed={failed}
-      revealedAt={revealedAt}
-      streak={{
-        currentStreak,
-        isVisible: showStreakBanner,
-        onComplete: hideStreakBanner,
-      }}
-    />
+    <CentralCardBoardView {...viewProps} />
   );
 };
 
