@@ -2,12 +2,9 @@
 
 import {
   InteractiveBoard,
-  MAGNET_IDLE_MARGIN_PX,
   StaticBoard,
   boardCollisionDetection,
   createInitialMagnetState,
-  getActiveRectWithDelta,
-  snapshotRect,
   usePlayerPresenceState,
   useResultFlipState,
   useRevealStatus,
@@ -19,9 +16,13 @@ import {
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
 import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
+import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDragMoveHandler";
+import { useBoardDragSensors } from "@/components/central-board/useBoardDragSensors";
+import { useBoardDropAnimation } from "@/components/central-board/useBoardDropAnimation";
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
-import { useActiveDragCancelFallback } from "@/components/central-board/useActiveDragCancelFallback";
+import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
+import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
@@ -45,28 +46,14 @@ import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import { computeMagnetTransform, type RectLike } from "@/lib/ui/dragMagnet";
 import {
   FLIP_DURATION_MS,
   RESULT_INTRO_DELAY,
 } from "@/lib/ui/motion";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
-import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
+import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
-import {
-  DragMoveEvent,
-  DragStartEvent,
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DropAnimation,
-  type DropAnimationKeyframeResolver,
-} from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { CSS, getEventCoordinates } from "@dnd-kit/utilities";
 import dynamic from "next/dynamic";
 import React, {
   useCallback,
@@ -303,24 +290,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     magnetConfigRef,
   } = magnetController;
 
-  const dropAnimationTargetRef = useRef<RectLike | null>(null);
-  const dropAnimationMetaRef = useRef<{ magnetSnap: boolean }>({
-    magnetSnap: false,
+  const { dropAnimation, updateDropAnimationTarget } = useBoardDropAnimation({
+    prefersReducedMotion,
   });
-  const updateDropAnimationTarget = useCallback(
-    (rect: RectLike | null, options?: { magnetSnap?: boolean }) => {
-      if (rect) {
-        dropAnimationTargetRef.current = snapshotRect(rect);
-        dropAnimationMetaRef.current = {
-          magnetSnap: Boolean(options?.magnetSnap),
-        };
-        return;
-      }
-      dropAnimationTargetRef.current = null;
-      dropAnimationMetaRef.current = { magnetSnap: false };
-    },
-    []
-  );
 
   const {
     boardContainerRef,
@@ -330,19 +302,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     updateBoardBounds,
   } = useBoardBoundsTracker();
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const latestDragMoveEventRef = useRef<DragMoveEvent | null>(null);
-  const dragMoveRafRef = useRef<number | null>(null);
   const [dragBoostEnabled, setDragBoostEnabled] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (dragMoveRafRef.current !== null && typeof window !== "undefined") {
-        window.cancelAnimationFrame(dragMoveRafRef.current);
-        dragMoveRafRef.current = null;
-      }
-      latestDragMoveEventRef.current = null;
-    };
-  }, []);
 
   useEffect(() => {
     if (roomStatus !== "clue" && dragBoostEnabled) {
@@ -397,220 +357,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     }
   }, [enqueueMagnetUpdate, getProjectedMagnetState, scheduleMagnetTarget]);
 
-  const resolveDropAnimationKeyframes =
-    useCallback<DropAnimationKeyframeResolver>(
-      ({ dragOverlay, transform }) => {
-        const overlayRect = dragOverlay?.rect ?? null;
-        const target = dropAnimationTargetRef.current;
-        const magnetSnap = dropAnimationMetaRef.current.magnetSnap;
-        const defaultFrames = [
-          { transform: CSS.Transform.toString(transform.initial) },
-          { transform: CSS.Transform.toString(transform.final) },
-        ];
-        if (!target || !overlayRect) {
-          return defaultFrames;
-        }
+  const { sensors } = useBoardDragSensors({ pointerProfile, dragBoostEnabled });
 
-        const deltaX = target.left - overlayRect.left;
-        const deltaY = target.top - overlayRect.top;
-        const finalTransform = {
-          ...transform.initial,
-          x: transform.initial.x + deltaX,
-          y: transform.initial.y + deltaY,
-          scaleX: 1,
-          scaleY: 1,
-        };
-
-        if (prefersReducedMotion || !magnetSnap) {
-          return [
-            { transform: CSS.Transform.toString(transform.initial) },
-            { transform: CSS.Transform.toString(finalTransform) },
-          ];
-        }
-
-        return [
-          { transform: CSS.Transform.toString(transform.initial) },
-          {
-            transform: CSS.Transform.toString({
-              ...finalTransform,
-              scaleX: 1.06,
-              scaleY: 1.06,
-            }),
-          },
-          { transform: CSS.Transform.toString(finalTransform) },
-        ];
-      },
-      [prefersReducedMotion]
-    );
-
-  const dropAnimation = useMemo<DropAnimation>(() => {
-    if (prefersReducedMotion) {
-      return {
-        duration: 110,
-        easing: "linear",
-        keyframes: resolveDropAnimationKeyframes,
-      };
-    }
-    return {
-      duration: 220,
-      easing: UI_TOKENS.EASING.standard,
-      keyframes: resolveDropAnimationKeyframes,
-    };
-  }, [prefersReducedMotion, resolveDropAnimationKeyframes]);
-
-  const mouseSensorOptions = useMemo(
-    () => ({
-      activationConstraint: {
-        // Avoid accidental micro-drags on desktop (which can momentarily hide the card)
-        // while keeping touch devices responsive.
-        distance: (() => {
-          const base = pointerProfile.isCoarsePointer ? 6 : 4;
-          // "Boost" keeps activation snappy but should not be hair-trigger.
-          return dragBoostEnabled ? Math.max(2, Math.round(base * 0.5)) : base;
-        })(),
-      },
-    }),
-    [pointerProfile.isCoarsePointer, dragBoostEnabled]
-  );
-
-  const touchSensorOptions = useMemo(() => {
-    const base = pointerProfile.isTouchOnly
-      ? {
-          delay: 45,
-          tolerance: 26,
-        }
-      : {
-          delay: 160,
-          tolerance: 8,
-        };
-    if (!dragBoostEnabled) {
-      return { activationConstraint: base };
-    }
-    return {
-      activationConstraint: {
-        delay: Math.max(12, Math.round(base.delay * 0.35)),
-        tolerance: base.tolerance + 6,
-      },
-    };
-  }, [pointerProfile.isTouchOnly, dragBoostEnabled]);
-
-  const sensors = useSensors(
-    useSensor(MouseSensor, mouseSensorOptions),
-    useSensor(TouchSensor, touchSensorOptions),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const processDragMoveFrame = useCallback(
-    (event: DragMoveEvent) => {
-      if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
-        return;
-      }
-
-      const { over, active } = event;
-      const activeRect = getActiveRectWithDelta(active, event.delta);
-      if (activeRect) {
-        lastDragPositionRef.current = {
-          x: activeRect.left + activeRect.width / 2,
-          y: activeRect.top + activeRect.height / 2,
-        };
-      }
-
-      const dragPoint = lastDragPositionRef.current;
-      const boardBounds = boardBoundsRef.current;
-      if (
-        boardBounds &&
-        dragPoint &&
-        (dragPoint.y < boardBounds.top - MAGNET_IDLE_MARGIN_PX ||
-          dragPoint.y > boardBounds.bottom + MAGNET_IDLE_MARGIN_PX)
-      ) {
-        releaseMagnet();
-        return;
-      }
-
-      if (
-        !over ||
-        typeof over.id !== "string" ||
-        !over.id.startsWith("slot-")
-      ) {
-        releaseMagnet();
-        return;
-      }
-
-      scheduleMagnetTarget(String(over.id));
-
-      const projectedState = getProjectedMagnetState();
-      const magnetResult = computeMagnetTransform(over.rect, activeRect, {
-        ...magnetConfigRef.current,
-        projectedOffset: {
-          dx: projectedState.dx + (cursorSnapOffset?.x ?? 0),
-          dy: projectedState.dy + (cursorSnapOffset?.y ?? 0),
-        },
-      });
-
-      const previous = projectedState;
-      const deltaX = Math.abs(previous.dx - magnetResult.dx);
-      const deltaY = Math.abs(previous.dy - magnetResult.dy);
-      const deltaStrength = Math.abs(previous.strength - magnetResult.strength);
-      if (
-        deltaX < 0.5 &&
-        deltaY < 0.5 &&
-        deltaStrength < 0.05 &&
-        previous.shouldSnap === magnetResult.shouldSnap
-      ) {
-        return;
-      }
-
-      enqueueMagnetUpdate({ state: magnetResult });
-    },
-    [
-      boardBoundsRef,
-      enqueueMagnetUpdate,
-      getProjectedMagnetState,
-      magnetConfigRef,
-      releaseMagnet,
+  const { onDragMove: magnetAwareDragMove, cancelPendingDragMove } =
+    useBoardDragMoveHandler({
       resolveMode,
       roomStatus,
-      scheduleMagnetTarget,
+      boardBoundsRef,
+      lastDragPositionRef,
+      magnetConfigRef,
       cursorSnapOffset,
-    ]
-  );
-
-  const flushPendingDragMove = useCallback(() => {
-    dragMoveRafRef.current = null;
-    const pending = latestDragMoveEventRef.current;
-    if (!pending) {
-      return;
-    }
-    latestDragMoveEventRef.current = null;
-    processDragMoveFrame(pending);
-  }, [processDragMoveFrame]);
-
-  const magnetAwareDragMove = useCallback(
-    (event: DragMoveEvent) => {
-      if (typeof window === "undefined") {
-        processDragMoveFrame(event);
-        return;
-      }
-
-      latestDragMoveEventRef.current = event;
-      if (dragMoveRafRef.current !== null) {
-        return;
-      }
-      dragMoveRafRef.current =
-        window.requestAnimationFrame(flushPendingDragMove);
-    },
-    [flushPendingDragMove, processDragMoveFrame]
-  );
-
-  const cancelPendingDragMove = useCallback(() => {
-    if (typeof window !== "undefined" && dragMoveRafRef.current !== null) {
-      window.cancelAnimationFrame(dragMoveRafRef.current);
-      dragMoveRafRef.current = null;
-    }
-    latestDragMoveEventRef.current = null;
-  }, []);
+      scheduleMagnetTarget,
+      getProjectedMagnetState,
+      enqueueMagnetUpdate,
+      releaseMagnet,
+    });
 
   useEffect(() => {
     setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
@@ -946,63 +707,17 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     resultIntroReadyAt,
   });
 
-  const onDragStart = useCallback(
-    (event: DragStartEvent) => {
-      traceAction("drag.start", { activeId: String(event.active.id) });
-      beginDropSession();
-      updateBoardBounds();
-      updateDropAnimationTarget(null);
-      resetMagnet({ immediate: true });
-      setActiveId(String(event.active.id));
-      setDragBoostEnabled((prev) => (prev ? prev : true));
-      if (
-        dragActivationStartRef.current !== null &&
-        typeof performance !== "undefined"
-      ) {
-        const latency = Math.max(
-          0,
-          performance.now() - dragActivationStartRef.current
-        );
-        setMetric("drag", "activationLatencyMs", Math.round(latency));
-      }
-      dragActivationStartRef.current = null;
-      playDragPickup();
-      if (
-        typeof navigator !== "undefined" &&
-        typeof navigator.vibrate === "function"
-      ) {
-        try {
-          navigator.vibrate(6);
-        } catch {
-          // 触覚フィードバックの失敗は無視
-        }
-      }
-
-      const coordinates = event.activatorEvent
-        ? getEventCoordinates(event.activatorEvent)
-        : null;
-      const activeRect = getActiveRectWithDelta(event.active);
-      if (coordinates && activeRect) {
-        const centerX = activeRect.left + activeRect.width / 2;
-        const centerY = activeRect.top + activeRect.height / 2;
-        setCursorSnapOffset({
-          x: coordinates.x - centerX,
-          y: coordinates.y - centerY,
-        });
-      } else {
-        setCursorSnapOffset(null);
-      }
-    },
-    [
-      beginDropSession,
-      dragActivationStartRef,
-      updateBoardBounds,
-      resetMagnet,
-      playDragPickup,
-      setCursorSnapOffset,
-      updateDropAnimationTarget,
-    ]
-  );
+  const onDragStart = useBoardDragStartHandler({
+    beginDropSession,
+    updateBoardBounds,
+    updateDropAnimationTarget,
+    resetMagnet,
+    dragActivationStartRef,
+    setActiveId,
+    setDragBoostEnabled,
+    playDragPickup,
+    setCursorSnapOffset,
+  });
 
   const clearActive = useCallback(
     (options?: { delayMagnetReset?: boolean }) => {
@@ -1033,29 +748,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     ]
   );
 
-  const cancelActiveDrag = useCallback(
-    (reason: "visibilitychange" | "pointercancel" | "touchcancel" | "blur") => {
-      if (!activeId) return;
-      traceAction("drag.cancel.fallback", {
-        activeId: String(activeId),
-        reason,
-      });
-      dragActivationStartRef.current = null;
-      updateDropAnimationTarget(null);
-      cancelPendingDragMove();
-      clearActive();
-      endDropSession();
-    },
-    [
-      activeId,
-      cancelPendingDragMove,
-      clearActive,
-      dragActivationStartRef,
-      endDropSession,
-      updateDropAnimationTarget,
-    ]
-  );
-  useActiveDragCancelFallback({ activeId, cancel: cancelActiveDrag });
+  const { onDragCancel } = useBoardDragCancelHandlers({
+    activeId,
+    dragActivationStartRef,
+    updateDropAnimationTarget,
+    cancelPendingDragMove,
+    clearActive,
+    endDropSession,
+  });
 
   const onDragEnd = useBoardDragEndHandler({
     activeId,
@@ -1087,21 +787,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setOptimisticReturningIds,
     applyOptimisticReorder,
   });
-
-  const onDragCancel = useCallback(() => {
-    traceAction("drag.cancel");
-    dragActivationStartRef.current = null;
-    updateDropAnimationTarget(null);
-    cancelPendingDragMove();
-    clearActive();
-    endDropSession();
-  }, [
-    cancelPendingDragMove,
-    clearActive,
-    dragActivationStartRef,
-    endDropSession,
-    updateDropAnimationTarget,
-  ]);
 
   const activeBoard =
     interactionEnabled && resolveMode === "sort-submit" && roomStatus === "clue";
