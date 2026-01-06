@@ -12,7 +12,7 @@ import { useBoardDropAnimation } from "@/components/central-board/useBoardDropAn
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDragBoostState } from "@/components/central-board/useBoardDragBoostState";
 import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleaseMagnet";
-import { useBoardDebugDumpState } from "@/components/central-board/useBoardDebugDumpState";
+import { useBoardDebugDumpBundle } from "@/components/central-board/useBoardDebugDumpBundle";
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
@@ -358,7 +358,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     activeId,
   });
 
-  useBoardDebugDumpState({
+  useBoardDebugDumpBundle({
     enabled: dropDebugEnabled,
     roomId,
     activeProposal,
