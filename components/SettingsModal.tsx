@@ -5,6 +5,7 @@ import { notify } from "@/components/ui/notify";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
 import { useSoundManager, useSoundSettings } from "@/lib/audio/SoundProvider";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
+import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { updateRoomOptions } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
@@ -220,26 +221,8 @@ export function SettingsModal({
     }
   });
 
-  const [supportToolsEnabled, setSupportToolsEnabled] = useState(false);
+  const supportToolsEnabled = useSupportToolsEnabled();
   const [supportCopying, setSupportCopying] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const envEnabled = process.env.NEXT_PUBLIC_ENABLE_SUPPORT_TOOLS === "1";
-      const params = new URLSearchParams(window.location.search);
-      const param = params.get("support");
-      const stored = window.localStorage.getItem("ito-support-tools") === "1";
-      if (param === "1") {
-        window.localStorage.setItem("ito-support-tools", "1");
-      } else if (param === "0") {
-        window.localStorage.removeItem("ito-support-tools");
-      }
-      setSupportToolsEnabled(envEnabled || stored || param === "1");
-    } catch {
-      setSupportToolsEnabled(false);
-    }
-  }, []);
 
   const handleCopySupportLog = useCallback(async () => {
     if (supportCopying) return;

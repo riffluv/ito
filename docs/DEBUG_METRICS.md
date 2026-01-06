@@ -66,6 +66,15 @@ copy(dumpItoMetricsJson("issue"))
   - `dumpItoMetricsJson("drop-noop-or-missing")`
   - `dumpItoMetricsJson("drag-disappear")`
 
+#### D-1. 盤面スナップショット（CentralCardBoard 補助）
+ドラッグ不具合の「その瞬間の盤面」を採取したい場合:
+
+```js
+window.dumpBoardState?.()
+```
+
+※ `dumpBoardState is not defined` の場合は `?support=1` を付けてリロード（または `localStorage.ito-support-tools=1`）。
+
 ### E. 音/表示（副作用チェック）
 - 症状: 音が鳴らない / タブ復帰後だけ音が遅い / 表示が乱れる  
   - `dumpItoMetricsJson("audio-issue")`

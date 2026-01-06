@@ -20,7 +20,7 @@ import { useBoardDropAnimation } from "@/components/central-board/useBoardDropAn
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDragBoostState } from "@/components/central-board/useBoardDragBoostState";
 import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleaseMagnet";
-import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
+import { useBoardDebugDumpState } from "@/components/central-board/useBoardDebugDumpState";
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
@@ -44,6 +44,7 @@ import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { computeBoardActiveProposal } from "@/lib/game/selectors";
+import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
@@ -174,7 +175,9 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   });
 
   const pointerProfile = usePointerProfile();
-  const dropDebugEnabled = process.env.NEXT_PUBLIC_UI_DROP_DEBUG === "1";
+  const supportToolsEnabled = useSupportToolsEnabled();
+  const dropDebugEnabled =
+    process.env.NEXT_PUBLIC_UI_DROP_DEBUG === "1" || supportToolsEnabled;
 
   const [cursorSnapOffset, setCursorSnapOffset] = useState<{
     x: number;
@@ -452,24 +455,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     activeId,
   });
 
-  const dumpBoardState = useCallback(() => {
-    return {
-      roomId,
-      timestamp: Date.now(),
-      proposal: activeProposal,
-      renderedProposal: boardProposal,
-      optimisticProposal,
-      pending,
-      placeholders: placeholderSlots,
-      waiting: waitingPlayers.map((player) => ({
-        id: player.id,
-        name: player.name,
-      })),
-      eligibleIds,
-      missingPlayerIds,
-      roomStatus,
-    };
-  }, [
+  useBoardDebugDumpState({
+    enabled: dropDebugEnabled,
     roomId,
     activeProposal,
     boardProposal,
@@ -480,9 +467,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     eligibleIds,
     missingPlayerIds,
     roomStatus,
-  ]);
-
-  useBoardDebugDump({ enabled: dropDebugEnabled, dump: dumpBoardState });
+  });
 
   const handleSlotEnter = useCallback(
     (_index: number) => {
