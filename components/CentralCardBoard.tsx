@@ -4,7 +4,6 @@ import {
   InteractiveBoard,
   StaticBoard,
   boardCollisionDetection,
-  usePlayerPresenceState,
   useRevealStatus,
 } from "@/components/central-board";
 import {
@@ -31,7 +30,7 @@ import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetC
 import { useBoardOptimisticReturning } from "@/components/central-board/useBoardOptimisticReturning";
 import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
 import { useBoardRevealState } from "@/components/central-board/useBoardRevealState";
-import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
+import { useBoardPresenceBundle } from "@/components/central-board/useBoardPresenceBundle";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
@@ -139,7 +138,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     availableEligibleCount,
     dealReadyForMe,
     dealGuardActive,
-  } = usePlayerPresenceState({
+    playerReadyMap,
+  } = useBoardPresenceBundle({
     players,
     orderList,
     proposal,
@@ -254,8 +254,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     dealGuardActive,
     interactionEnabled,
   });
-
-  const playerReadyMap = usePlayerReadyMap({ playerMap });
 
   const playDropInvalid = useSoundEffect(undefined);
   const playCardPlace = useSoundEffect("card_place");
