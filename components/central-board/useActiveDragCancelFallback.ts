@@ -6,21 +6,24 @@ export type ActiveDragCancelReason =
   | "touchcancel"
   | "blur";
 
-export function useActiveDragCancelFallback(params: {
+export function useActiveDragCancelFallback({
+  activeId,
+  cancel,
+}: {
   activeId: string | null;
   cancel: (reason: ActiveDragCancelReason) => void;
 }) {
   useEffect(() => {
-    if (!params.activeId || typeof window === "undefined") return undefined;
-    const handlePointerCancel = () => params.cancel("pointercancel");
-    const handleTouchCancel = () => params.cancel("touchcancel");
-    const handleBlur = () => params.cancel("blur");
+    if (!activeId || typeof window === "undefined") return undefined;
+    const handlePointerCancel = () => cancel("pointercancel");
+    const handleTouchCancel = () => cancel("touchcancel");
+    const handleBlur = () => cancel("blur");
     const handleVisibility = () => {
       if (
         typeof document !== "undefined" &&
         document.visibilityState === "hidden"
       ) {
-        params.cancel("visibilitychange");
+        cancel("visibilitychange");
       }
     };
     const touchCancelOptions: AddEventListenerOptions = { passive: true };
@@ -34,6 +37,5 @@ export function useActiveDragCancelFallback(params: {
       window.removeEventListener("blur", handleBlur);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [params.activeId, params.cancel]);
+  }, [activeId, cancel]);
 }
-

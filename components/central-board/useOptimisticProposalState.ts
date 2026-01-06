@@ -369,6 +369,8 @@ export function useOptimisticProposalState(params: {
   }, [clearOptimisticProposal, setOptimisticReturningIds, updatePendingState]);
 
   useEffect(() => {
+    const dropRollbackTimers = dropRollbackTimersRef.current;
+    const dropRollbackSnapshots = dropRollbackSnapshotsRef.current;
     return () => {
       if (
         typeof window !== "undefined" &&
@@ -377,11 +379,11 @@ export function useOptimisticProposalState(params: {
         window.clearTimeout(forceResyncTimerRef.current);
         forceResyncTimerRef.current = null;
       }
-      if (typeof window !== "undefined" && dropRollbackTimersRef.current.size > 0) {
-        dropRollbackTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-        dropRollbackTimersRef.current.clear();
+      if (typeof window !== "undefined" && dropRollbackTimers.size > 0) {
+        dropRollbackTimers.forEach((timer) => window.clearTimeout(timer));
+        dropRollbackTimers.clear();
       }
-      dropRollbackSnapshotsRef.current.clear();
+      dropRollbackSnapshots.clear();
     };
   }, []);
 

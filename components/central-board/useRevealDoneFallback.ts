@@ -15,7 +15,15 @@ import {
   REVEAL_MIN_STEP_DELAY,
 } from "@/lib/ui/motion";
 
-export function useRevealDoneFallback(params: {
+export function useRevealDoneFallback({
+  roomId,
+  roomStatus,
+  resolveMode,
+  orderListLength,
+  finalizeScheduled,
+  sendRoomEvent,
+  resultIntroReadyAt,
+}: {
   roomId: string;
   roomStatus: RoomDoc["status"];
   resolveMode: ResolveMode | null | undefined;
@@ -35,12 +43,12 @@ export function useRevealDoneFallback(params: {
     };
 
     if (
-      params.resolveMode === "sort-submit" &&
-      params.roomStatus === "reveal" &&
-      params.orderListLength > 0 &&
-      !params.finalizeScheduled
+      resolveMode === "sort-submit" &&
+      roomStatus === "reveal" &&
+      orderListLength > 0 &&
+      !finalizeScheduled
     ) {
-      const intervalCount = Math.max(params.orderListLength - 1, 0);
+      const intervalCount = Math.max(orderListLength - 1, 0);
       const finalBonusSteps = Math.min(intervalCount, 2); // 最後の2枚だけ余韻を追加
       // 加速テンポの平均値で概算
       const avgStepDelay = Math.round(
@@ -59,8 +67,8 @@ export function useRevealDoneFallback(params: {
 
       const SAFETY_BUFFER_MS = 600;
       const baseTotal = revealTraversal + lastFlipWindow + SAFETY_BUFFER_MS;
-      const introAligned = params.resultIntroReadyAt
-        ? params.resultIntroReadyAt +
+      const introAligned = resultIntroReadyAt
+        ? resultIntroReadyAt +
           RESULT_RECOGNITION_DELAY +
           SAFETY_BUFFER_MS -
           Date.now()
@@ -70,14 +78,14 @@ export function useRevealDoneFallback(params: {
       clearPendingTimer();
       fallbackTimerRef.current = setTimeout(() => {
         // もしまだローカルがリビール中なら、最低でもローカルの resultIntroReadyAt が来るまで待つ
-        if (params.sendRoomEvent) {
+        if (sendRoomEvent) {
           try {
-            params.sendRoomEvent({ type: "REVEAL_DONE" });
+            sendRoomEvent({ type: "REVEAL_DONE" });
           } catch {
-            finalizeReveal(params.roomId).catch(() => void 0);
+            finalizeReveal(roomId).catch(() => void 0);
           }
         } else {
-          finalizeReveal(params.roomId).catch(() => void 0);
+          finalizeReveal(roomId).catch(() => void 0);
         }
       }, total);
       return clearPendingTimer;
@@ -86,13 +94,12 @@ export function useRevealDoneFallback(params: {
     clearPendingTimer();
     return clearPendingTimer;
   }, [
-    params.finalizeScheduled,
-    params.orderListLength,
-    params.resolveMode,
-    params.resultIntroReadyAt,
-    params.roomId,
-    params.roomStatus,
-    params.sendRoomEvent,
+    finalizeScheduled,
+    orderListLength,
+    resolveMode,
+    resultIntroReadyAt,
+    roomId,
+    roomStatus,
+    sendRoomEvent,
   ]);
 }
-
