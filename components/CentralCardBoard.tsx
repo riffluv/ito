@@ -28,6 +28,7 @@ import { useBoardDropState } from "@/components/central-board/useBoardDropState"
 import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSlotHoverHandlers";
 import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
 import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetConfig";
+import { useBoardOptimisticReturning } from "@/components/central-board/useBoardOptimisticReturning";
 import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
 import { useBoardRevealState } from "@/components/central-board/useBoardRevealState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
@@ -35,7 +36,6 @@ import { useProposalSyncTrace } from "@/components/central-board/useProposalSync
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
-import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
@@ -278,19 +278,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     startPending: uiRevealPending || localRevealPending,
   });
 
-  // optimisticReturningIds のタイムアウトクリア用
-  const returningTimeoutsRef = useRef<
-    Map<string, ReturnType<typeof setTimeout>>
-  >(new Map());
-
-  const { returnCardToWaiting } = useOptimisticReturningIds({
+  const { returningTimeoutsRef, returnCardToWaiting } = useBoardOptimisticReturning({
     roomId,
     roomStatus,
     proposal: proposal ?? null,
     proposalKey,
     optimisticReturningIds,
     setOptimisticReturningIds,
-    returningTimeoutsRef,
     updatePendingState,
     playCardPlace,
     playDropInvalid,
