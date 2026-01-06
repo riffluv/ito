@@ -1,37 +1,41 @@
 "use client";
 
-import { useRevealStatus } from "@/components/central-board";
-import { useBoardActiveProposal } from "@/components/central-board/useBoardActiveProposal";
-import { isBoardInteractive } from "@/components/central-board/boardUiFlags";
-import { useBoardA11yMessage } from "@/components/central-board/useBoardA11yMessage";
-import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
-import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
-import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDragMoveHandler";
-import { useBoardDragSensors } from "@/components/central-board/useBoardDragSensors";
-import { useBoardDropAnimation } from "@/components/central-board/useBoardDropAnimation";
-import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
-import { useBoardDragBoostState } from "@/components/central-board/useBoardDragBoostState";
-import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleaseMagnet";
-import { useBoardDebugDumpBundle } from "@/components/central-board/useBoardDebugDumpBundle";
-import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
-import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
-import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
-import { useBoardPlaceholderSlots } from "@/components/central-board/useBoardPlaceholderSlots";
-import { useBoardDropState } from "@/components/central-board/useBoardDropState";
-import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSlotHoverHandlers";
-import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
-import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetConfig";
-import { useBoardOptimisticReturning } from "@/components/central-board/useBoardOptimisticReturning";
-import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
-import { useBoardRevealState } from "@/components/central-board/useBoardRevealState";
-import { useBoardPresenceBundle } from "@/components/central-board/useBoardPresenceBundle";
-import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
-import { useBoardSlotDescriptors } from "@/components/central-board/useBoardSlotDescriptors";
-import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
-import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
-import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
-import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
-import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
+import {
+  CentralCardBoardView,
+  buildCentralCardBoardViewProps,
+  isBoardInteractive,
+  useBoardA11yMessage,
+  useBoardActiveProposal,
+  useBoardBoundsTracker,
+  useBoardCardRenderer,
+  useBoardClearActive,
+  useBoardDebugDumpBundle,
+  useBoardDragBoostState,
+  useBoardDragCancelHandlers,
+  useBoardDragEndHandler,
+  useBoardDragMoveHandler,
+  useBoardDragSensors,
+  useBoardDragStartHandler,
+  useBoardDropAnimation,
+  useBoardDropState,
+  useBoardMagnetConfig,
+  useBoardOptimisticReturning,
+  useBoardPlaceholderSlots,
+  useBoardPresenceBundle,
+  useBoardRevealState,
+  useBoardReleaseMagnet,
+  useBoardRoomKeys,
+  useBoardSlotCountState,
+  useBoardSlotDescriptors,
+  useBoardSlotHoverHandlers,
+  useOptimisticProposalState,
+  usePendingPruneEffects,
+  useProposalSyncTrace,
+  useRevealDoneFallback,
+  useRevealStatus,
+  useStreakBannerState,
+  useVictoryRaysPrefetch,
+} from "@/components/central-board";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
@@ -40,8 +44,6 @@ import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import { CentralCardBoardView } from "@/components/central-board/CentralCardBoardView";
-import { buildCentralCardBoardViewProps } from "@/components/central-board/buildCentralCardBoardViewProps";
 import React, {
   useRef,
   useState,
