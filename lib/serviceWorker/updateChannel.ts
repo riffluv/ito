@@ -15,6 +15,7 @@ import {
   type SafeUpdatePhase,
   type SafeUpdateSnapshot,
 } from "./safeUpdateMachine";
+import { createStartApply } from "./updateChannelApply";
 import {
   addSnapshotListener,
   addUpdateListener,
@@ -35,11 +36,6 @@ export { getRequiredSwVersionHint, setRequiredSwVersionHint };
 
 type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
 
-// Some environments appear to keep the waiting SW stuck in `installed` when heavy worker clients are alive.
-// Fall back to a hard reload (which closes those clients) if SKIP_WAITING doesn't progress quickly.
-const APPLY_FALLBACK_RELOAD_MS = 5_000;
-const APPLY_FALLBACK_RELOAD_SESSION_KEY = "ito-safe-update-fallback-reload-count";
-const APPLY_FALLBACK_RELOAD_LIMIT = 2;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const IN_GAME_HOLD_KEY = "in-game";
 
@@ -56,6 +52,12 @@ const broadcast =
 function now(): number {
   return Date.now();
 }
+
+const startApply = createStartApply({
+  now,
+  broadcast,
+  getSnapshot: getCurrentSnapshot,
+});
 
 const safeUpdateMachine = createSafeUpdateMachine({
   isBrowser,
@@ -210,118 +212,6 @@ async function handleBroadcastMessage(message: { type?: string; detail?: string 
     default:
       break;
   }
-}
-function startApply(
-  context: SafeUpdateContext,
-  params: { reason: string; safeMode: boolean; automatic: boolean; broadcast: boolean }
-): Partial<SafeUpdateContext> {
-  const registration = context.waitingRegistration;
-  const waiting = registration?.waiting ?? null;
-  if (!registration || !waiting) {
-    return {
-      lastError: "no_waiting",
-      pendingReload: false,
-      applyReason: params.reason,
-    };
-  }
-
-  const controllerBefore =
-    typeof navigator !== "undefined"
-      ? navigator.serviceWorker?.controller?.scriptURL ?? null
-      : null;
-  const waitingUrl = waiting.scriptURL;
-
-  // Service Worker 更新の適用直前に、重い Worker（OffscreenCanvas など）を止めておく。
-  // これが生きているとブラウザが skipWaiting/activate を進められず apply がタイムアウトするケースがある。
-  if (typeof window !== "undefined") {
-    try {
-      window.dispatchEvent(new Event("ito-safe-update-apply"));
-    } catch {
-      /* noop */
-    }
-  }
-  try {
-    waiting.postMessage({ type: "SKIP_WAITING" });
-  } catch (error) {
-    traceError("safeUpdate.apply.postMessage", error, {
-      reason: params.reason,
-      safeMode: params.safeMode,
-    });
-  }
-
-  if (typeof window !== "undefined" && typeof navigator !== "undefined") {
-    window.setTimeout(() => {
-      try {
-        if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-          return;
-        }
-        if (getCurrentSnapshot().phase !== "applying") {
-          return;
-        }
-        const controllerUrl = navigator.serviceWorker?.controller?.scriptURL ?? null;
-        if (controllerBefore && controllerUrl && controllerUrl !== controllerBefore) {
-          return;
-        }
-        const count = Number(sessionStorage.getItem(APPLY_FALLBACK_RELOAD_SESSION_KEY) ?? "0");
-        if (!Number.isFinite(count) || count >= APPLY_FALLBACK_RELOAD_LIMIT) {
-          return;
-        }
-        void navigator.serviceWorker
-          .getRegistration()
-          .then((reg) => {
-            const waitingNow = reg?.waiting?.scriptURL ?? null;
-            if (!waitingNow || waitingNow !== waitingUrl) {
-              return;
-            }
-            traceAction("safeUpdate.apply.fallbackReload", {
-              reason: params.reason,
-              safeMode: params.safeMode,
-              waitingUrl,
-              controllerBefore,
-              count: count + 1,
-              delayMs: APPLY_FALLBACK_RELOAD_MS,
-            });
-            sessionStorage.setItem(
-              APPLY_FALLBACK_RELOAD_SESSION_KEY,
-              String(count + 1)
-            );
-            window.location.reload();
-          })
-          .catch(() => undefined);
-      } catch (error) {
-        traceError("safeUpdate.apply.fallbackReloadFailed", error, {
-          reason: params.reason,
-          safeMode: params.safeMode,
-          waitingUrl,
-        });
-      }
-    }, APPLY_FALLBACK_RELOAD_MS);
-  }
-  logSafeUpdateTelemetry(
-    "triggered",
-    buildTelemetryOptions(context, { reason: params.reason, safeMode: params.safeMode })
-  );
-  traceAction("safeUpdate.apply.start", {
-    reason: params.reason,
-    safeMode: params.safeMode,
-    automatic: params.automatic,
-  });
-  if (params.broadcast) {
-    broadcast?.postMessage({ type: "update-applying", reason: params.reason });
-  }
-  return {
-    pendingReload: true,
-    applyReason: params.reason,
-    pendingApply: {
-      reason: params.reason,
-      safeMode: params.safeMode,
-      startedAt: now(),
-      attemptId: context.attemptSeq + 1,
-      automatic: params.automatic,
-    },
-    attemptSeq: context.attemptSeq + 1,
-    lastError: null,
-  };
 }
 
 export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
