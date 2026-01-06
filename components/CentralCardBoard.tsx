@@ -15,6 +15,7 @@ import {
   countActiveProposalIds,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
+import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
 import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
 import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDragMoveHandler";
 import { useBoardDragSensors } from "@/components/central-board/useBoardDragSensors";
@@ -62,7 +63,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { unstable_batchedUpdates } from "react-dom";
 
 const GameResultOverlay = dynamic(
   () =>
@@ -245,7 +245,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     };
   }, [showStreakBanner, prefersReducedMotion]);
 
-  const magnetResetTimeoutRef = useRef<number | null>(null);
   const [cursorSnapOffset, setCursorSnapOffset] = useState<{
     x: number;
     y: number;
@@ -310,39 +309,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       dragActivationStartRef.current = null;
     }
   }, [roomStatus, dragBoostEnabled, dragActivationStartRef]);
-
-  const queueMagnetReset = useCallback(
-    (delayMs: number) => {
-      if (
-        typeof window !== "undefined" &&
-        magnetResetTimeoutRef.current !== null
-      ) {
-        window.clearTimeout(magnetResetTimeoutRef.current);
-        magnetResetTimeoutRef.current = null;
-      }
-      if (delayMs <= 0 || typeof window === "undefined") {
-        resetMagnet({ immediate: true });
-        return;
-      }
-      magnetResetTimeoutRef.current = window.setTimeout(() => {
-        magnetResetTimeoutRef.current = null;
-        resetMagnet({ immediate: true });
-      }, delayMs);
-    },
-    [resetMagnet]
-  );
-
-  useEffect(() => {
-    return () => {
-      if (
-        typeof window !== "undefined" &&
-        magnetResetTimeoutRef.current !== null
-      ) {
-        window.clearTimeout(magnetResetTimeoutRef.current);
-        magnetResetTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   const releaseMagnet = useCallback(() => {
     scheduleMagnetTarget(null);
@@ -719,34 +685,14 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     setCursorSnapOffset,
   });
 
-  const clearActive = useCallback(
-    (options?: { delayMagnetReset?: boolean }) => {
-      unstable_batchedUpdates(() => {
-        setIsOver(false);
-        setActiveId(null);
-        setCursorSnapOffset(null);
-      });
-      const shouldDelay = options?.delayMagnetReset ?? false;
-      if (!shouldDelay) {
-        queueMagnetReset(0);
-        return;
-      }
-      const currentMagnetState = getProjectedMagnetState();
-      const baseDelay = prefersReducedMotion
-        ? 130
-        : currentMagnetState.shouldSnap
-          ? 220
-          : 260;
-      queueMagnetReset(baseDelay);
-    },
-    [
-      getProjectedMagnetState,
-      prefersReducedMotion,
-      queueMagnetReset,
-      setIsOver,
-      setCursorSnapOffset,
-    ]
-  );
+  const { clearActive } = useBoardClearActive({
+    resetMagnet,
+    getProjectedMagnetState,
+    prefersReducedMotion,
+    setIsOver,
+    setActiveId,
+    setCursorSnapOffset,
+  });
 
   const { onDragCancel } = useBoardDragCancelHandlers({
     activeId,
