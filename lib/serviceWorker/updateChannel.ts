@@ -29,6 +29,7 @@ import {
   type SnapshotListener,
   type UpdateListener,
 } from "./updateChannelState";
+import { attachUpdateChannelBroadcastListener } from "./updateChannelBroadcast";
 import { createActor, type ActorRefFrom, type StateFrom } from "xstate";
 
 export type { ApplyServiceWorkerOptions, SafeUpdatePhase, SafeUpdateSnapshot };
@@ -154,64 +155,11 @@ function getCurrentContext(): SafeUpdateContext {
 }
 
 if (broadcast) {
-  broadcast.addEventListener("message", (event) => {
-    const data = event.data;
-    if (!data || typeof data !== "object") {
-      return;
-    }
-    void handleBroadcastMessage(data as { type?: string; detail?: string });
+  attachUpdateChannelBroadcastListener({
+    broadcast,
+    ensureActor,
+    resyncWaitingServiceWorker,
   });
-}
-
-async function handleBroadcastMessage(message: { type?: string; detail?: string }) {
-  const actor = ensureActor();
-  if (!actor) return;
-  switch (message.type) {
-    case "update-applying":
-      traceAction("safeUpdate.sw.applying", { source: "broadcast" });
-      break;
-    case "update-ready":
-      await resyncWaitingServiceWorker("broadcast-ready");
-      break;
-    case "update-cleared":
-      actor.send({ type: "WAITING_CLEARED", result: "manual", source: "broadcast", broadcast: false });
-      break;
-    case "update-applied":
-      actor.send({ type: "APPLY_SUCCESS", broadcast: false });
-      actor.send({ type: "WAITING_CLEARED", result: "activated", source: "broadcast", broadcast: false });
-      break;
-    case "update-failed":
-      actor.send({
-        type: "APPLY_FAILURE",
-        detail: typeof message.detail === "string" ? message.detail : "unknown",
-        reason: "remote",
-        safeMode: false,
-        broadcast: false,
-      });
-      break;
-    case "suppress":
-      actor.send({ type: "AUTO_SUPPRESS", reason: "broadcast", broadcast: false });
-      break;
-    case "resume-auto":
-      actor.send({ type: "AUTO_RESUME", reason: "broadcast", broadcast: false });
-      break;
-    case "force-hold":
-      actor.send({
-        type: "FORCE_HOLD",
-        key: normalizeHoldReason(message.detail),
-        broadcast: false,
-      });
-      break;
-    case "force-release":
-      actor.send({
-        type: "FORCE_RELEASE",
-        key: normalizeHoldReason(message.detail),
-        broadcast: false,
-      });
-      break;
-    default:
-      break;
-  }
 }
 
 export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
