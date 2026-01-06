@@ -6,15 +6,12 @@ import {
   isBoardInteractive,
   useBoardA11yMessage,
   useBoardActiveProposal,
-  useBoardBoundsTracker,
   useBoardCardRenderer,
   useBoardClearActive,
   useBoardDebugDumpBundle,
-  useBoardDragBoostState,
   useBoardDragCancelHandlers,
   useBoardDragEndHandler,
-  useBoardDragMoveHandler,
-  useBoardDragSensors,
+  useBoardDragSystem,
   useBoardDragStartHandler,
   useBoardDropAnimation,
   useBoardDropState,
@@ -43,7 +40,6 @@ import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import React, {
-  useRef,
   useState,
 } from "react";
 
@@ -175,32 +171,25 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   const {
     boardContainerRef,
-    boardBoundsRef,
     dragActivationStartRef,
     handleBoardRef,
     updateBoardBounds,
-  } = useBoardBoundsTracker();
-  const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const { dragBoostEnabled, setDragBoostEnabled } = useBoardDragBoostState({
+    lastDragPositionRef,
+    sensors,
+    setDragBoostEnabled,
+    onDragMove: magnetAwareDragMove,
+    cancelPendingDragMove,
+  } = useBoardDragSystem({
+    resolveMode,
     roomStatus,
-    dragActivationStartRef,
+    pointerProfile,
+    magnetConfigRef,
+    cursorSnapOffset,
+    scheduleMagnetTarget,
+    getProjectedMagnetState,
+    enqueueMagnetUpdate,
+    releaseMagnet,
   });
-
-  const { sensors } = useBoardDragSensors({ pointerProfile, dragBoostEnabled });
-
-  const { onDragMove: magnetAwareDragMove, cancelPendingDragMove } =
-    useBoardDragMoveHandler({
-      resolveMode,
-      roomStatus,
-      boardBoundsRef,
-      lastDragPositionRef,
-      magnetConfigRef,
-      cursorSnapOffset,
-      scheduleMagnetTarget,
-      getProjectedMagnetState,
-      enqueueMagnetUpdate,
-      releaseMagnet,
-    });
 
   const {
     pending,
