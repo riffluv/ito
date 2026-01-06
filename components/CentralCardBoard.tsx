@@ -4,7 +4,6 @@ import {
   InteractiveBoard,
   StaticBoard,
   boardCollisionDetection,
-  createInitialMagnetState,
   usePlayerPresenceState,
   useResultFlipState,
   useRevealStatus,
@@ -21,9 +20,12 @@ import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDrag
 import { useBoardDragSensors } from "@/components/central-board/useBoardDragSensors";
 import { useBoardDropAnimation } from "@/components/central-board/useBoardDropAnimation";
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
+import { useBoardDragBoostState } from "@/components/central-board/useBoardDragBoostState";
+import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleaseMagnet";
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
+import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
@@ -47,11 +49,6 @@ import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import {
-  FLIP_DURATION_MS,
-  RESULT_INTRO_DELAY,
-} from "@/lib/ui/motion";
-import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
@@ -293,6 +290,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     prefersReducedMotion,
   });
 
+  const { releaseMagnet } = useBoardReleaseMagnet({
+    scheduleMagnetTarget,
+    getProjectedMagnetState,
+    enqueueMagnetUpdate,
+  });
+
   const {
     boardContainerRef,
     boardBoundsRef,
@@ -301,27 +304,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     updateBoardBounds,
   } = useBoardBoundsTracker();
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const [dragBoostEnabled, setDragBoostEnabled] = useState(false);
-
-  useEffect(() => {
-    if (roomStatus !== "clue" && dragBoostEnabled) {
-      setDragBoostEnabled(false);
-      dragActivationStartRef.current = null;
-    }
-  }, [roomStatus, dragBoostEnabled, dragActivationStartRef]);
-
-  const releaseMagnet = useCallback(() => {
-    scheduleMagnetTarget(null);
-    const projectedState = getProjectedMagnetState();
-    if (
-      projectedState.dx !== 0 ||
-      projectedState.dy !== 0 ||
-      projectedState.strength > 0 ||
-      projectedState.shouldSnap
-    ) {
-      enqueueMagnetUpdate({ state: createInitialMagnetState() });
-    }
-  }, [enqueueMagnetUpdate, getProjectedMagnetState, scheduleMagnetTarget]);
+  const { dragBoostEnabled, setDragBoostEnabled } = useBoardDragBoostState({
+    roomStatus,
+    dragActivationStartRef,
+  });
 
   const { sensors } = useBoardDragSensors({ pointerProfile, dragBoostEnabled });
 
@@ -338,10 +324,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       enqueueMagnetUpdate,
       releaseMagnet,
     });
-
-  useEffect(() => {
-    setMetric("drag", "boostEnabled", dragBoostEnabled ? 1 : 0);
-  }, [dragBoostEnabled]);
 
   const {
     pending,
@@ -414,23 +396,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     startPending: uiRevealPending || localRevealPending,
   });
 
-  // 結果オーバーレイを表示してよい最短タイミングをローカルで管理（roomStatusが早くfinishedになっても待つ）
-  const [resultOverlayAllowed, setResultOverlayAllowed] = useState(false);
-  useEffect(() => {
-    if (roomStatus !== "finished") {
-      setResultOverlayAllowed(false);
-      return undefined;
-    }
-    const now = Date.now();
-    // 最低でも「最後のフリップ完了 + RESULT_INTRO_DELAY」ぶん待つ。
-    // resultIntroReadyAt が過去でも、ミニマムの余韻（FLIP_DURATION+RESULT_INTRO）を確保する。
-    const minimalIntro = now + FLIP_DURATION_MS + RESULT_INTRO_DELAY; // ≈510ms
-    const target = Math.max(resultIntroReadyAt ?? 0, minimalIntro);
-    const delay = Math.max(0, target - now);
-    setResultOverlayAllowed(false);
-    const timer = window.setTimeout(() => setResultOverlayAllowed(true), delay);
-    return () => window.clearTimeout(timer);
-  }, [roomStatus, resultIntroReadyAt]);
+  const resultOverlayAllowed = useResultOverlayAllowed({
+    roomStatus,
+    resultIntroReadyAt,
+  });
 
   // optimisticReturningIds のタイムアウトクリア用
   const returningTimeoutsRef = useRef<
