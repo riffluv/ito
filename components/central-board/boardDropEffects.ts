@@ -234,3 +234,59 @@ export function handleMoveToCardDropEffects(params: {
   applyOptimisticReorder(activePlayerId, targetIndex);
 }
 
+export function handleReturnDropEffects(params: {
+  activePlayerId: string;
+  allowed: boolean;
+  reason?: string;
+  onOptimisticProposalChange?: (
+    playerId: string,
+    state: "placed" | "removed" | null
+  ) => void;
+  returnCardToWaiting: (playerId: string) => Promise<boolean>;
+  playDropInvalid: () => void;
+}): void {
+  const {
+    activePlayerId,
+    allowed,
+    reason,
+    onOptimisticProposalChange,
+    returnCardToWaiting,
+    playDropInvalid,
+  } = params;
+
+  if (!allowed) {
+    playDropInvalid();
+    if (reason === "notOwner") {
+      notify({
+        title: "自分のカードだけ戻せます",
+        type: "info",
+        duration: 1200,
+      });
+    }
+    return;
+  }
+
+  onOptimisticProposalChange?.(activePlayerId, "removed");
+  returnCardToWaiting(activePlayerId)
+    .then((ok) => {
+      if (!ok) {
+        onOptimisticProposalChange?.(activePlayerId, null);
+      }
+    })
+    .catch((error) => {
+      onOptimisticProposalChange?.(activePlayerId, null);
+      logError("central-card-board", "return-card-to-waiting", error);
+      playDropInvalid();
+      const message =
+        error instanceof Error
+          ? error.message
+          : error !== null && error !== undefined
+            ? String(error)
+            : "";
+      notify({
+        title: "カードを戻せませんでした",
+        description: message || undefined,
+        type: "error",
+      });
+    });
+}

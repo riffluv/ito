@@ -17,7 +17,7 @@ export function useOptimisticReturningIds(params: {
   updatePendingState: PendingStateUpdater;
   playCardPlace: () => void;
   playDropInvalid: () => void;
-}): { returnCardToWaiting: (playerId: string) => Promise<void> } {
+}): { returnCardToWaiting: (playerId: string) => Promise<boolean> } {
   const {
     roomId,
     roomStatus,
@@ -100,6 +100,7 @@ export function useOptimisticReturningIds(params: {
       try {
         await removeCardFromProposal(roomId, playerId);
         playCardPlace();
+        return true;
       } catch (error) {
         logError("central-card-board", "remove-card-from-proposal", error);
         playDropInvalid();
@@ -125,6 +126,7 @@ export function useOptimisticReturningIds(params: {
           type: "error",
           duration: 1200,
         });
+        return false;
       }
     },
     [playCardPlace, playDropInvalid, roomId, setOptimisticReturningIds, updatePendingState]
@@ -132,4 +134,3 @@ export function useOptimisticReturningIds(params: {
 
   return { returnCardToWaiting };
 }
-

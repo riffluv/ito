@@ -17,6 +17,7 @@ import {
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
 import {
+  handleReturnDropEffects,
   handleMoveToCardDropEffects,
   handleSlotDropEffects,
 } from "@/components/central-board/boardDropEffects";
@@ -53,7 +54,7 @@ import {
   FLIP_DURATION_MS,
   RESULT_INTRO_DELAY,
 } from "@/lib/ui/motion";
-import { logError, logWarn } from "@/lib/utils/log";
+import { logWarn } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { UI_TOKENS, UNIFIED_LAYOUT } from "@/theme/layout";
@@ -1203,39 +1204,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
           returnDropZoneId: RETURN_DROP_ZONE_ID,
         });
 
-        const initiateReturn = () => {
-          onOptimisticProposalChange?.(activePlayerId, "removed");
-          returnCardToWaiting(activePlayerId).catch((error) => {
-            onOptimisticProposalChange?.(activePlayerId, null);
-            logError("central-card-board", "return-card-to-waiting", error);
-            playDropInvalid();
-            const message =
-              error instanceof Error
-                ? error.message
-                : error !== null && error !== undefined
-                  ? String(error)
-                  : "";
-            notify({
-              title: "カードを戻せませんでした",
-              description: message || undefined,
-              type: "error",
-            });
-          });
-        };
-
         if (decision.kind === "return") {
-          if (!decision.allowed) {
-            playDropInvalid();
-            if (decision.reason === "notOwner") {
-              notify({
-                title: "自分のカードだけ戻せます",
-                type: "info",
-                duration: 1200,
-              });
-            }
-            return;
-          }
-          initiateReturn();
+          handleReturnDropEffects({
+            activePlayerId,
+            allowed: decision.allowed,
+            reason: decision.allowed ? undefined : decision.reason,
+            onOptimisticProposalChange,
+            returnCardToWaiting,
+            playDropInvalid,
+          });
           return;
         }
 
