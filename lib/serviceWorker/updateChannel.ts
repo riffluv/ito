@@ -15,13 +15,23 @@ import {
   type SafeUpdatePhase,
   type SafeUpdateSnapshot,
 } from "./safeUpdateMachine";
+import {
+  addSnapshotListener,
+  addUpdateListener,
+  getCurrentSnapshot,
+  getCurrentWaitingRegistration,
+  notifyUpdateChannelListeners,
+  removeSnapshotListener,
+  removeUpdateListener,
+  setCurrentSnapshot,
+  setCurrentWaitingRegistration,
+  type SnapshotListener,
+  type UpdateListener,
+} from "./updateChannelState";
 import { createActor, type ActorRefFrom, type StateFrom } from "xstate";
 
 export type { ApplyServiceWorkerOptions, SafeUpdatePhase, SafeUpdateSnapshot };
 export { getRequiredSwVersionHint, setRequiredSwVersionHint };
-
-type UpdateListener = (registration: ServiceWorkerRegistration | null) => void;
-type SnapshotListener = (snapshot: SafeUpdateSnapshot) => void;
 
 type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
 
@@ -32,22 +42,7 @@ const APPLY_FALLBACK_RELOAD_SESSION_KEY = "ito-safe-update-fallback-reload-count
 const APPLY_FALLBACK_RELOAD_LIMIT = 2;
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const IN_GAME_HOLD_KEY = "in-game";
-const updateListeners = new Set<UpdateListener>();
-const snapshotListeners = new Set<SnapshotListener>();
 
-let currentWaitingRegistration: ServiceWorkerRegistration | null = null;
-let currentSnapshot: SafeUpdateSnapshot = {
-  phase: "idle",
-  waitingSince: null,
-  waitingVersion: null,
-  lastCheckAt: null,
-  lastError: null,
-  autoApplySuppressed: false,
-  pendingReload: false,
-  applyReason: null,
-  autoApplyAt: null,
-  retryCount: 0,
-};
 let previousPhase: SafeUpdatePhase = "idle";
 
 const isBrowser =
@@ -101,40 +96,23 @@ function createSnapshot(state: SafeUpdateSnapshotState): SafeUpdateSnapshot {
   };
 }
 
-function notifyListeners(snapshot: SafeUpdateSnapshot) {
-  snapshotListeners.forEach((listener) => {
-    try {
-      listener({ ...snapshot });
-    } catch {
-      /* ignore */
-    }
-  });
-  updateListeners.forEach((listener) => {
-    try {
-      listener(currentWaitingRegistration);
-    } catch {
-      /* ignore */
-    }
-  });
-}
-
 function handleStateChange(state: SafeUpdateSnapshotState) {
-  currentWaitingRegistration = state.context.waitingRegistration ?? null;
+  setCurrentWaitingRegistration(state.context.waitingRegistration ?? null);
   const nextSnapshot = createSnapshot(state);
   const nextPhase = nextSnapshot.phase;
   const eventType = ((state as unknown as { event?: SafeUpdateEvent }).event?.type) ?? "INIT";
+  const previousSnapshot = getCurrentSnapshot();
   const changed =
-    nextPhase !== currentSnapshot.phase ||
-    nextSnapshot.lastError !== currentSnapshot.lastError ||
-    nextSnapshot.pendingReload !== currentSnapshot.pendingReload ||
-    nextSnapshot.autoApplySuppressed !== currentSnapshot.autoApplySuppressed ||
-    nextSnapshot.autoApplyAt !== currentSnapshot.autoApplyAt ||
-    nextSnapshot.waitingSince !== currentSnapshot.waitingSince ||
-    nextSnapshot.retryCount !== currentSnapshot.retryCount ||
-    nextSnapshot.waitingVersion !== currentSnapshot.waitingVersion;
+    nextPhase !== previousSnapshot.phase ||
+    nextSnapshot.lastError !== previousSnapshot.lastError ||
+    nextSnapshot.pendingReload !== previousSnapshot.pendingReload ||
+    nextSnapshot.autoApplySuppressed !== previousSnapshot.autoApplySuppressed ||
+    nextSnapshot.autoApplyAt !== previousSnapshot.autoApplyAt ||
+    nextSnapshot.waitingSince !== previousSnapshot.waitingSince ||
+    nextSnapshot.retryCount !== previousSnapshot.retryCount ||
+    nextSnapshot.waitingVersion !== previousSnapshot.waitingVersion;
 
-  const previousSnapshot = currentSnapshot;
-  currentSnapshot = nextSnapshot;
+  setCurrentSnapshot(nextSnapshot);
 
   const transitionChanged =
     ((state as unknown as { changed?: boolean }).changed ?? false) ||
@@ -151,7 +129,7 @@ function handleStateChange(state: SafeUpdateSnapshotState) {
   }
 
   if (changed) {
-    notifyListeners(nextSnapshot);
+    notifyUpdateChannelListeners(nextSnapshot);
   }
 }
 
@@ -277,7 +255,7 @@ function startApply(
         if (typeof document !== "undefined" && document.visibilityState === "hidden") {
           return;
         }
-        if (currentSnapshot.phase !== "applying") {
+        if (getCurrentSnapshot().phase !== "applying") {
           return;
         }
         const controllerUrl = navigator.serviceWorker?.controller?.scriptURL ?? null;
@@ -354,44 +332,44 @@ export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () =>
       /* noop */
     };
   }
-  updateListeners.add(listener);
+  addUpdateListener(listener);
   try {
-    listener(currentWaitingRegistration);
+    listener(getCurrentWaitingRegistration());
   } catch {
     /* ignore */
   }
   return () => {
-    updateListeners.delete(listener);
+    removeUpdateListener(listener);
   };
 }
 
 export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () => void {
   const actor = ensureActor();
   if (!actor) {
-    listener({ ...currentSnapshot });
+    listener({ ...getCurrentSnapshot() });
     return () => {
       /* noop */
     };
   }
-  snapshotListeners.add(listener);
+  addSnapshotListener(listener);
   try {
-    listener({ ...currentSnapshot });
+    listener({ ...getCurrentSnapshot() });
   } catch {
     /* ignore */
   }
   return () => {
-    snapshotListeners.delete(listener);
+    removeSnapshotListener(listener);
   };
 }
 
 export function getSafeUpdateSnapshot(): SafeUpdateSnapshot {
   ensureActor();
-  return { ...currentSnapshot };
+  return { ...getCurrentSnapshot() };
 }
 
 export function getWaitingServiceWorker(): ServiceWorkerRegistration | null {
   ensureActor();
-  return currentWaitingRegistration;
+  return getCurrentWaitingRegistration();
 }
 
 export function announceServiceWorkerUpdate(
@@ -454,7 +432,7 @@ export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): b
 export function consumePendingReloadFlag(): boolean {
   const actor = ensureActor();
   if (!actor) return false;
-  if (!currentSnapshot.pendingReload) {
+  if (!getCurrentSnapshot().pendingReload) {
     return false;
   }
   actor.send({ type: "RELOAD_CONSUMED" });
@@ -546,7 +524,7 @@ export function clearAutoApplySuppression() {
 
 export function isAutoApplySuppressed(): boolean {
   ensureActor();
-  return currentSnapshot.autoApplySuppressed;
+  return getCurrentSnapshot().autoApplySuppressed;
 }
 
 export function clearWaitingServiceWorker(options?: { result?: ClearResult }) {
