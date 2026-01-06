@@ -47,4 +47,5 @@ export { useRevealDoneFallback } from "./useRevealDoneFallback";
 export { useRevealStatus } from "./useRevealStatus";
 export { useResultFlipState } from "./useResultFlipState";
 export { useStreakBannerState } from "./useStreakBannerState";
+export { useCentralCardBoardViewProps } from "./useCentralCardBoardViewProps";
 export { useVictoryRaysPrefetch } from "./useVictoryRaysPrefetch";
