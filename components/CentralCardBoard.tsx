@@ -10,6 +10,8 @@ import {
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
 import { useBoardActiveProposal } from "@/components/central-board/useBoardActiveProposal";
+import { isBoardInteractive } from "@/components/central-board/boardUiFlags";
+import { useBoardA11yMessage } from "@/components/central-board/useBoardA11yMessage";
 import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
 import { useBoardDragEndHandler } from "@/components/central-board/useBoardDragEndHandler";
 import { useBoardDragMoveHandler } from "@/components/central-board/useBoardDragMoveHandler";
@@ -473,8 +475,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     applyOptimisticReorder,
   });
 
-  const activeBoard =
-    interactionEnabled && resolveMode === "sort-submit" && roomStatus === "clue";
+  const activeBoard = isBoardInteractive({
+    interactionEnabled,
+    resolveMode,
+    roomStatus,
+  });
+
+  const a11yLiveMessage = useBoardA11yMessage({
+    isRevealing,
+    revealIndex,
+    orderListLength,
+    roomStatus,
+    realtimeResult,
+  });
 
   return (
     <Box
@@ -496,14 +509,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       }}
     >
       <VisuallyHidden aria-live="polite">
-        {isRevealing
-          ? `進行状況: ${revealIndex} / ${(orderList || []).length}`
-          : roomStatus === "finished"
-            ? realtimeResult?.failedAt !== null &&
-              realtimeResult?.failedAt !== undefined
-              ? `結果: ${realtimeResult.failedAt}番目で失敗`
-              : "結果: 成功"
-            : ""}
+        {a11yLiveMessage}
       </VisuallyHidden>
 
       <Box
