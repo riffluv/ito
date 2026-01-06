@@ -11,13 +11,6 @@ import {
   useRevealStatus,
 } from "@/components/central-board";
 import {
-  buildOptimisticProposalSnapshot,
-  buildOptimisticStateKey,
-  buildProposalSignature,
-  buildRenderedProposalForSignature,
-  sanitizeOptimisticProposal,
-} from "@/components/central-board/optimisticReorder";
-import {
   buildPlaceholderSlots,
   computeSlotCountTarget,
   countActiveProposalIds,
@@ -26,6 +19,7 @@ import {
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useActiveDragCancelFallback } from "@/components/central-board/useActiveDragCancelFallback";
+import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
 import { usePlaceholderSlotTrace } from "@/components/central-board/usePlaceholderSlotTrace";
@@ -368,14 +362,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     x: number;
     y: number;
   } | null>(null);
-  const dropRollbackTimersRef = useRef<Map<string, number>>(new Map());
-  const dropRollbackSnapshotsRef = useRef<Map<string, (string | null)[]>>(
-    new Map()
-  );
-  const latestActiveProposalRef = useRef<(string | null)[]>([]);
   const pendingRef = useRef<(string | null)[]>([]);
-  const forceResyncTimerRef = useRef<number | null>(null);
-  const optimisticSessionRef = useRef(0);
 
   const magnetConfig = useMemo(() => {
     const isTouchLike =
@@ -485,8 +472,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   );
 
   useEffect(() => {
-    const timersRef = dropRollbackTimersRef;
-    const snapshotsRef = dropRollbackSnapshotsRef;
     return () => {
       if (
         typeof window !== "undefined" &&
@@ -495,18 +480,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
         window.clearTimeout(magnetResetTimeoutRef.current);
         magnetResetTimeoutRef.current = null;
       }
-      if (
-        typeof window !== "undefined" &&
-        forceResyncTimerRef.current !== null
-      ) {
-        window.clearTimeout(forceResyncTimerRef.current);
-        forceResyncTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && timersRef.current.size > 0) {
-        timersRef.current.forEach((timer) => window.clearTimeout(timer));
-        timersRef.current.clear();
-      }
-      snapshotsRef.current.clear();
     };
   }, []);
 
@@ -778,11 +751,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     pendingRef.current = pending;
   }, [pending]);
 
-  const pendingHasContent = useMemo(
-    () => pending.some((id) => typeof id === "string" && id.length > 0),
-    [pending]
-  );
-
   const playerReadyMap = useMemo(() => {
     const map = new Map<string, boolean>();
     playerMap.forEach((player, id) => {
@@ -867,27 +835,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     updatePendingState,
   });
 
-  useEffect(() => {
-    const onVis = () => {
-      try {
-        if (document.visibilityState === "hidden") {
-          updatePendingState((cur) => (cur.length === 0 ? cur : []));
-          // 画面非表示時は楽観状態をすべてリセット
-          setOptimisticProposal(null);
-          setOptimisticReturningIds([]);
-        }
-      } catch {}
-    };
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVis);
-    }
-    return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVis);
-      }
-    };
-  }, [updatePendingState]);
-
   const renderCard = useCallback(
     (id: string, idx?: number) => {
       const interactiveFlip =
@@ -952,229 +899,30 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     eligibleIdSet,
   ]);
 
-  useEffect(() => {
-    latestActiveProposalRef.current = activeProposal;
-  }, [activeProposal]);
-
-  const [optimisticProposal, setOptimisticProposal] = useState<
-    (string | null)[] | null
-  >(null);
-  const boardProposal = optimisticProposal ?? activeProposal;
-
-  const renderedProposalForSignature = useMemo<(string | null)[]>(() => {
-    return buildRenderedProposalForSignature({
-      activeProposal,
-      optimisticProposal,
-      pending,
-      optimisticReturningIds,
-    });
-  }, [activeProposal, optimisticProposal, pending, optimisticReturningIds]);
-
-  const renderedProposalSignature = useMemo(
-    () => buildProposalSignature(renderedProposalForSignature),
-    [renderedProposalForSignature]
-  );
-
-  const serverProposalSignature = useMemo(
-    () => buildProposalSignature(activeProposal),
-    [activeProposal]
-  );
-
-  const optimisticStateKey = useMemo(() => {
-    return buildOptimisticStateKey({
-      optimisticProposal,
-      pending,
-      optimisticReturningIds,
-    });
-  }, [optimisticProposal, pending, optimisticReturningIds]);
-
-  const hasOptimisticState = useMemo(
-    () =>
-      Boolean(optimisticProposal) ||
-      pendingHasContent ||
-      optimisticReturningIds.length > 0,
-    [optimisticProposal, pendingHasContent, optimisticReturningIds.length]
-  );
-
-  const clearDropRollbackTimer = useCallback((playerId?: string) => {
-    if (!playerId) {
-      if (typeof window !== "undefined") {
-        dropRollbackTimersRef.current.forEach((timer) =>
-          window.clearTimeout(timer)
-        );
-      }
-      dropRollbackTimersRef.current.clear();
-      dropRollbackSnapshotsRef.current.clear();
-      return;
-    }
-    const timer = dropRollbackTimersRef.current.get(playerId);
-    if (typeof window !== "undefined" && typeof timer === "number") {
-      window.clearTimeout(timer);
-    }
-    dropRollbackTimersRef.current.delete(playerId);
-    dropRollbackSnapshotsRef.current.delete(playerId);
-  }, []);
-
-  const clearForceResyncTimer = useCallback(() => {
-    if (forceResyncTimerRef.current) {
-      clearTimeout(forceResyncTimerRef.current);
-      forceResyncTimerRef.current = null;
-    }
-  }, []);
-
-  const resetOptimisticState = useCallback(
-    (reason: "hash-mismatch" | "forced-sync") => {
-      if (
-        !optimisticProposal &&
-        !pendingHasContent &&
-        optimisticReturningIds.length === 0
-      ) {
-        return;
-      }
-      clearForceResyncTimer();
-      clearDropRollbackTimer();
-      dropRollbackSnapshotsRef.current.clear();
-      const returningMap = returningTimeoutsRef.current;
-      returningMap.forEach((timeout) => clearTimeout(timeout));
-      returningMap.clear();
-      pendingRef.current = [];
-      unstable_batchedUpdates(() => {
-        setOptimisticProposal(null);
-        setPending(() => []);
-        setOptimisticReturningIds([]);
-      });
-      traceAction("proposal.resync", {
-        roomId,
-        reason,
-        serverSig: serverProposalSignature,
-        localSig: renderedProposalSignature,
-      });
-    },
-    [
-      clearDropRollbackTimer,
-      clearForceResyncTimer,
-      optimisticProposal,
-      pendingHasContent,
-      optimisticReturningIds.length,
-      roomId,
-      serverProposalSignature,
-      renderedProposalSignature,
-      setPending,
-    ]
-  );
-
-  useEffect(() => {
-    if (roomStatus === "waiting") {
-      resetOptimisticState("forced-sync");
-    }
-  }, [roomStatus, resetOptimisticState]);
-
-  const applyOptimisticReorder = useCallback(
-    (playerId: string, targetIndex: number) => {
-      setOptimisticProposal((prev) => {
-        const next = buildOptimisticProposalSnapshot(
-          prev ?? boardProposal,
-          playerId,
-          targetIndex
-        );
-        return next ?? prev ?? null;
-      });
-    },
-    [boardProposal]
-  );
-
-  const scheduleDropRollback = useCallback(
-    (playerId: string, snapshot: (string | null)[]) => {
-      if (typeof window === "undefined") return;
-      clearDropRollbackTimer(playerId);
-      dropRollbackSnapshotsRef.current.set(playerId, snapshot.slice());
-      const timeoutMs = prefersReducedMotion ? 1400 : 1700;
-      const handle = window.setTimeout(() => {
-        dropRollbackTimersRef.current.delete(playerId);
-        const latestServerProposal = latestActiveProposalRef.current;
-        if (latestServerProposal.includes(playerId)) {
-          dropRollbackSnapshotsRef.current.delete(playerId);
-          return;
-        }
-        const rollback = dropRollbackSnapshotsRef.current.get(playerId);
-        dropRollbackSnapshotsRef.current.delete(playerId);
-        if (!rollback) return;
-        updatePendingState(() => rollback.slice());
-        onOptimisticProposalChange?.(playerId, null);
-        notify({
-          title: "配置を巻き戻しました",
-          description:
-            "サーバー反映が遅延したためローカル状態をリセットしました。",
-          type: "info",
-          duration: 1400,
-        });
-      }, timeoutMs);
-      dropRollbackTimersRef.current.set(playerId, handle);
-    },
-    [
-      clearDropRollbackTimer,
-      prefersReducedMotion,
-      updatePendingState,
-      onOptimisticProposalChange,
-    ]
-  );
-
-  const lastServerSignatureRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!hasOptimisticState) {
-      lastServerSignatureRef.current = serverProposalSignature;
-      return undefined;
-    }
-    if (serverProposalSignature === lastServerSignatureRef.current) {
-      return undefined;
-    }
-    lastServerSignatureRef.current = serverProposalSignature;
-    if (renderedProposalSignature === serverProposalSignature) {
-      return undefined;
-    }
-    resetOptimisticState("hash-mismatch");
-    return undefined;
-  }, [
-    hasOptimisticState,
-    renderedProposalSignature,
-    resetOptimisticState,
-    serverProposalSignature,
-  ]);
-
-  // オフライン/再接続中は楽観状態をクリアしてサーバー値に揃える
-  useEffect(() => {
-    if (!presenceReady) {
-      resetOptimisticState("forced-sync");
-    }
-  }, [presenceReady, resetOptimisticState]);
-
-  // 強制同期: 楽観状態は最長 ~1.7–1.9s でサーバー値に揃える
-  useEffect(() => {
-    if (!hasOptimisticState) {
-      clearForceResyncTimer();
-      return undefined;
-    }
-    if (typeof window === "undefined") return undefined;
-    const sessionId = optimisticSessionRef.current + 1;
-    optimisticSessionRef.current = sessionId;
-    clearForceResyncTimer();
-    const timeoutMs = prefersReducedMotion ? 1900 : 1700;
-    forceResyncTimerRef.current = window.setTimeout(() => {
-      if (optimisticSessionRef.current !== sessionId) return;
-      resetOptimisticState("forced-sync");
-      forceResyncTimerRef.current = null;
-    }, timeoutMs);
-    return () => {
-      clearForceResyncTimer();
-    };
-  }, [
-    clearForceResyncTimer,
-    hasOptimisticState,
-    optimisticStateKey,
+  const {
+    optimisticProposal,
+    boardProposal,
+    clearOptimisticProposal,
+    applyOptimisticReorder,
+    scheduleDropRollback,
+    clearDropRollbackTimer,
+  } = useOptimisticProposalState({
+    roomId,
+    roomStatus,
+    activeProposal,
+    serverProposal: proposal,
+    serverProposalKey: proposalKey,
+    pending,
+    pendingRef,
+    setPending,
+    updatePendingState,
+    optimisticReturningIds,
+    setOptimisticReturningIds,
+    returningTimeoutsRef,
+    presenceReady,
     prefersReducedMotion,
-    resetOptimisticState,
-  ]);
+    onOptimisticProposalChange,
+  });
 
   const slotCountTarget = useMemo(() => {
     // サーバー計算済みの slotCount を信頼し、在室人数で最低値を張る。pending やローカル提案では揺らさない。
@@ -1199,36 +947,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
   }, [boardProposal, missingPlayerIds]);
 
   usePlaceholderSlotTrace({ placeholderSlots, roomId });
-
-  useEffect(() => {
-    if (!optimisticProposal) return;
-    const optimisticKey = buildProposalSignature(optimisticProposal);
-    if (optimisticKey === serverProposalSignature) {
-      setOptimisticProposal(null);
-    }
-  }, [optimisticProposal, serverProposalSignature]);
-
-  // サーバー側からカードが消えているのに、ローカルの楽観提案にだけ残ってしまうケースを補正する
-  useEffect(() => {
-    if (!optimisticProposal) return;
-    const sanitized = sanitizeOptimisticProposal({
-      optimisticProposal,
-      serverProposal: proposal,
-    });
-    if (!sanitized) {
-      setOptimisticProposal(null);
-      return;
-    }
-
-    if (shallowArrayEqual(optimisticProposal, sanitized)) return;
-    setOptimisticProposal(sanitized);
-  }, [optimisticProposal, proposal, proposalKey]);
-
-  useEffect(() => {
-    if (roomStatus !== "clue" && optimisticProposal) {
-      setOptimisticProposal(null);
-    }
-  }, [roomStatus, optimisticProposal]);
 
   const proposalSyncRef = useRef<string | null>(null);
   useEffect(() => {
@@ -1630,7 +1348,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               ).catch((error) => {
                 logError("central-card-board", "move-card-in-proposal", error);
                 playDropInvalid();
-                setOptimisticProposal(null);
+                clearOptimisticProposal();
                 // エラー時は楽観返却状態もクリア
                 setOptimisticReturningIds((prev) =>
                   prev.filter((id) => id !== activePlayerId)
@@ -1658,7 +1376,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   dropSession?.complete("noop");
                   onOptimisticProposalChange?.(activePlayerId, null);
                   // noop 時は optimisticProposal もクリア
-                  setOptimisticProposal(null);
+                  clearOptimisticProposal();
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
                     updatePendingState(() => snapshot);
@@ -1693,7 +1411,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                   logError("central-card-board", "add-card-to-proposal", error);
                   onOptimisticProposalChange?.(activePlayerId, null);
                   // エラー時も optimisticProposal をクリア
-                  setOptimisticProposal(null);
+                  clearOptimisticProposal();
                   if (previousPending !== undefined) {
                     const snapshot = previousPending.slice();
                     updatePendingState(() => snapshot);
@@ -1766,7 +1484,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
                 cooldownKey: `drop:proposal:${roomId}`,
               },
             });
-            setOptimisticProposal(null);
+            clearOptimisticProposal();
             // エラー時は楽観返却状態もクリア
             setOptimisticReturningIds((prev) =>
               prev.filter((id) => id !== activePlayerId)
@@ -1799,6 +1517,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       onOptimisticProposalChange,
       magnetConfigRef,
       cursorSnapOffset,
+      clearOptimisticProposal,
       applyOptimisticReorder,
       boardProposal,
       scheduleDropRollback,
