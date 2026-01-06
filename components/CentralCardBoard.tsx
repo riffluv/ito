@@ -11,7 +11,6 @@ import {
 import {
   buildPlaceholderSlots,
   computeSlotCountTarget,
-  countActiveProposalIds,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
 import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
@@ -27,6 +26,7 @@ import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardD
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
+import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
 import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
@@ -48,13 +48,11 @@ import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
-import { traceAction } from "@/lib/utils/trace";
 import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -465,24 +463,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
 
   usePlaceholderSlotTrace({ placeholderSlots, roomId });
 
-  const proposalSyncRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!proposalKey) {
-      proposalSyncRef.current = null;
-      return;
-    }
-    if (proposalSyncRef.current === proposalKey) {
-      return;
-    }
-    proposalSyncRef.current = proposalKey;
-    const activeCount = countActiveProposalIds(activeProposal);
-    traceAction("proposal.sync", {
-      roomId,
-      activeProposalLen: activeCount,
-      orderListLen: orderListLength,
-      source: "firestore",
-    });
-  }, [proposalKey, roomId, activeProposal, orderListLength]);
+  useProposalSyncTrace({
+    proposalKey,
+    roomId,
+    activeProposal,
+    orderListLength,
+  });
 
   const slotCountDragging = resolvedSlotCount;
   const slotCountStatic = resolvedSlotCount;
