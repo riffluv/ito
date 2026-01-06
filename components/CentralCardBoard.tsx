@@ -28,6 +28,7 @@ import { useBoardPendingState } from "@/components/central-board/useBoardPending
 import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSlotHoverHandlers";
 import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
 import { useBoardMagnetConfig } from "@/components/central-board/useBoardMagnetConfig";
+import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
 import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
@@ -151,15 +152,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     dealPlayers,
   });
 
-  const orderListKey = useMemo(
-    () => (Array.isArray(orderList) ? orderList.join(",") : ""),
-    [orderList]
-  );
-  const proposalKey = useMemo(
-    () => (Array.isArray(proposal) ? proposal.join(",") : ""),
-    [proposal]
-  );
-  const orderListLength = Array.isArray(orderList) ? orderList.length : 0;
+  const { orderListKey, proposalKey, orderListLength } = useBoardRoomKeys({
+    orderList,
+    proposal,
+  });
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticReturningIds, setOptimisticReturningIds] = useState<
