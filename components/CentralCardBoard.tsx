@@ -16,6 +16,7 @@ import {
   countActiveProposalIds,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
+import { interpretBoardDrop } from "@/components/central-board/boardDropInterpretation";
 import { useBoardBoundsTracker } from "@/components/central-board/useBoardBoundsTracker";
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useActiveDragCancelFallback } from "@/components/central-board/useActiveDragCancelFallback";
@@ -1171,37 +1172,30 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       updateDropAnimationTarget(null);
 
       try {
-        if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
-
-        const activePlayerId = String(active.id);
-        const alreadyInProposal = (boardProposal as (string | null)[]).includes(
-          activePlayerId
-        );
-        const isPendingOnly =
-          !alreadyInProposal && pendingRef.current.includes(activePlayerId);
-        const alreadyPlaced = alreadyInProposal || isPendingOnly;
-        const isSlotTarget =
-          over && typeof over.id === "string" && over.id.startsWith("slot-");
-        const isReturnTarget =
-          over &&
-          typeof over.id === "string" &&
-          over.id === RETURN_DROP_ZONE_ID;
-
-        const boardRect = boardContainerRef.current?.getBoundingClientRect();
-        const lastPosition = lastDragPositionRef.current;
-        const fallbackReturn =
-          !isReturnTarget &&
-          !isSlotTarget &&
-          alreadyPlaced &&
-          boardRect &&
-          lastPosition &&
-          lastPosition.y >= boardRect.bottom + 6 &&
-          lastPosition.x >= boardRect.left - 16 &&
-          lastPosition.x <= boardRect.right + 16;
-        const initiateReturn = () => {
-          onOptimisticProposalChange?.(activePlayerId, "removed");
-          returnCardToWaiting(activePlayerId).catch((error) => {
-            onOptimisticProposalChange?.(activePlayerId, null);
+	        if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
+	
+	        const activePlayerId = String(active.id);
+	        const overId = over ? String(over.id) : null;
+	        const boardRect = boardContainerRef.current?.getBoundingClientRect() ?? null;
+	        const decision = interpretBoardDrop({
+	          activePlayerId,
+	          meId,
+	          overId,
+	          isSameTarget: over ? active.id === over.id : false,
+	          boardProposal,
+	          pending: pendingRef.current,
+	          slotCountDragging,
+	          hasOverRect: Boolean(overRect),
+	          boardBounds: boardRect
+	            ? { left: boardRect.left, right: boardRect.right, bottom: boardRect.bottom }
+	            : null,
+	          lastDragPosition: lastDragPositionRef.current,
+	          returnDropZoneId: RETURN_DROP_ZONE_ID,
+	        });
+	        const initiateReturn = () => {
+	          onOptimisticProposalChange?.(activePlayerId, "removed");
+	          returnCardToWaiting(activePlayerId).catch((error) => {
+	            onOptimisticProposalChange?.(activePlayerId, null);
             logError("central-card-board", "return-card-to-waiting", error);
             playDropInvalid();
             const message =
@@ -1214,288 +1208,267 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
               title: "カードを戻せませんでした",
               description: message || undefined,
               type: "error",
-            });
-          });
-        };
-
-        if (isReturnTarget || fallbackReturn) {
-          if (!alreadyPlaced) {
-            playDropInvalid();
-            return;
-          }
-          if (activePlayerId !== meId) {
-            playDropInvalid();
-            notify({
-              title: "自分のカードだけ戻せます",
-              type: "info",
-              duration: 1200,
-            });
-            return;
-          }
-          initiateReturn();
-          return;
-        }
-
-        if (!over) {
-          playDropInvalid();
-          notify({
-            title: "この位置には置けません",
-            type: "info",
-            duration: 900,
-          });
-          return;
-        }
-
-        if (active.id === over.id) return;
-
-        const overId = String(over.id);
-
-        if (overId === RETURN_DROP_ZONE_ID) {
-          if (!alreadyPlaced) {
-            playDropInvalid();
-            return;
-          }
-          if (activePlayerId !== meId) {
-            playDropInvalid();
-            notify({
-              title: "自分のカードだけ戻せます",
-              type: "info",
-              duration: 1200,
-            });
-            return;
-          }
-          initiateReturn();
-          return;
-        }
-
-        if (isSlotTarget && overRect) {
-          const currentMagnetState = getProjectedMagnetState();
-          updateDropAnimationTarget(overRect as RectLike, {
-            magnetSnap: currentMagnetState.shouldSnap,
-          });
-          magnetResult = computeMagnetTransform(overRect, activeRect, {
-            ...magnetConfigRef.current,
-            projectedOffset: {
-              dx: currentMagnetState.dx + (cursorSnapOffset?.x ?? 0),
-              dy: currentMagnetState.dy + (cursorSnapOffset?.y ?? 0),
-            },
-          });
-          let slotIndex = parseInt(overId.split("-")[1], 10);
-          if (!Number.isNaN(slotIndex)) {
-            const maxSlots = Math.max(0, slotCountDragging - 1);
-            const originalSlotIndex = slotIndex;
-            slotIndex = Math.min(Math.max(0, slotIndex), maxSlots);
-
-            if (
-              process.env.NODE_ENV === "development" &&
-              originalSlotIndex !== slotIndex
-            ) {
-              logWarn("central-card-board", "slot-index-clamped", {
-                originalSlotIndex,
-                slotIndex,
-                maxSlots,
-                slotCountDragging,
-              });
-            }
-
-            let dropSession: ReturnType<
-              typeof createDropMetricsSession
-            > | null = null;
-            let previousPending: (string | null)[] | undefined;
-            let insertedPending = false;
-            let didPlaySound = false;
-            const playOnce = () => {
-              if (didPlaySound) return;
-              didPlaySound = true;
-              playCardPlace();
-              dropSession?.markStage("client.drop.t3_soundPlayedMs", {
-                channel: "success",
-              });
-            };
-
-            if (!alreadyInProposal) {
-              dropSession = createDropMetricsSession({
-                optimisticMode: DROP_OPTIMISTIC_ENABLED,
-                index: slotIndex,
-              });
-              onOptimisticProposalChange?.(activePlayerId, "placed");
-              updatePendingState((prev) => {
-                previousPending = prev.slice();
-                const next = [...prev];
-                const exist = next.indexOf(activePlayerId);
-                if (exist >= 0) next.splice(exist, 1);
-                if (slotIndex >= next.length) {
-                  next.length = slotIndex + 1;
-                }
-                next[slotIndex] = activePlayerId;
-                insertedPending = true;
-                return next;
-              });
-              if (insertedPending) {
-                scheduleDropRollback(
-                  activePlayerId,
-                  previousPending ? previousPending.slice() : []
-                );
-              }
-            }
-
-            if (alreadyInProposal) {
-              playOnce();
-              scheduleMoveCardInProposalToPosition(
-                roomId,
-                activePlayerId,
-                slotIndex
-              ).catch((error) => {
-                logError("central-card-board", "move-card-in-proposal", error);
-                playDropInvalid();
-                clearOptimisticProposal();
-                // エラー時は楽観返却状態もクリア
-                setOptimisticReturningIds((prev) =>
-                  prev.filter((id) => id !== activePlayerId)
-                );
-              });
-              applyOptimisticReorder(activePlayerId, slotIndex);
-              return;
-            }
-
-            const request = scheduleAddCardToProposalAtPosition(
-              roomId,
-              activePlayerId,
-              slotIndex
-            );
-            if (insertedPending) {
-              playOnce();
-            }
-              request
-                .then((result) => {
-                  clearDropRollbackTimer(activePlayerId);
-                  dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
-                  result,
-                });
-                if (result === "noop") {
-                  dropSession?.complete("noop");
-                  onOptimisticProposalChange?.(activePlayerId, null);
-                  // noop 時は optimisticProposal もクリア
-                  clearOptimisticProposal();
-                  if (previousPending !== undefined) {
-                    const snapshot = previousPending.slice();
-                    updatePendingState(() => snapshot);
-                  }
-                  notify({
-                    title: "その位置には置けません",
-                    description:
-                      "カードが既に置かれているか、提案が更新されています。",
-                    type: "info",
-                  });
-                  playDropInvalid();
-                  dropSession?.markStage("client.drop.t1_notifyShownMs", {
-                    origin: "post",
-                  });
-                  traceAction("board.drop.attempt", {
-                    roomId,
-                    playerId: activePlayerId,
-                    targetSlot: slotIndex,
-                    reasonIfRejected: "slot-occupied",
-                  });
-                  return;
-                }
-                playOnce();
-                dropSession?.complete("success");
-                })
-                .catch((error) => {
-                  clearDropRollbackTimer(activePlayerId);
-                  dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
-                    result: "error",
-                  });
-                  dropSession?.complete("error");
-                  logError("central-card-board", "add-card-to-proposal", error);
-                  onOptimisticProposalChange?.(activePlayerId, null);
-                  // エラー時も optimisticProposal をクリア
-                  clearOptimisticProposal();
-                  if (previousPending !== undefined) {
-                    const snapshot = previousPending.slice();
-                    updatePendingState(() => snapshot);
-                  }
-                  const errorCode = (error as { code?: unknown } | null)?.code;
-                  const isNetworkError = error instanceof TypeError || errorCode === "timeout";
-                  notify({
-                    title: isNetworkError
-                      ? "通信に失敗しました"
-                      : "カードをその位置に置けませんでした",
-                    description: isNetworkError
-                      ? "ネットワークが不安定か、サーバーが応答しませんでした。もう一度お試しください。"
-                      : error instanceof Error
-                        ? error.message
-                        : undefined,
-                    type: "error",
-                    duration: 1400,
-                    meta: {
-                      cooldownMs: 1200,
-                      cooldownKey: `drop:proposal:${roomId}`,
-                    },
-                  });
-                  playDropInvalid();
-                  dropSession?.markStage("client.drop.t1_notifyShownMs", {
-                    origin: "error",
-                  });
-                  traceAction("board.drop.attempt", {
-                  roomId,
-                  playerId: activePlayerId,
-                  targetSlot: slotIndex,
-                  reasonIfRejected: "error",
-                });
-              });
-            return;
-          }
-          return;
-        }
-
-        if (alreadyInProposal) {
-          const targetIndex = (boardProposal as (string | null)[]).indexOf(
-            overId
-          );
-          if (targetIndex < 0) {
-            playDropInvalid();
-            return;
-          }
-          playCardPlace();
-          scheduleMoveCardInProposalToPosition(
-            roomId,
-            activePlayerId,
-            targetIndex
-          ).catch((error) => {
-            logError("central-card-board", "move-card-in-proposal", error);
-            playDropInvalid();
-            const errorCode = (error as { code?: unknown } | null)?.code;
-            const isNetworkError = error instanceof TypeError || errorCode === "timeout";
-            notify({
-              title: isNetworkError
-                ? "通信に失敗しました"
-                : "カードをその位置に移動できませんでした",
-              description: isNetworkError
-                ? "ネットワークが不安定か、サーバーが応答しませんでした。もう一度お試しください。"
-                : error instanceof Error
-                  ? error.message
-                  : undefined,
-              type: "error",
-              duration: 1400,
-              meta: {
-                cooldownMs: 1200,
-                cooldownKey: `drop:proposal:${roomId}`,
-              },
-            });
-            clearOptimisticProposal();
-            // エラー時は楽観返却状態もクリア
-            setOptimisticReturningIds((prev) =>
-              prev.filter((id) => id !== activePlayerId)
-            );
-          });
-          applyOptimisticReorder(activePlayerId, targetIndex);
-        }
+	            });
+	          });
+	        };
+	
+	        if (decision.kind === "return") {
+	          if (!decision.allowed) {
+	            playDropInvalid();
+	            if (decision.reason === "notOwner") {
+	              notify({
+	                title: "自分のカードだけ戻せます",
+	                type: "info",
+	                duration: 1200,
+	              });
+	            }
+	            return;
+	          }
+	          initiateReturn();
+	          return;
+	        }
+	
+	        if (decision.kind === "invalid" && decision.reason === "no-over") {
+	          playDropInvalid();
+	          notify({
+	            title: "この位置には置けません",
+	            type: "info",
+	            duration: 900,
+	          });
+	          return;
+	        }
+	
+	        if (decision.kind === "ignore") {
+	          return;
+	        }
+	
+	        if (decision.kind === "slot" && overRect) {
+	          if (
+	            process.env.NODE_ENV === "development" &&
+	            decision.clamped &&
+	            decision.originalSlotIndex !== decision.slotIndex
+	          ) {
+	            logWarn("central-card-board", "slot-index-clamped", {
+	              originalSlotIndex: decision.originalSlotIndex,
+	              slotIndex: decision.slotIndex,
+	              maxSlots: decision.maxSlots,
+	              slotCountDragging,
+	            });
+	          }
+	
+	          const currentMagnetState = getProjectedMagnetState();
+	          updateDropAnimationTarget(overRect as RectLike, {
+	            magnetSnap: currentMagnetState.shouldSnap,
+	          });
+	          magnetResult = computeMagnetTransform(overRect, activeRect, {
+	            ...magnetConfigRef.current,
+	            projectedOffset: {
+	              dx: currentMagnetState.dx + (cursorSnapOffset?.x ?? 0),
+	              dy: currentMagnetState.dy + (cursorSnapOffset?.y ?? 0),
+	            },
+	          });
+	
+	          const slotIndex = decision.slotIndex;
+	
+	          let dropSession: ReturnType<typeof createDropMetricsSession> | null =
+	            null;
+	          let previousPending: (string | null)[] | undefined;
+	          let insertedPending = false;
+	          let didPlaySound = false;
+	          const playOnce = () => {
+	            if (didPlaySound) return;
+	            didPlaySound = true;
+	            playCardPlace();
+	            dropSession?.markStage("client.drop.t3_soundPlayedMs", {
+	              channel: "success",
+	            });
+	          };
+	
+	          if (decision.operation === "add") {
+	            dropSession = createDropMetricsSession({
+	              optimisticMode: DROP_OPTIMISTIC_ENABLED,
+	              index: slotIndex,
+	            });
+	            onOptimisticProposalChange?.(activePlayerId, "placed");
+	            updatePendingState((prev) => {
+	              previousPending = prev.slice();
+	              const next = [...prev];
+	              const exist = next.indexOf(activePlayerId);
+	              if (exist >= 0) next.splice(exist, 1);
+	              if (slotIndex >= next.length) {
+	                next.length = slotIndex + 1;
+	              }
+	              next[slotIndex] = activePlayerId;
+	              insertedPending = true;
+	              return next;
+	            });
+	            if (insertedPending) {
+	              scheduleDropRollback(
+	                activePlayerId,
+	                previousPending ? previousPending.slice() : []
+	              );
+	            }
+	          }
+	
+	          if (decision.operation === "move") {
+	            playOnce();
+	            scheduleMoveCardInProposalToPosition(
+	              roomId,
+	              activePlayerId,
+	              slotIndex
+	            ).catch((error) => {
+	              logError("central-card-board", "move-card-in-proposal", error);
+	              playDropInvalid();
+	              clearOptimisticProposal();
+	              // エラー時は楽観返却状態もクリア
+	              setOptimisticReturningIds((prev) =>
+	                prev.filter((id) => id !== activePlayerId)
+	              );
+	            });
+	            applyOptimisticReorder(activePlayerId, slotIndex);
+	            return;
+	          }
+	
+	          const request = scheduleAddCardToProposalAtPosition(
+	            roomId,
+	            activePlayerId,
+	            slotIndex
+	          );
+	          if (insertedPending) {
+	            playOnce();
+	          }
+	            request
+	              .then((result) => {
+	                clearDropRollbackTimer(activePlayerId);
+	                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
+	                result,
+	              });
+	              if (result === "noop") {
+	                dropSession?.complete("noop");
+	                onOptimisticProposalChange?.(activePlayerId, null);
+	                // noop 時は optimisticProposal もクリア
+	                clearOptimisticProposal();
+	                if (previousPending !== undefined) {
+	                  const snapshot = previousPending.slice();
+	                  updatePendingState(() => snapshot);
+	                }
+	                notify({
+	                  title: "その位置には置けません",
+	                  description:
+	                    "カードが既に置かれているか、提案が更新されています。",
+	                  type: "info",
+	                });
+	                playDropInvalid();
+	                dropSession?.markStage("client.drop.t1_notifyShownMs", {
+	                  origin: "post",
+	                });
+	                traceAction("board.drop.attempt", {
+	                  roomId,
+	                  playerId: activePlayerId,
+	                  targetSlot: slotIndex,
+	                  reasonIfRejected: "slot-occupied",
+	                });
+	                return;
+	              }
+	              playOnce();
+	              dropSession?.complete("success");
+	              })
+	              .catch((error) => {
+	                clearDropRollbackTimer(activePlayerId);
+	                dropSession?.markStage("client.drop.t2_addProposalResolvedMs", {
+	                  result: "error",
+	                });
+	                dropSession?.complete("error");
+	                logError("central-card-board", "add-card-to-proposal", error);
+	                onOptimisticProposalChange?.(activePlayerId, null);
+	                // エラー時も optimisticProposal をクリア
+	                clearOptimisticProposal();
+	                if (previousPending !== undefined) {
+	                  const snapshot = previousPending.slice();
+	                  updatePendingState(() => snapshot);
+	                }
+	                const errorCode = (error as { code?: unknown } | null)?.code;
+	                const isNetworkError =
+	                  error instanceof TypeError || errorCode === "timeout";
+	                notify({
+	                  title: isNetworkError
+	                    ? "通信に失敗しました"
+	                    : "カードをその位置に置けませんでした",
+	                  description: isNetworkError
+	                    ? "ネットワークが不安定か、サーバーが応答しませんでした。もう一度お試しください。"
+	                    : error instanceof Error
+	                      ? error.message
+	                      : undefined,
+	                  type: "error",
+	                  duration: 1400,
+	                  meta: {
+	                    cooldownMs: 1200,
+	                    cooldownKey: `drop:proposal:${roomId}`,
+	                  },
+	                });
+	                playDropInvalid();
+	                dropSession?.markStage("client.drop.t1_notifyShownMs", {
+	                  origin: "error",
+	                });
+	                traceAction("board.drop.attempt", {
+	                roomId,
+	                playerId: activePlayerId,
+	                targetSlot: slotIndex,
+	                reasonIfRejected: "error",
+	              });
+	            });
+	          return;
+	        }
+	
+	        if (decision.kind === "invalid" && decision.reason === "target-not-found") {
+	          playDropInvalid();
+	          return;
+	        }
+	
+	        if (decision.kind === "move-to-card") {
+	          const targetIndex = decision.targetIndex;
+	          playCardPlace();
+	          scheduleMoveCardInProposalToPosition(
+	            roomId,
+	            activePlayerId,
+	            targetIndex
+	          ).catch((error) => {
+	            logError("central-card-board", "move-card-in-proposal", error);
+	            playDropInvalid();
+	            const errorCode = (error as { code?: unknown } | null)?.code;
+	            const isNetworkError =
+	              error instanceof TypeError || errorCode === "timeout";
+	            notify({
+	              title: isNetworkError
+	                ? "通信に失敗しました"
+	                : "カードをその位置に移動できませんでした",
+	              description: isNetworkError
+	                ? "ネットワークが不安定か、サーバーが応答しませんでした。もう一度お試しください。"
+	                : error instanceof Error
+	                  ? error.message
+	                  : undefined,
+	              type: "error",
+	              duration: 1400,
+	              meta: {
+	                cooldownMs: 1200,
+	                cooldownKey: `drop:proposal:${roomId}`,
+	              },
+	            });
+	            clearOptimisticProposal();
+	            // エラー時は楽観返却状態もクリア
+	            setOptimisticReturningIds((prev) =>
+	              prev.filter((id) => id !== activePlayerId)
+	            );
+	          });
+	          applyOptimisticReorder(activePlayerId, targetIndex);
+	          return;
+	        }
+	
+	        return;
       } finally {
-        enqueueMagnetUpdate({ state: magnetResult, immediate: true });
-        clearActive({ delayMagnetReset: true });
-        endDropSession();
+	        enqueueMagnetUpdate({ state: magnetResult, immediate: true });
+	        clearActive({ delayMagnetReset: true });
+	        endDropSession();
       }
     },
     [
