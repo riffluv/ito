@@ -8,7 +8,6 @@ import {
   useRevealStatus,
 } from "@/components/central-board";
 import {
-  computeSlotCountTarget,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
 import { useBoardClearActive } from "@/components/central-board/useBoardClearActive";
@@ -25,6 +24,8 @@ import { useBoardDragStartHandler } from "@/components/central-board/useBoardDra
 import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
 import { useBoardPlaceholderSlots } from "@/components/central-board/useBoardPlaceholderSlots";
 import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
+import { useBoardSlotHoverHandlers } from "@/components/central-board/useBoardSlotHoverHandlers";
+import { useBoardSlotCountState } from "@/components/central-board/useBoardSlotCountState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
 import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
@@ -34,7 +35,6 @@ import { useOptimisticProposalState } from "@/components/central-board/useOptimi
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
-import { useResolvedSlotCount } from "@/components/central-board/useResolvedSlotCount";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
@@ -51,7 +51,6 @@ import { UNIFIED_LAYOUT } from "@/theme/layout";
 import { Box, VisuallyHidden } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 import React, {
-  useCallback,
   useMemo,
   useRef,
   useState,
@@ -401,23 +400,13 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     onOptimisticProposalChange,
   });
 
-  const slotCountTarget = useMemo(() => {
-    // サーバー計算済みの slotCount を信頼し、在室人数で最低値を張る。pending やローカル提案では揺らさない。
-    return computeSlotCountTarget(slotCount, availableEligibleCount);
-  }, [slotCount, availableEligibleCount]);
-
-  const { resolvedSlotCount, beginDropSession, endDropSession } =
-    useResolvedSlotCount({ slotCountTarget, prefersReducedMotion });
-
-  const paddedBoardProposal = useMemo<(string | null)[]>(() => {
-    const target = resolvedSlotCount;
-    if (boardProposal.length >= target) return boardProposal;
-    const next = boardProposal.slice();
-    while (next.length < target) {
-      next.push(null);
-    }
-    return next;
-  }, [boardProposal, resolvedSlotCount]);
+  const { resolvedSlotCount, beginDropSession, endDropSession, paddedBoardProposal } =
+    useBoardSlotCountState({
+      slotCount,
+      availableEligibleCount,
+      boardProposal,
+      prefersReducedMotion,
+    });
 
   const placeholderSlots = useBoardPlaceholderSlots({
     boardProposal,
@@ -432,14 +421,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     orderListLength,
   });
 
-  const slotCountDragging = resolvedSlotCount;
-  const slotCountStatic = resolvedSlotCount;
-
   const isGameActive = useMemo(() => isGameActiveStatus(roomStatus), [roomStatus]);
 
   const { dragSlots, staticSlots, waitingPlayers } = useBoardSlots({
-    slotCountDragging,
-    slotCountStatic,
+    slotCountDragging: resolvedSlotCount,
+    slotCountStatic: resolvedSlotCount,
     activeProposal: paddedBoardProposal,
     pending,
     playerReadyMap,
@@ -468,18 +454,10 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     roomStatus,
   });
 
-  const handleSlotEnter = useCallback(
-    (_index: number) => {
-      if (!isOver) {
-        setIsOver(true);
-      }
-    },
-    [isOver, setIsOver]
-  );
-
-  const handleSlotLeave = useCallback(() => {
-    setIsOver(false);
-  }, [setIsOver]);
+  const { onSlotEnter, onSlotLeave } = useBoardSlotHoverHandlers({
+    isOver,
+    setIsOver,
+  });
 
   useRevealDoneFallback({
     roomId,
@@ -529,7 +507,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     meId,
     boardProposal,
     pendingRef,
-    slotCountDragging,
+    slotCountDragging: resolvedSlotCount,
     boardContainerRef,
     lastDragPositionRef,
     cursorSnapOffset,
@@ -643,8 +621,8 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
             meId={meId}
             displayMode={displayMode}
             onDropAtPosition={onDropAtPosition}
-            onSlotEnter={handleSlotEnter}
-            onSlotLeave={handleSlotLeave}
+            onSlotEnter={onSlotEnter}
+            onSlotLeave={onSlotLeave}
             isRevealing={isRevealing}
           />
         )}
