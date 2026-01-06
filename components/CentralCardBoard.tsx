@@ -26,6 +26,8 @@ import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump"
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useResultOverlayAllowed } from "@/components/central-board/useResultOverlayAllowed";
+import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
+import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
@@ -39,11 +41,6 @@ import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
 import { CardRenderer } from "@/components/ui/CardRenderer";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
-import {
-  STREAK_BANNER_AUTOHIDE_MS,
-  STREAK_BANNER_AUTOHIDE_REDUCED_MS,
-  STREAK_BANNER_DELAY_MS,
-} from "@/lib/constants/uiTimings";
 import type { ResolveMode } from "@/lib/game/resolveMode";
 import { computeBoardActiveProposal } from "@/lib/game/selectors";
 import { usePointerProfile } from "@/lib/hooks/usePointerProfile";
@@ -144,16 +141,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     uiRevealPending ?? false
   );
 
-  // 勝利演出の Pixi モジュールを先読みして、初回から Pixi 版を使えるようにする
-  useEffect(() => {
-    if (process.env.NEXT_PUBLIC_USE_PIXI_RAYS === "0") return;
-    void import("@/lib/pixi/victoryRays").catch((error) => {
-      console.warn("[CentralCardBoard] prefetch victory rays failed", error);
-    });
-  }, []);
-
-  // Streak Banner の表示管理
-  const [showStreakBanner, setShowStreakBanner] = useState(false);
+  useVictoryRaysPrefetch();
 
   const {
     playerMap,
@@ -191,56 +179,15 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     string[]
   >([]);
   const prefersReducedMotion = useReducedMotionPreference();
+  const { showStreakBanner, hideStreakBanner } = useStreakBannerState({
+    roomStatus,
+    failed,
+    currentStreak,
+    prefersReducedMotion,
+  });
 
   const pointerProfile = usePointerProfile();
   const dropDebugEnabled = process.env.NEXT_PUBLIC_UI_DROP_DEBUG === "1";
-
-  // Streak Banner のタイミング制御
-  const streakTimerRef = useRef<number | null>(null);
-  const streakAutoHideRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (roomStatus === "finished" && !failed && currentStreak >= 2) {
-      // GameResultOverlay のアニメーション完了を待つ
-      // 勝利アニメーションは約2.5秒、0.3秒の間を置いて表示（タイミング短縮）
-      streakTimerRef.current = window.setTimeout(() => {
-        setShowStreakBanner(true);
-      }, STREAK_BANNER_DELAY_MS);
-
-      return () => {
-        if (streakTimerRef.current) {
-          clearTimeout(streakTimerRef.current);
-          streakTimerRef.current = null;
-        }
-        if (streakAutoHideRef.current) {
-          clearTimeout(streakAutoHideRef.current);
-          streakAutoHideRef.current = null;
-        }
-      };
-    } else if (roomStatus !== "finished") {
-      // 次のゲームが始まったらバナーを閉じる
-      setShowStreakBanner(false);
-    }
-
-    return undefined;
-  }, [roomStatus, failed, currentStreak]);
-
-  // バナーが表示されたまま残るのを防ぐフォールバック
-  useEffect(() => {
-    if (!showStreakBanner) return undefined;
-    const duration = prefersReducedMotion
-      ? STREAK_BANNER_AUTOHIDE_REDUCED_MS
-      : STREAK_BANNER_AUTOHIDE_MS; // アニメーション完了を十分にカバーするバッファ
-    streakAutoHideRef.current = window.setTimeout(() => {
-      setShowStreakBanner(false);
-    }, duration);
-    return () => {
-      if (streakAutoHideRef.current) {
-        clearTimeout(streakAutoHideRef.current);
-        streakAutoHideRef.current = null;
-      }
-    };
-  }, [showStreakBanner, prefersReducedMotion]);
 
   const [cursorSnapOffset, setCursorSnapOffset] = useState<{
     x: number;
@@ -810,7 +757,7 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
       <StreakBanner
         streak={currentStreak}
         isVisible={showStreakBanner}
-        onComplete={() => setShowStreakBanner(false)}
+        onComplete={hideStreakBanner}
       />
     </Box>
   );
