@@ -25,6 +25,7 @@ export { useBoardDragStartHandler } from "./useBoardDragStartHandler";
 export { useBoardDragSystem } from "./useBoardDragSystem";
 export { useBoardMagnetSystem } from "./useBoardMagnetSystem";
 export { useBoardDropAnimation } from "./useBoardDropAnimation";
+export { useBoardDropSessionSystem } from "./useBoardDropSessionSystem";
 export { useBoardDropState } from "./useBoardDropState";
 export { useBoardMagnetConfig } from "./useBoardMagnetConfig";
 export { useBoardOptimisticReturning } from "./useBoardOptimisticReturning";

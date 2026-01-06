@@ -13,15 +13,14 @@ import {
   useBoardDragEndHandler,
   useBoardDragSystem,
   useBoardDragStartHandler,
-  useBoardDropAnimation,
   useBoardDropState,
+  useBoardDropSessionSystem,
   useBoardMagnetSystem,
   useBoardOptimisticReturning,
   useBoardPlaceholderSlots,
   useBoardPresenceBundle,
   useBoardRevealState,
   useBoardRoomKeys,
-  useBoardSlotCountState,
   useBoardSlotDescriptors,
   useBoardSlotHoverHandlers,
   useOptimisticProposalState,
@@ -165,10 +164,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     prefersReducedMotion,
   });
 
-  const { dropAnimation, updateDropAnimationTarget } = useBoardDropAnimation({
-    prefersReducedMotion,
-  });
-
   const {
     boardContainerRef,
     dragActivationStartRef,
@@ -303,13 +298,19 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     onOptimisticProposalChange,
   });
 
-  const { resolvedSlotCount, beginDropSession, endDropSession, paddedBoardProposal } =
-    useBoardSlotCountState({
-      slotCount,
-      availableEligibleCount,
-      boardProposal,
-      prefersReducedMotion,
-    });
+  const {
+    resolvedSlotCount,
+    beginDropSession,
+    endDropSession,
+    paddedBoardProposal,
+    dropAnimation,
+    updateDropAnimationTarget,
+  } = useBoardDropSessionSystem({
+    slotCount,
+    availableEligibleCount,
+    boardProposal,
+    prefersReducedMotion,
+  });
 
   const placeholderSlots = useBoardPlaceholderSlots({
     boardProposal,
