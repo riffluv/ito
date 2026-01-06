@@ -8,7 +8,6 @@ import {
   useRevealStatus,
 } from "@/components/central-board";
 import {
-  buildPlaceholderSlots,
   computeSlotCountTarget,
   isGameActiveStatus,
 } from "@/components/central-board/boardDerivations";
@@ -24,6 +23,7 @@ import { useBoardDebugDumpState } from "@/components/central-board/useBoardDebug
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
 import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
+import { useBoardPlaceholderSlots } from "@/components/central-board/useBoardPlaceholderSlots";
 import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
@@ -33,7 +33,6 @@ import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRay
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { useOptimisticReturningIds } from "@/components/central-board/useOptimisticReturningIds";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
-import { usePlaceholderSlotTrace } from "@/components/central-board/usePlaceholderSlotTrace";
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
 import { useResolvedSlotCount } from "@/components/central-board/useResolvedSlotCount";
 import { useBoardSlots } from "@/components/hooks/useBoardSlots";
@@ -420,11 +419,11 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     return next;
   }, [boardProposal, resolvedSlotCount]);
 
-  const placeholderSlots = useMemo(() => {
-    return buildPlaceholderSlots({ boardProposal, missingPlayerIds });
-  }, [boardProposal, missingPlayerIds]);
-
-  usePlaceholderSlotTrace({ placeholderSlots, roomId });
+  const placeholderSlots = useBoardPlaceholderSlots({
+    boardProposal,
+    missingPlayerIds,
+    roomId,
+  });
 
   useProposalSyncTrace({
     proposalKey,
