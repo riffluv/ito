@@ -5,7 +5,6 @@ import {
   StaticBoard,
   boardCollisionDetection,
   usePlayerPresenceState,
-  useResultFlipState,
   useRevealStatus,
 } from "@/components/central-board";
 import {
@@ -24,6 +23,7 @@ import { useBoardReleaseMagnet } from "@/components/central-board/useBoardReleas
 import { useBoardDebugDump } from "@/components/central-board/useBoardDebugDump";
 import { useBoardDragCancelHandlers } from "@/components/central-board/useBoardDragCancelHandlers";
 import { useBoardDragStartHandler } from "@/components/central-board/useBoardDragStartHandler";
+import { useBoardCardRenderer } from "@/components/central-board/useBoardCardRenderer";
 import { useBoardPendingState } from "@/components/central-board/useBoardPendingState";
 import { usePlayerReadyMap } from "@/components/central-board/usePlayerReadyMap";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
@@ -40,7 +40,6 @@ import { useBoardSlots } from "@/components/hooks/useBoardSlots";
 import { useDropHandler } from "@/components/hooks/useDropHandler";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
 import { useRevealAnimation } from "@/components/hooks/useRevealAnimation";
-import { CardRenderer } from "@/components/ui/CardRenderer";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { ResolveMode } from "@/lib/game/resolveMode";
@@ -336,12 +335,6 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     playDropInvalid,
   });
 
-
-  const { resultFlipMap, handleResultCardFlip } = useResultFlipState(
-    roomStatus,
-    orderList
-  );
-
   usePendingPruneEffects({
     orderList,
     orderListKey,
@@ -350,51 +343,18 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     updatePendingState,
   });
 
-  const renderCard = useCallback(
-    (id: string, idx?: number) => {
-      const interactiveFlip =
-        roomStatus === "finished"
-          ? {
-              flipped: resultFlipMap[id] ?? true,
-              onToggle: () => handleResultCardFlip(id),
-              preset: "result" as const,
-            }
-          : undefined;
-
-      return (
-        <CardRenderer
-          key={id}
-          id={id}
-          player={playerMap.get(id)}
-          idx={idx}
-          orderList={orderList}
-          pending={pending}
-          proposal={proposal}
-          resolveMode={resolveMode}
-          roomStatus={roomStatus}
-          revealIndex={revealIndex}
-          revealAnimating={revealAnimating}
-          failed={failed}
-          realtimeResult={realtimeResult}
-          interactiveFlip={interactiveFlip}
-        />
-      );
-    },
-    [
-      roomStatus,
-      resultFlipMap,
-      handleResultCardFlip,
-      playerMap,
-      orderList,
-      pending,
-      proposal,
-      resolveMode,
-      revealIndex,
-      revealAnimating,
-      failed,
-      realtimeResult,
-    ]
-  );
+  const { renderCard } = useBoardCardRenderer({
+    roomStatus,
+    orderList,
+    playerMap,
+    pending,
+    proposal,
+    resolveMode,
+    revealIndex,
+    revealAnimating,
+    failed,
+    realtimeResult,
+  });
 
   /* selectors */ const activeProposal = useMemo<(string | null)[]>(() => {
     return computeBoardActiveProposal({
