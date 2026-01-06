@@ -1,9 +1,6 @@
 "use client";
 
 import { useRevealStatus } from "@/components/central-board";
-import {
-  isGameActiveStatus,
-} from "@/components/central-board/boardDerivations";
 import { useBoardActiveProposal } from "@/components/central-board/useBoardActiveProposal";
 import { isBoardInteractive } from "@/components/central-board/boardUiFlags";
 import { useBoardA11yMessage } from "@/components/central-board/useBoardA11yMessage";
@@ -29,12 +26,12 @@ import { useBoardRoomKeys } from "@/components/central-board/useBoardRoomKeys";
 import { useBoardRevealState } from "@/components/central-board/useBoardRevealState";
 import { useBoardPresenceBundle } from "@/components/central-board/useBoardPresenceBundle";
 import { useProposalSyncTrace } from "@/components/central-board/useProposalSyncTrace";
+import { useBoardSlotDescriptors } from "@/components/central-board/useBoardSlotDescriptors";
 import { useStreakBannerState } from "@/components/central-board/useStreakBannerState";
 import { useVictoryRaysPrefetch } from "@/components/central-board/useVictoryRaysPrefetch";
 import { useOptimisticProposalState } from "@/components/central-board/useOptimisticProposalState";
 import { usePendingPruneEffects } from "@/components/central-board/usePendingPruneEffects";
 import { useRevealDoneFallback } from "@/components/central-board/useRevealDoneFallback";
-import { useBoardSlots } from "@/components/hooks/useBoardSlots";
 import { useMagnetController } from "@/components/hooks/useMagnetController";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
@@ -46,7 +43,6 @@ import type { PlayerDoc, PlayerSnapshot, RoomDoc } from "@/lib/types";
 import { CentralCardBoardView } from "@/components/central-board/CentralCardBoardView";
 import { buildCentralCardBoardViewProps } from "@/components/central-board/buildCentralCardBoardViewProps";
 import React, {
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -347,16 +343,12 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     orderListLength,
   });
 
-  const isGameActive = useMemo(() => isGameActiveStatus(roomStatus), [roomStatus]);
-
-  const { dragSlots, staticSlots, waitingPlayers } = useBoardSlots({
-    slotCountDragging: resolvedSlotCount,
-    slotCountStatic: resolvedSlotCount,
-    activeProposal: paddedBoardProposal,
+  const { dragSlots, staticSlots, waitingPlayers } = useBoardSlotDescriptors({
+    resolvedSlotCount,
+    paddedBoardProposal,
     pending,
     playerReadyMap,
     optimisticReturningIds,
-    isGameActive,
     roomStatus,
     orderList,
     canDropAtPosition,
