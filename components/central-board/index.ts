@@ -22,6 +22,7 @@ export { useBoardDragEndHandler } from "./useBoardDragEndHandler";
 export { useBoardDragMoveHandler } from "./useBoardDragMoveHandler";
 export { useBoardDragSensors } from "./useBoardDragSensors";
 export { useBoardDragStartHandler } from "./useBoardDragStartHandler";
+export { useBoardMagnetSystem } from "./useBoardMagnetSystem";
 export { useBoardDropAnimation } from "./useBoardDropAnimation";
 export { useBoardDropState } from "./useBoardDropState";
 export { useBoardMagnetConfig } from "./useBoardMagnetConfig";

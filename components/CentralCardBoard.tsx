@@ -18,12 +18,11 @@ import {
   useBoardDragStartHandler,
   useBoardDropAnimation,
   useBoardDropState,
-  useBoardMagnetConfig,
+  useBoardMagnetSystem,
   useBoardOptimisticReturning,
   useBoardPlaceholderSlots,
   useBoardPresenceBundle,
   useBoardRevealState,
-  useBoardReleaseMagnet,
   useBoardRoomKeys,
   useBoardSlotCountState,
   useBoardSlotDescriptors,
@@ -36,7 +35,6 @@ import {
   useStreakBannerState,
   useVictoryRaysPrefetch,
 } from "@/components/central-board";
-import { useMagnetController } from "@/components/hooks/useMagnetController";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import type { ResolveMode } from "@/lib/game/resolveMode";
@@ -158,29 +156,21 @@ const CentralCardBoard: React.FC<CentralCardBoardProps> = ({
     y: number;
   } | null>(null);
 
-  const magnetConfig = useBoardMagnetConfig({
-    pointerProfile,
-    prefersReducedMotion,
-  });
-  const magnetController = useMagnetController(magnetConfig, {
-    prefersReducedMotion,
-  });
   const {
+    magnetController,
     enqueueMagnetUpdate,
     resetMagnet,
     scheduleMagnetTarget,
     getProjectedMagnetState,
     magnetConfigRef,
-  } = magnetController;
-
-  const { dropAnimation, updateDropAnimationTarget } = useBoardDropAnimation({
+    releaseMagnet,
+  } = useBoardMagnetSystem({
+    pointerProfile,
     prefersReducedMotion,
   });
 
-  const { releaseMagnet } = useBoardReleaseMagnet({
-    scheduleMagnetTarget,
-    getProjectedMagnetState,
-    enqueueMagnetUpdate,
+  const { dropAnimation, updateDropAnimationTarget } = useBoardDropAnimation({
+    prefersReducedMotion,
   });
 
   const {
