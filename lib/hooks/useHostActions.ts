@@ -13,11 +13,15 @@ import {
   handleFirebaseQuotaError,
   isFirebaseQuotaExceeded,
 } from "@/lib/utils/errorHandling";
-import { PRESENCE_FORCE_START_AFTER_MS } from "@/lib/constants/presence";
 import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
+import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
+import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
+import { usePendingVisibilityKick } from "@/lib/hooks/hostActions/usePendingVisibilityKick";
+import { usePresenceStartGate } from "@/lib/hooks/hostActions/usePresenceStartGate";
+import { useResetUiHold } from "@/lib/hooks/hostActions/useResetUiHold";
 import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
@@ -100,7 +104,6 @@ export function useHostActions({
 }: UseHostActionsOptions) {
   const [quickStartPending, setQuickStartPending] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [resetUiPending, setResetUiPending] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customStartPending, setCustomStartPending] = useState(false);
@@ -112,10 +115,6 @@ export function useHostActions({
   const pendingVisibilityKickAtRef = useRef<number>(0);
   const evalSortedPendingRef = useRef(false);
   const mountedRef = useRef(true);
-  const presenceWarningShownRef = useRef(false);
-  const presenceWaitSinceRef = useRef<number | null>(null);
-  const [presenceWaitedMs, setPresenceWaitedMs] = useState(0);
-  const resetUiTimerRef = useRef<number | null>(null);
   const lastActionAtRef = useRef<Record<string, number>>({});
   const latestRoomStatusRef = useRef<string | undefined>(roomStatus);
   const quickStartStuckTimerRef = useRef<number | null>(null);
@@ -218,56 +217,22 @@ export function useHostActions({
     }
   }, [statusVersion]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return () => {};
-    const handler = () => {
-      try {
-        if (document.visibilityState !== "visible") return;
-        if (!db) return;
-        if (latestRoomStatusRef.current === "clue") return;
-        if (!quickStartPendingRef.current && !isRestartingRef.current) return;
-        const now = Date.now();
-        if (now - pendingVisibilityKickAtRef.current < 1200) return;
-        pendingVisibilityKickAtRef.current = now;
-        window.dispatchEvent(
-          new CustomEvent("ito:room-force-refresh", {
-            detail: { roomId, reason: "host.pending.visibility" },
-          })
-        );
-      } catch {}
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [roomId]);
+  usePendingVisibilityKick({
+    roomId,
+    latestRoomStatusRef,
+    quickStartPendingRef,
+    isRestartingRef,
+    pendingVisibilityKickAtRef,
+  });
 
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && quickStartStuckTimerRef.current !== null) {
-        window.clearTimeout(quickStartStuckTimerRef.current);
-        quickStartStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && quickStartEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(quickStartEarlySyncTimerRef.current);
-        quickStartEarlySyncTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
-        window.clearTimeout(nextGameStuckTimerRef.current);
-        nextGameStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && nextGameEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(nextGameEarlySyncTimerRef.current);
-        nextGameEarlySyncTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && resetStuckTimerRef.current !== null) {
-        window.clearTimeout(resetStuckTimerRef.current);
-        resetStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && resetEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(resetEarlySyncTimerRef.current);
-        resetEarlySyncTimerRef.current = null;
-      }
-    };
-  }, []);
+  useHostActionTimersCleanup({
+    quickStartStuckTimerRef,
+    quickStartEarlySyncTimerRef,
+    nextGameStuckTimerRef,
+    nextGameEarlySyncTimerRef,
+    resetStuckTimerRef,
+    resetEarlySyncTimerRef,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -335,29 +300,9 @@ export function useHostActions({
     }
   }, [roomStatus]);
 
-  const markActionStart = useCallback((action: string) => {
-    if (typeof performance !== "undefined") {
-      actionLatencyRef.current[action] = performance.now();
-    }
-    setMetric("hostAction", `${action}.pending`, 1);
-  }, []);
-
-  const finalizeAction = useCallback((action: string, status: "success" | "error") => {
-    const start = actionLatencyRef.current[action];
-    if (typeof start === "number" && typeof performance !== "undefined") {
-      setMetric("hostAction", `${action}.latencyMs`, Math.round(performance.now() - start));
-    }
-    delete actionLatencyRef.current[action];
-    setMetric("hostAction", `${action}.pending`, 0);
-    setMetric("hostAction", `${action}.result`, status === "success" ? 1 : -1);
-  }, []);
-
-  const abortAction = useCallback((action: string) => {
-    if (actionLatencyRef.current[action]) {
-      delete actionLatencyRef.current[action];
-    }
-    setMetric("hostAction", `${action}.pending`, 0);
-  }, []);
+  const { markActionStart, finalizeAction, abortAction } = useHostActionMetrics({
+    actionLatencyRef,
+  });
 
   // Host-only start confirmation sound. Global start cue is controlled in Showtime (currently muted).
   const playOrderConfirm = useSoundEffect("order_confirm");
@@ -370,105 +315,26 @@ export function useHostActions({
     return "通常版";
   }, [defaultTopicType]);
 
-  // presence の初期同期が遅延した場合の待ち時間を計測し、一定時間で強制開始を許可する。
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return () => {};
-    }
-    if (presenceReady || presenceDegraded) {
-      presenceWaitSinceRef.current = null;
-      setPresenceWaitedMs(0);
-      return () => {};
-    }
-    if (presenceWaitSinceRef.current === null) {
-      presenceWaitSinceRef.current = Date.now();
-    }
-    const tick = () => {
-      const since = presenceWaitSinceRef.current;
-      if (since === null) return;
-      setPresenceWaitedMs(Date.now() - since);
-    };
-    tick();
-    const handle = window.setInterval(tick, 1000);
-    return () => {
-      window.clearInterval(handle);
-    };
-  }, [presenceReady, presenceDegraded, roomId]);
-
-  const presenceForceEligible =
-    !presenceReady &&
-    !presenceDegraded &&
-    presenceWaitedMs >= PRESENCE_FORCE_START_AFTER_MS;
-  const presenceCanStart =
-    presenceReady || presenceDegraded || presenceForceEligible;
-  const presenceWaitRemainingMs = useMemo(() => {
-    if (presenceCanStart) return 0;
-    return Math.max(PRESENCE_FORCE_START_AFTER_MS - presenceWaitedMs, 0);
-  }, [presenceCanStart, presenceWaitedMs]);
-
-  const ensurePresenceReady = useCallback(() => {
-    if (presenceReady) {
-      return true;
-    }
-    const forceAllowed = presenceForceEligible;
-    if (presenceDegraded === true || forceAllowed) {
-      if (!presenceWarningShownRef.current) {
-        notify({
-          id: toastIds.genericInfo(roomId, "presence-warn"),
-          title: "接続状況を確認できません",
-          description: "プレイヤー一覧をもとに開始を続行します。",
-          type: "info",
-          duration: 2400,
-        });
-        presenceWarningShownRef.current = true;
-      }
-      traceAction("ui.host.presence.degraded", {
-        roomId,
-        ready: presenceReady ? "1" : "0",
-        degraded: presenceDegraded ? "1" : "0",
-        forced: forceAllowed ? "1" : "0",
-        waitedMs: Math.round(presenceWaitedMs),
-        players: typeof playerCount === "number" ? playerCount : -1,
-      });
-      return true;
-    }
-
-    traceAction("ui.host.presence.wait", {
-      roomId,
-      waitedMs: Math.round(presenceWaitedMs),
-    });
-    notify({
-      id: toastIds.genericInfo(roomId, "presence-wait"),
-      title: "参加者の接続を待っています",
-      description: "全員のオンライン状態が揃うまで数秒お待ちください。",
-      type: "info",
-      duration: 2000,
-    });
-    return false;
-  }, [
+  const {
+    presenceForceEligible,
+    presenceCanStart,
+    presenceWaitRemainingMs,
+    ensurePresenceReady,
+  } = usePresenceStartGate({
+    roomId,
     presenceReady,
     presenceDegraded,
-    presenceForceEligible,
-    presenceWaitedMs,
     playerCount,
-    roomId,
-  ]);
+  });
 
   useEffect(() => {
-    presenceWarningShownRef.current = false;
     expectedStatusVersionRef.current = { quickStart: null, nextGame: null, reset: null };
     setMetric("hostAction", "quickStart.expectedStatusVersion", null);
     setMetric("hostAction", "nextGame.expectedStatusVersion", null);
     setMetric("hostAction", "reset.expectedStatusVersion", null);
   }, [roomId]);
 
-  const clearResetUiHold = useCallback(() => {
-    if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
-      window.clearTimeout(resetUiTimerRef.current);
-      resetUiTimerRef.current = null;
-    }
-    setResetUiPending(false);
-  }, []);
+  const { resetUiPending, beginResetUiHold, clearResetUiHold } = useResetUiHold({ roomStatus });
 
   const ACTION_COOLDOWN_MS = 420;
   const canProceed = useCallback(
@@ -484,32 +350,7 @@ export function useHostActions({
     []
   );
 
-  const beginResetUiHold = useCallback((durationMs = 2800) => {
-    if (typeof window === "undefined") return;
-    setResetUiPending(true);
-    if (resetUiTimerRef.current !== null) {
-      window.clearTimeout(resetUiTimerRef.current);
-    }
-    resetUiTimerRef.current = window.setTimeout(() => {
-      setResetUiPending(false);
-      resetUiTimerRef.current = null;
-    }, durationMs);
-  }, []);
-
-  useEffect(() => {
-    if (roomStatus === "waiting") {
-      clearResetUiHold();
-    }
-  }, [roomStatus, clearResetUiHold]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
-        window.clearTimeout(resetUiTimerRef.current);
-        resetUiTimerRef.current = null;
-      }
-    };
-  }, []);
+  // NOTE: resetUiHold のタイマー管理は useResetUiHold 側で完結させる
 
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
