@@ -3,18 +3,15 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import {
   buildTelemetryOptions,
   createInitialContext,
-  createSafeUpdateMachine,
   getRequiredSwVersionHint,
   hasForceHold,
   normalizeHoldReason,
   setRequiredSwVersionHint,
   type ApplyServiceWorkerOptions,
   type ClearResult,
-  type SafeUpdateContext,
   type SafeUpdatePhase,
   type SafeUpdateSnapshot,
 } from "./safeUpdateMachine";
-import { createStartApply } from "./updateChannelApply";
 import {
   addSnapshotListener,
   addUpdateListener,
@@ -25,69 +22,17 @@ import {
   type SnapshotListener,
   type UpdateListener,
 } from "./updateChannelState";
-import { attachUpdateChannelBroadcastListener } from "./updateChannelBroadcast";
-import { handleSafeUpdateStateChange, resolvePhase } from "./updateChannelSnapshot";
-import { createActor, type ActorRefFrom } from "xstate";
+import { resolvePhase } from "./updateChannelSnapshot";
+import { ensureSafeUpdateActor, getSafeUpdateContext, now } from "./updateChannelRuntime";
 
 export type { ApplyServiceWorkerOptions, SafeUpdatePhase, SafeUpdateSnapshot };
 export { getRequiredSwVersionHint, setRequiredSwVersionHint };
+export { __safeUpdateMachine, resyncWaitingServiceWorker } from "./updateChannelRuntime";
 
-const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const IN_GAME_HOLD_KEY = "in-game";
 
-const isBrowser =
-  typeof window !== "undefined" && typeof navigator !== "undefined" && "serviceWorker" in navigator;
-
-const broadcast =
-  isBrowser && "BroadcastChannel" in window
-    ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
-    : null;
-
-function now(): number {
-  return Date.now();
-}
-
-const startApply = createStartApply({
-  now,
-  broadcast,
-  getSnapshot: getCurrentSnapshot,
-});
-
-const safeUpdateMachine = createSafeUpdateMachine({
-  isBrowser,
-  broadcast,
-  startApply,
-  now,
-});
-
-let safeUpdateActor: ActorRefFrom<typeof safeUpdateMachine> | null = null;
-
-function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
-  if (safeUpdateActor || !isBrowser) {
-    return safeUpdateActor;
-  }
-  safeUpdateActor = createActor(safeUpdateMachine);
-  safeUpdateActor.subscribe(handleSafeUpdateStateChange);
-  safeUpdateActor.start();
-  void resyncWaitingServiceWorker("actor-init");
-  return safeUpdateActor;
-}
-
-function getCurrentContext(): SafeUpdateContext {
-  const actor = ensureActor();
-  return actor?.getSnapshot().context ?? createInitialContext();
-}
-
-if (broadcast) {
-  attachUpdateChannelBroadcastListener({
-    broadcast,
-    ensureActor,
-    resyncWaitingServiceWorker,
-  });
-}
-
 export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () => void {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) {
     listener(null);
     return () => {
@@ -106,7 +51,7 @@ export function subscribeToServiceWorkerUpdates(listener: UpdateListener): () =>
 }
 
 export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () => void {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) {
     listener({ ...getCurrentSnapshot() });
     return () => {
@@ -125,19 +70,19 @@ export function subscribeToSafeUpdateSnapshot(listener: SnapshotListener): () =>
 }
 
 export function getSafeUpdateSnapshot(): SafeUpdateSnapshot {
-  ensureActor();
+  ensureSafeUpdateActor();
   return { ...getCurrentSnapshot() };
 }
 
 export function getWaitingServiceWorker(): ServiceWorkerRegistration | null {
-  ensureActor();
+  ensureSafeUpdateActor();
   return getCurrentWaitingRegistration();
 }
 
 export function announceServiceWorkerUpdate(
   registration: ServiceWorkerRegistration | null
 ): void {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   if (registration) {
     actor.send({
@@ -157,7 +102,7 @@ export function announceServiceWorkerUpdate(
 }
 
 export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): boolean {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return false;
   const reason = options?.reason ?? "manual";
   const safeMode = options?.safeMode === true;
@@ -192,7 +137,7 @@ export function applyServiceWorkerUpdate(options?: ApplyServiceWorkerOptions): b
 }
 
 export function consumePendingReloadFlag(): boolean {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return false;
   if (!getCurrentSnapshot().pendingReload) {
     return false;
@@ -202,7 +147,7 @@ export function consumePendingReloadFlag(): boolean {
 }
 
 export function consumePendingApplyContext(): ApplyServiceWorkerOptions | null {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return null;
   const pending = actor.getSnapshot().context.pendingApply;
   if (!pending) {
@@ -213,7 +158,7 @@ export function consumePendingApplyContext(): ApplyServiceWorkerOptions | null {
 }
 
 export function holdForceApplyTimer(reason?: string) {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   actor.send({
     type: "FORCE_HOLD",
@@ -223,7 +168,7 @@ export function holdForceApplyTimer(reason?: string) {
 }
 
 export function releaseForceApplyTimer(reason?: string) {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   actor.send({
     type: "FORCE_RELEASE",
@@ -251,7 +196,7 @@ type SafeUpdateFetchErrorPayload = {
 };
 
 export function handleServiceWorkerFetchError(detail: SafeUpdateFetchErrorPayload) {
-  const context = getCurrentContext();
+  const context = getSafeUpdateContext();
   const detailTag =
     typeof detail.status === "number"
       ? `fetch_${detail.status}`
@@ -273,24 +218,24 @@ export function handleServiceWorkerFetchError(detail: SafeUpdateFetchErrorPayloa
 }
 
 export function suppressAutoApply() {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   actor.send({ type: "AUTO_SUPPRESS", reason: "manual", broadcast: true });
 }
 
 export function clearAutoApplySuppression() {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   actor.send({ type: "AUTO_RESUME", reason: "manual", broadcast: true });
 }
 
 export function isAutoApplySuppressed(): boolean {
-  ensureActor();
+  ensureSafeUpdateActor();
   return getCurrentSnapshot().autoApplySuppressed;
 }
 
 export function clearWaitingServiceWorker(options?: { result?: ClearResult }) {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   const result: ClearResult = options?.result ?? "manual";
   if (result === "redundant") {
@@ -314,7 +259,7 @@ export function clearWaitingServiceWorker(options?: { result?: ClearResult }) {
 }
 
 export function markUpdateCheckStart() {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   const phase = resolvePhase(actor.getSnapshot());
   if (phase === "applying") return;
@@ -322,7 +267,7 @@ export function markUpdateCheckStart() {
 }
 
 export function markUpdateCheckEnd() {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   const phase = resolvePhase(actor.getSnapshot());
   if (phase === "applying") return;
@@ -330,37 +275,9 @@ export function markUpdateCheckEnd() {
 }
 
 export function markUpdateCheckError(detail: string) {
-  const actor = ensureActor();
+  const actor = ensureSafeUpdateActor();
   if (!actor) return;
   const phase = resolvePhase(actor.getSnapshot());
   if (phase === "applying") return;
   actor.send({ type: "CHECK_FAILED", detail });
 }
-
-export async function resyncWaitingServiceWorker(source?: string): Promise<void> {
-  if (!isBrowser) return;
-  try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    const actor = ensureActor();
-    if (!actor) return;
-    if (registration?.waiting) {
-      actor.send({
-        type: "WAITING_DETECTED",
-        registration,
-        source: source ?? "resync",
-        broadcast: false,
-      });
-    } else {
-      actor.send({
-        type: "WAITING_CLEARED",
-        result: "manual",
-        source: source ?? "resync",
-        broadcast: false,
-      });
-    }
-  } catch (error) {
-    traceError("safeUpdate.resync.failed", error, { source });
-  }
-}
-
-export const __safeUpdateMachine = safeUpdateMachine;
