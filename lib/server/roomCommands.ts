@@ -1,7 +1,5 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { promises as fs } from "fs";
-import path from "path";
-import { getAdminAuth, getAdminDb, getAdminRtdb } from "@/lib/server/firebaseAdmin";
+import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
 import { generateRoomId } from "@/lib/utils/roomId";
@@ -16,11 +14,10 @@ import {
   buildPlayOutcomePayload,
   buildRevealOutcomePayload,
 } from "@/lib/game/domain";
-import { acquireRoomLock, releaseRoomLock } from "@/lib/server/roomQueue";
+import { acquireRoomLock } from "@/lib/server/roomQueue";
 import { composeWaitingResetPayload, leaveRoomServer } from "@/lib/server/roomActions";
 import { buildRoomSyncPatch, publishRoomSyncPatch } from "@/lib/server/roomSync";
 import { logRoomCommandAudit } from "@/lib/server/roomAudit";
-import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
 import { normalizeVersion } from "@/lib/server/roomVersionGate";
@@ -28,23 +25,21 @@ import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import type { OrderState } from "@/lib/game/rules";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { toMillis } from "@/lib/time";
-import {
-  parseItoWordMarkdown,
-  pickOne,
-  topicTypeLabels,
-  type TopicSections,
-  type TopicType,
-} from "@/lib/topics";
+import { pickOne, type TopicType } from "@/lib/topics";
 import { verifyHostSession } from "@/lib/server/hostToken";
+import {
+  clearRoundPreparingWithRetry,
+  codedError,
+  fetchPresenceUids,
+  isTopicTypeValue,
+  loadTopicSectionsFromFs,
+  releaseLockSafely,
+  safeTraceAction,
+  sanitizeClue,
+  sanitizeName,
+  sanitizeTopicText,
+} from "@/lib/server/roomCommandShared";
 type WithAuth = { token: string };
-type CodedError = Error & { code?: string; reason?: string };
-
-const codedError = (message: string, code: string, reason?: string): CodedError => {
-  const err = new Error(message) as CodedError;
-  err.code = code;
-  if (reason) err.reason = reason;
-  return err;
-};
 
 export type CreateRoomParams = WithAuth & {
   roomName: string;
@@ -83,114 +78,6 @@ export type SubmitOrderParams = WithAuth & {
 };
 
 type ProposalAction = "add" | "remove" | "move";
-
-const sanitizeName = (value: string) => sanitizePlainText(value).slice(0, 24);
-
-const sanitizeClue = (value: string) => sanitizePlainText(value).slice(0, 120);
-
-const sanitizeTopicText = (value: string) => sanitizePlainText(value).slice(0, 240);
-
-const safeTraceAction = (name: string, detail?: Record<string, unknown>) => {
-  try {
-    traceAction(name, detail);
-  } catch {
-    // swallow tracing failures on the server to avoid impacting API responses
-  }
-};
-
-const releaseLockSafely = async (roomId: string, holder: string) => {
-  try {
-    await releaseRoomLock(roomId, holder);
-  } catch (error) {
-    traceError("room.lock.release", error, { roomId, holder });
-  }
-};
-
-const waitMs = (durationMs: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, durationMs));
-
-const clearRoundPreparingWithRetry = async (params: {
-  roomRef: FirebaseFirestore.DocumentReference;
-  roomId: string;
-  context: string;
-}): Promise<boolean> => {
-  const { roomRef, roomId, context } = params;
-  const MAX_ATTEMPTS = 2;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    try {
-      await roomRef.update({
-        "ui.roundPreparing": false,
-        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-      });
-      return true;
-    } catch (error) {
-      traceError("ui.roundPreparing.clear.retry", error, { roomId, attempt, context });
-      if (attempt < MAX_ATTEMPTS) {
-        await waitMs(100);
-      }
-    }
-  }
-  return false;
-};
-
-const fetchPresenceUids = async (roomId: string): Promise<string[] | null> => {
-  const rtdb = getAdminRtdb();
-  if (!rtdb) return null;
-  try {
-    const snap = await rtdb.ref(`presence/${roomId}`).get();
-    const val = (snap.val() as Record<string, Record<string, { online?: boolean; ts?: number }>> | null) ?? {};
-    const now = Date.now();
-    const ACTIVE_WINDOW_MS = 30_000;
-    const online: string[] = [];
-    for (const [uid, conns] of Object.entries(val)) {
-      const hasActive = Object.values(conns ?? {}).some((c) => {
-        if (c?.online === false) return false;
-        const ts = typeof c?.ts === "number" ? c.ts : 0;
-        if (!ts) return true;
-        return now - ts <= ACTIVE_WINDOW_MS;
-      });
-      if (hasActive) online.push(uid);
-    }
-    return online;
-  } catch {
-    return null;
-  }
-};
-
-let cachedTopicSections: TopicSections | null = null;
-let cachedTopicSectionsPromise: Promise<TopicSections> | null = null;
-
-const loadTopicSectionsFromFs = async (): Promise<TopicSections> => {
-  const isProd = process.env.NODE_ENV === "production";
-  if (isProd && cachedTopicSections) {
-    return cachedTopicSections;
-  }
-  if (isProd && cachedTopicSectionsPromise) {
-    return cachedTopicSectionsPromise;
-  }
-
-  const filePath = path.join(process.cwd(), "public", "itoword.md");
-  const load = fs
-    .readFile(filePath, "utf8")
-    .then((text) => parseItoWordMarkdown(text));
-
-  if (!isProd) {
-    return load;
-  }
-
-  cachedTopicSectionsPromise = load
-    .then((sections) => {
-      cachedTopicSections = sections;
-      return sections;
-    })
-    .finally(() => {
-      cachedTopicSectionsPromise = null;
-    });
-  return cachedTopicSectionsPromise;
-};
-
-const isTopicTypeValue = (value: string | null | undefined): value is TopicType =>
-  typeof value === "string" && (topicTypeLabels as readonly string[]).includes(value as TopicType);
 
 async function verifyToken(token: string): Promise<string> {
   try {
