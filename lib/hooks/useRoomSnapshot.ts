@@ -11,8 +11,7 @@ import {
 } from "@/lib/services/roomService";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
-import { applyRoomSyncPatch } from "@/lib/sync/applyRoomSyncPatch";
-import { parseRoomSyncPatch } from "@/lib/sync/roomSyncPatch";
+import { useRoomSnapshotSyncPatchListener } from "@/lib/hooks/useRoomSnapshotSyncPatchListener";
 import {
   type RoomSnapshotWatchdogEpisode,
   type RoomSnapshotWatchdogTrigger,
@@ -22,7 +21,6 @@ import { APP_VERSION } from "@/lib/constants/appVersion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   loadPrefetchedRoom,
-  storePrefetchedRoom,
 } from "@/lib/prefetch/prefetchRoomExperience";
 import {
   ROOM_SNAPSHOT_DEFER_ENABLED,
@@ -282,61 +280,14 @@ export function useRoomSnapshot(
   }, [roomId]);
 
   // Apply sync patches (API/RTDB) without waiting for Firestore propagation.
-  useEffect(() => {
-    if (typeof window === "undefined") return () => undefined;
-    if (!roomId) return () => undefined;
-
-    const handler = (event: Event) => {
-      if (leavingRef.current) return;
-      const patch = parseRoomSyncPatch((event as CustomEvent).detail);
-      if (!patch || patch.roomId !== roomId) return;
-
-      const startedAt = typeof performance !== "undefined" ? performance.now() : null;
-      const result = applyRoomSyncPatch(roomStateRef.current, patch);
-      enqueueCommit(() => {
-        if (!result.applied) {
-          setMetric(
-            "roomSnapshot",
-            "patch.lastIgnored",
-            `${result.reason}@${patch.meta.source}:${patch.statusVersion}`
-          );
-          return;
-        }
-
-        statusVersionRef.current = patch.statusVersion;
-        roomStateRef.current = result.next;
-        setRoom(result.next);
-
-        setMetric("roomSnapshot", "patch.lastSource", patch.meta.source);
-        setMetric("roomSnapshot", "patch.lastStatusVersion", patch.statusVersion);
-        if (typeof patch.meta.ts === "number" && Number.isFinite(patch.meta.ts)) {
-          setMetric("roomSnapshot", "patch.lastTs", patch.meta.ts);
-        }
-        if (typeof patch.meta.requestId === "string" && patch.meta.requestId.trim().length > 0) {
-          setMetric("roomSnapshot", "patch.lastRequestId", patch.meta.requestId);
-        }
-        try {
-          traceAction("room.sync.patch.apply", {
-            source: patch.meta.source,
-            roomId,
-            statusVersion: String(patch.statusVersion),
-            status: patch.room.status ?? undefined,
-            command: patch.meta.command ?? undefined,
-            requestId: patch.meta.requestId ?? undefined,
-          });
-        } catch {}
-        try {
-          const { id: _ignored, ...toStore } = result.next;
-          storePrefetchedRoom(roomId, toStore as unknown as Record<string, unknown>);
-        } catch {}
-      }, startedAt, "syncPatchCommitMs");
-    };
-
-    window.addEventListener("ito:room-sync-patch", handler as EventListener);
-    return () => {
-      window.removeEventListener("ito:room-sync-patch", handler as EventListener);
-    };
-  }, [roomId, enqueueCommit]);
+  useRoomSnapshotSyncPatchListener({
+    roomId,
+    leavingRef,
+    roomStateRef,
+    statusVersionRef,
+    setRoom,
+    enqueueCommit,
+  });
 
   // RTDB roomSync event bus (server-issued fast notifications).
   useRoomSnapshotRtdbRoomSyncBus({
