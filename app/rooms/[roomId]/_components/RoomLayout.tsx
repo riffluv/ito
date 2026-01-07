@@ -43,6 +43,7 @@ import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
 import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
+import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -50,7 +51,6 @@ import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
-import { selectHostCandidate } from "@/lib/host/HostManager";
 import { showtime } from "@/lib/showtime";
 import {
   publishShowtimeEvent,
@@ -1011,66 +1011,19 @@ export function RoomLayout(props: RoomLayoutProps) {
     [isMember, players, uid]
   );
 
-  const hostClaimCandidateId = useMemo(() => {
-    const roomKey = room?.id ?? null;
-    if (!roomKey || players.length === 0) {
-      return null;
-    }
-
-    void joinVersion;
-
-    const onlineSet = new Set(Array.isArray(onlineUids) ? onlineUids : []);
-    const now = Date.now();
-
-    if (lastKnownHostId && players.some((p) => p.id === lastKnownHostId)) {
-      if (!presenceReady) {
-        return lastKnownHostId;
-      }
-      if (onlineSet.has(lastKnownHostId)) {
-        return lastKnownHostId;
-      }
-      if (lastKnownHostId === stableHostId && hostLikelyUnavailable) {
-        // host missing beyond grace; fall through to selectHostCandidate
-      } else {
-        const lastPresence =
-          presenceLastSeenRef.current.get(lastKnownHostId) ?? null;
-        if (lastPresence !== null && now - lastPresence < HOST_UNAVAILABLE_GRACE_MS) {
-          return lastKnownHostId;
-        }
-      }
-    }
-    const inputs = players.map((player) => {
-      const joinedAt =
-        playerJoinOrderRef.current.get(player.id) ?? Number.MAX_SAFE_INTEGER;
-      const lastPresence = presenceLastSeenRef.current.get(player.id) ?? null;
-      const isOnline =
-        !presenceReady ||
-        onlineSet.has(player.id) ||
-        (lastPresence !== null && now - lastPresence < HOST_UNAVAILABLE_GRACE_MS);
-      const lastSeenAt = lastPresence ?? null;
-      return {
-        id: player.id,
-        joinedAt,
-        orderIndex:
-          typeof player.orderIndex === "number" ? player.orderIndex : null,
-        lastSeenAt,
-        isOnline,
-        name: player.name ?? null,
-      };
-    });
-
-    return selectHostCandidate(inputs) ?? null;
-  }, [
-    room?.id,
+  const hostClaimCandidateId = useHostClaimCandidateId({
+    roomId: room?.id ?? null,
     players,
+    joinVersion,
+    playerJoinOrderRef,
     lastKnownHostId,
     stableHostId,
-    joinVersion,
     presenceReady,
     onlineUids,
     presenceLastSeenRef,
     hostLikelyUnavailable,
-  ]);
+    graceMs: HOST_UNAVAILABLE_GRACE_MS,
+  });
 
 
   const [pop, setPop] = useState(false);
