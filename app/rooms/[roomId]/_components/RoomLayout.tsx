@@ -52,6 +52,7 @@ import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
 import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
 import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
 import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
+import { useJoinEstablished } from "@/lib/hooks/useJoinEstablished";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -706,15 +707,12 @@ export function RoomLayout(props: RoomLayoutProps) {
     uid,
     displayName,
   });
-  const lastSeenAsMemberRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (isMember) {
-      lastSeenAsMemberRef.current = Date.now();
-    }
-  }, [isMember]);
-  const wasMemberRecently =
-    lastSeenAsMemberRef.current !== null &&
-    Date.now() - lastSeenAsMemberRef.current < 15000; // 15s grace to avoid transient demotion
+  const { joinEstablished } = useJoinEstablished({
+    isMember,
+    joinStatus,
+    roomStatus,
+    graceMs: 15000, // 15s grace to avoid transient demotion
+  });
   const dealPlayers = useMemo((): string[] | null => {
     const list = room?.deal?.players;
     if (!Array.isArray(list)) {
@@ -1020,9 +1018,6 @@ export function RoomLayout(props: RoomLayoutProps) {
 
 
 
-  const joinEstablished =
-    (joinStatus === "joined" && (isMember || room?.status === "waiting")) ||
-    wasMemberRecently;
   const spectatorJoinStatus = useMemo(() => {
     if (room?.status === "waiting") {
       return joinStatus;
