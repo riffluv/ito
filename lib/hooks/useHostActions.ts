@@ -26,6 +26,8 @@ import { normalizeProposalList } from "@/lib/hooks/hostActions/normalizeProposal
 import { describeSubmitOrderError } from "@/lib/hooks/hostActions/describeSubmitOrderError";
 import { handleCustomTopicSubmissionResult } from "@/lib/hooks/hostActions/handleCustomTopicSubmissionResult";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
+import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
+import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
 import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
 import { useActionCooldown } from "@/lib/hooks/hostActions/useActionCooldown";
 import { usePendingVisibilityKick } from "@/lib/hooks/hostActions/usePendingVisibilityKick";
@@ -176,55 +178,14 @@ export function useHostActions({
     latestRoomStatusRef.current = roomStatus;
   }, [roomStatus]);
 
-  useEffect(() => {
-    if (typeof statusVersion === "number" && Number.isFinite(statusVersion)) {
-      latestStatusVersionRef.current = statusVersion;
-    }
-  }, [statusVersion]);
-
-  useEffect(() => {
-    if (typeof statusVersion !== "number" || typeof performance === "undefined") {
-      return;
-    }
-    const now = performance.now();
-    const expected = expectedStatusVersionRef.current;
-
-    if (expected.reset !== null && statusVersion >= expected.reset) {
-      if (resetOkAtRef.current !== null) {
-        setMetric(
-          "hostAction",
-          "reset.statusVersionSyncMs",
-          Math.max(0, Math.round(now - resetOkAtRef.current))
-        );
-      }
-      expected.reset = null;
-      setMetric("hostAction", "reset.expectedStatusVersion", null);
-    }
-
-    if (expected.quickStart !== null && statusVersion >= expected.quickStart) {
-      if (quickStartOkAtRef.current !== null) {
-        setMetric(
-          "hostAction",
-          "quickStart.statusVersionSyncMs",
-          Math.max(0, Math.round(now - quickStartOkAtRef.current))
-        );
-      }
-      expected.quickStart = null;
-      setMetric("hostAction", "quickStart.expectedStatusVersion", null);
-    }
-
-    if (expected.nextGame !== null && statusVersion >= expected.nextGame) {
-      if (nextGameOkAtRef.current !== null) {
-        setMetric(
-          "hostAction",
-          "nextGame.statusVersionSyncMs",
-          Math.max(0, Math.round(now - nextGameOkAtRef.current))
-        );
-      }
-      expected.nextGame = null;
-      setMetric("hostAction", "nextGame.expectedStatusVersion", null);
-    }
-  }, [statusVersion]);
+  useHostActionStatusVersionSync({
+    statusVersion,
+    latestStatusVersionRef,
+    expectedStatusVersionRef,
+    resetOkAtRef,
+    quickStartOkAtRef,
+    nextGameOkAtRef,
+  });
 
   usePendingVisibilityKick({
     roomId,
@@ -243,71 +204,21 @@ export function useHostActions({
     resetEarlySyncTimerRef,
   });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (roomStatus && roomStatus !== "waiting" && quickStartStuckTimerRef.current !== null) {
-      window.clearTimeout(quickStartStuckTimerRef.current);
-      quickStartStuckTimerRef.current = null;
-    }
-    if (roomStatus && roomStatus !== "waiting" && quickStartEarlySyncTimerRef.current !== null) {
-      window.clearTimeout(quickStartEarlySyncTimerRef.current);
-      quickStartEarlySyncTimerRef.current = null;
-    }
-    if (roomStatus === "clue" && nextGameStuckTimerRef.current !== null) {
-      window.clearTimeout(nextGameStuckTimerRef.current);
-      nextGameStuckTimerRef.current = null;
-    }
-    if (roomStatus === "clue" && nextGameEarlySyncTimerRef.current !== null) {
-      window.clearTimeout(nextGameEarlySyncTimerRef.current);
-      nextGameEarlySyncTimerRef.current = null;
-    }
-    if (roomStatus === "waiting") {
-      if (typeof window !== "undefined" && resetStuckTimerRef.current !== null) {
-        window.clearTimeout(resetStuckTimerRef.current);
-        resetStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && resetEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(resetEarlySyncTimerRef.current);
-        resetEarlySyncTimerRef.current = null;
-      }
-      expectedStatusVersionRef.current.reset = null;
-      setMetric("hostAction", "reset.expectedStatusVersion", null);
-      if (typeof performance !== "undefined" && resetOkAtRef.current !== null) {
-        setMetric(
-          "hostAction",
-          "reset.statusSyncMs",
-          Math.max(0, Math.round(performance.now() - resetOkAtRef.current))
-        );
-      }
-      resetOkAtRef.current = null;
-    }
-    if (roomStatus === "clue") {
-      if (typeof performance !== "undefined") {
-        if (quickStartOkAtRef.current !== null) {
-          setMetric(
-            "hostAction",
-            "quickStart.statusSyncMs",
-            Math.max(0, Math.round(performance.now() - quickStartOkAtRef.current))
-          );
-        }
-        if (nextGameOkAtRef.current !== null) {
-          setMetric(
-            "hostAction",
-            "nextGame.statusSyncMs",
-            Math.max(0, Math.round(performance.now() - nextGameOkAtRef.current))
-          );
-        }
-      }
-      quickStartOkAtRef.current = null;
-      nextGameOkAtRef.current = null;
-      expectedStatusVersionRef.current.quickStart = null;
-      expectedStatusVersionRef.current.nextGame = null;
-      setMetric("hostAction", "quickStart.expectedStatusVersion", null);
-      setMetric("hostAction", "nextGame.expectedStatusVersion", null);
-      setQuickStartPending(false);
-      setIsRestarting(false);
-    }
-  }, [roomStatus]);
+  useHostActionRoomStatusSync({
+    roomStatus,
+    quickStartStuckTimerRef,
+    quickStartEarlySyncTimerRef,
+    nextGameStuckTimerRef,
+    nextGameEarlySyncTimerRef,
+    resetStuckTimerRef,
+    resetEarlySyncTimerRef,
+    expectedStatusVersionRef,
+    resetOkAtRef,
+    quickStartOkAtRef,
+    nextGameOkAtRef,
+    setQuickStartPending,
+    setIsRestarting,
+  });
 
   const { markActionStart, finalizeAction, abortAction } = useHostActionMetrics({
     actionLatencyRef,
