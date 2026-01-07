@@ -29,14 +29,11 @@ import {
 } from "@/lib/constants/presence";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import {
-  areAllCluesReady,
   collectServerAssignedSeatIds,
   computeSlotCount,
-  getClueTargetIds,
   getPresenceEligibleIds,
   prioritizeHostId,
 } from "@/lib/game/selectors";
-import { pruneProposalByEligible } from "@/lib/game/service";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
@@ -60,6 +57,7 @@ import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
 import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
 import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
 import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
+import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -71,7 +69,7 @@ import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
 import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/services/roomService";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
-import { logDebug, logInfo } from "@/lib/utils/log";
+import { logInfo } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -99,7 +97,6 @@ import {
   type SetStateAction,
 } from "react";
 import { APP_VERSION } from "@/lib/constants/appVersion";
-import { PRUNE_PROPOSAL_DEBOUNCE_MS } from '@/lib/constants/uiTimings';
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 
 const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
@@ -932,134 +929,13 @@ export function RoomLayout(props: RoomLayoutProps) {
     () => prioritizeHostId({ eligibleIds: presenceEligibleIds, hostId }),
     [hostId, presenceEligibleIds]
   );
-
-  const eligibleIdsSignature = useMemo(() => eligibleIds.join(","), [eligibleIds]);
-
-  const clueTargetIds = useMemo(
-    () =>
-      getClueTargetIds({
-        dealPlayers: room?.deal?.players ?? null,
-        eligibleIds,
-      }),
-    [room?.deal?.players, eligibleIds]
-  );
-
-  const allCluesReady = useMemo(
-    () =>
-      areAllCluesReady({
-        players,
-        targetIds: clueTargetIds,
-      }),
-    [players, clueTargetIds]
-  );
-  const cluesReadyToastStateRef = useRef<{ round: number; ready: boolean }>({
-    round: -1,
-    ready: false,
-  });
-  const cluesReadyToastTimerRef = useRef<number | null>(null);
-  const clearCluesReadyToastTimer = useCallback(() => {
-    if (cluesReadyToastTimerRef.current) {
-      window.clearTimeout(cluesReadyToastTimerRef.current);
-      cluesReadyToastTimerRef.current = null;
-    }
-  }, []);
-  useEffect(() => () => clearCluesReadyToastTimer(), [clearCluesReadyToastTimer]);
-
-  // 在室外IDが proposal に混入している場合の自動クリーンアップ（clue中のみ、軽いデバウンス）
-  const pruneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pruneSigRef = useRef<string>("");
-  useEffect(() => {
-    if (!room || room.status !== "clue") {
-      if (pruneTimerRef.current) {
-        clearTimeout(pruneTimerRef.current);
-        pruneTimerRef.current = null;
-      }
-      pruneSigRef.current = "";
-      return () => {};
-    }
-    const proposal: (string | null)[] = Array.isArray(room?.order?.proposal)
-      ? (room.order!.proposal as (string | null)[])
-      : [];
-    const extra = proposal.filter(
-      (pid): pid is string => typeof pid === "string" && !eligibleIds.includes(pid)
-    );
-    const sig = `${roomId}|${room?.round || 0}|${proposal.join(',')}|${eligibleIds.join(',')}`;
-    if (extra.length === 0 || pruneSigRef.current === sig) return () => {};
-    pruneSigRef.current = sig;
-    if (pruneTimerRef.current) {
-      clearTimeout(pruneTimerRef.current);
-      pruneTimerRef.current = null;
-    }
-    pruneTimerRef.current = setTimeout(() => {
-      pruneProposalByEligible(roomId, eligibleIds).catch(() => {});
-    }, PRUNE_PROPOSAL_DEBOUNCE_MS);
-    return () => {
-      if (pruneTimerRef.current) {
-        clearTimeout(pruneTimerRef.current);
-        pruneTimerRef.current = null;
-      }
-    };
-  }, [room?.status, room?.order?.proposal, room?.round, eligibleIdsSignature, roomId, eligibleIds, room]);
-
-  useEffect(() => {
-    if (!room) {
-      clearCluesReadyToastTimer();
-      return;
-    }
-
-    const round = room?.round || 0;
-    if (cluesReadyToastStateRef.current.round !== round) {
-      cluesReadyToastStateRef.current = { round, ready: allCluesReady };
-      clearCluesReadyToastTimer();
-      return;
-    }
-
-    if (!isHost) {
-      cluesReadyToastStateRef.current.ready = allCluesReady;
-      clearCluesReadyToastTimer();
-      return;
-    }
-
-    const status = room?.status;
-    if (status !== "clue" || room?.ui?.roundPreparing || room?.ui?.revealPending) {
-      cluesReadyToastStateRef.current.ready = allCluesReady;
-      clearCluesReadyToastTimer();
-      return;
-    }
-
-    if (!cluesReadyToastStateRef.current.ready && allCluesReady) {
-      const mode = room?.options?.resolveMode || "sequential";
-      const id = `clues-ready-${mode}-${roomId}-${round}`;
-      clearCluesReadyToastTimer();
-      cluesReadyToastTimerRef.current = window.setTimeout(() => {
-        try {
-          notify({
-            id,
-            type: "success",
-            title: "全員の連想ワードが揃いました",
-            description:
-              "カードを全員場に置き、相談して並べ替えてから『せーので判定』を押してください",
-            duration: 6000,
-          });
-        } catch (error) {
-          logDebug("room-page", "notify-clues-ready-failed", error);
-        }
-      }, 420);
-    }
-
-    cluesReadyToastStateRef.current.ready = allCluesReady;
-  }, [
-    allCluesReady,
-    clearCluesReadyToastTimer,
-    isHost,
-    room,
-    room?.options?.resolveMode,
-    room?.round,
-    room?.status,
-    room?.ui?.revealPending,
-    room?.ui?.roundPreparing,
+  const { clueTargetIds, allCluesReady } = useCluePhaseHygiene({
     roomId,
-  ]);
+    room,
+    players,
+    eligibleIds,
+    isHost,
+  });
 
   // 戦績モーダルは finished → その他 への遷移時に自動で閉じる（再オープンは手動で可）。
   useEffect(() => {
