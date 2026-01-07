@@ -22,6 +22,9 @@ import { handleNextGameFailure } from "@/lib/hooks/hostActions/handleNextGameFai
 import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQuickStartWithNotWaitingRetry";
 import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
 import { scheduleNextGameSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleNextGameSyncWatchdogs";
+import { normalizeProposalList } from "@/lib/hooks/hostActions/normalizeProposalList";
+import { describeSubmitOrderError } from "@/lib/hooks/hostActions/describeSubmitOrderError";
+import { handleCustomTopicSubmissionResult } from "@/lib/hooks/hostActions/handleCustomTopicSubmissionResult";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
 import { useActionCooldown } from "@/lib/hooks/hostActions/useActionCooldown";
@@ -1037,10 +1040,7 @@ export function useHostActions({
     // 連打やダブルクリックで二重送信しない
     if (evalSortedPendingRef.current) return false;
 
-    if (!proposal || proposal.length === 0) return false;
-    const list = proposal.filter(
-      (value): value is string => typeof value === "string" && value.length > 0
-    );
+    const list = normalizeProposalList(proposal);
     if (list.length === 0) return false;
 
     evalSortedPendingRef.current = true;
@@ -1080,53 +1080,16 @@ export function useHostActions({
         );
       }
       traceError("ui.order.submit", error, { roomId, count: list.length });
-      const apiError = error as {
-        code?: unknown;
-        status?: unknown;
-        details?: unknown;
-        url?: unknown;
-      };
-      const code = typeof apiError?.code === "string" ? apiError.code : null;
-      const status = typeof apiError?.status === "number" ? apiError.status : null;
-      const reason =
-        typeof (apiError?.details as { reason?: unknown } | null)?.reason === "string"
-          ? (apiError.details as { reason: string }).reason
-          : null;
+      const { code, status, reason, url, description } = describeSubmitOrderError(error);
       console.warn("[order] submit failed", {
         roomId,
         count: list.length,
         code,
         status,
         reason,
-        url: typeof apiError?.url === "string" ? apiError.url : null,
+        url,
         error,
       });
-      const description = (() => {
-        if (code === "timeout") {
-          return "通信がタイムアウトしました。数秒待ってからもう一度お試しください。";
-        }
-        if (code === "unauthorized") {
-          return "認証の準備中です。数秒待ってからもう一度お試しください。";
-        }
-        if (code === "forbidden") {
-          return "ホスト権限が必要です。";
-        }
-        if (code === "invalid_status") {
-          return "進行状態が更新されました。画面が切り替わらない場合は少し待ってからもう一度お試しください。";
-        }
-        if (code === "room/join/version-mismatch") {
-          return "別バージョンで動作している可能性があります。ページを更新してからやり直してください。";
-        }
-        if (code === "invalid_payload") {
-          return "提出枚数や並び順を確認して、もう一度お試しください。";
-        }
-        if (status === 429) {
-          return "短時間に操作が集中しました。少し待ってからもう一度お試しください。";
-        }
-        const message = error instanceof Error ? error.message : "";
-        if (message && (!code || message !== code)) return message;
-        return "提出枚数や並び順を確認して、もう一度お試しください。";
-      })();
       notify({
         id: toastIds.genericError(roomId, "submit-order"),
         title: "並びの確定に失敗しました",
@@ -1171,42 +1134,13 @@ export function useHostActions({
         });
         setCustomOpen(false);
 
-        if (!shouldAutoStart) {
-          notify({
-            id: toastIds.topicChangeSuccess(roomId),
-            title: "お題を更新しました",
-            description: "ホストが開始するとゲームがスタートします",
-            type: "success",
-            duration: 1800,
-          });
-          return;
-        }
-
-        if (result && "ok" in result && result.ok === false) {
-          if (result.reason === "presence-not-ready") {
-            ensurePresenceReady();
-          } else if (result.reason === "host-mismatch") {
-            notify({
-              id: toastIds.genericInfo(roomId, "host-mismatch"),
-              title: "ホスト権限の確定を待っています",
-              description: "権限が移動した直後は数秒後にもう一度お試しください",
-              type: "warning",
-              duration: 2600,
-            });
-          }
-          return;
-        }
-
-        if ((result as { started?: boolean })?.started === false) {
-          notify({
-            id: toastIds.topicChangeSuccess(roomId),
-            title: "お題を更新しました",
-            description: "ホストが開始するとゲームがスタートします",
-            type: "success",
-            duration: 1800,
-          });
-          return;
-        }
+        const shouldProceed = handleCustomTopicSubmissionResult({
+          roomId,
+          shouldAutoStart,
+          result,
+          ensurePresenceReady: () => void ensurePresenceReady(),
+        });
+        if (!shouldProceed) return;
 
         showtimeIntents?.markStartIntent?.({
           action: "quickStart:customTopic",
@@ -1230,20 +1164,20 @@ export function useHostActions({
       }
     },
     [
-    roomId,
-    isHost,
-    roomStatus,
-    customStartPending,
-    actualResolveMode,
-    playOrderConfirm,
-    ensurePresenceReady,
-    showtimeIntents,
-    hostActions,
-    presenceCanStart,
-    onlineUids,
-    playerCount,
-  ]
-);
+      roomId,
+      isHost,
+      roomStatus,
+      customStartPending,
+      actualResolveMode,
+      playOrderConfirm,
+      ensurePresenceReady,
+      showtimeIntents,
+      hostActions,
+      presenceCanStart,
+      onlineUids,
+      playerCount,
+    ]
+  );
 
   return {
     quickStart,
