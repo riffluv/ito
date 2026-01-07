@@ -1,6 +1,6 @@
 "use client";
 
-import { db, firebaseEnabled, rtdb } from "@/lib/firebase/client";
+import { db, firebaseEnabled } from "@/lib/firebase/client";
 import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { notify } from "@/components/ui/notify";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
@@ -36,7 +36,6 @@ import {
   onSnapshot,
   type FirestoreError,
 } from "firebase/firestore";
-import { off as offRtdb, onValue, ref as rtdbRef, type DataSnapshot } from "firebase/database";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import {
@@ -69,6 +68,7 @@ import {
   ROOM_SNAPSHOT_RESUME_WINDOW_MS,
   ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS,
 } from "@/lib/hooks/roomSnapshotConfig";
+import { useRoomSnapshotRtdbRoomSyncBus } from "@/lib/hooks/useRoomSnapshotRtdbRoomSyncBus";
 
 export type RoomSyncHealth =
   | "initial"
@@ -453,103 +453,15 @@ export function useRoomSnapshot(
   }, [roomId, enqueueCommit]);
 
   // RTDB roomSync event bus (server-issued fast notifications).
-  useEffect(() => {
-    if (typeof window === "undefined") return () => undefined;
-    if (!roomId || !rtdb) return () => undefined;
-
-    const ref = rtdbRef(rtdb, `roomSync/${roomId}/latest`);
-    const handler = (snap: DataSnapshot) => {
-      if (leavingRef.current) return;
-      const patch = parseRoomSyncPatch(snap.val());
-      if (!patch || patch.roomId !== roomId) return;
-
-      const key = `${patch.statusVersion}:${patch.meta.ts ?? 0}:${patch.meta.requestId ?? ""}:${patch.meta.command ?? ""}`;
-      if (key === rtdbLastEventKeyRef.current) return;
-      rtdbLastEventKeyRef.current = key;
-      rtdbLastEventVersionRef.current = patch.statusVersion;
-
-      setMetric("roomSnapshot", "rtdb.lastEventTs", Date.now());
-      setMetric("roomSnapshot", "rtdb.lastStatusVersion", patch.statusVersion);
-      if (typeof patch.meta.ts === "number" && Number.isFinite(patch.meta.ts)) {
-        setMetric("roomSnapshot", "rtdb.lastEventServerTs", patch.meta.ts);
-      }
-
-      try {
-        traceAction("room.sync.event.received", {
-          source: "rtdb",
-          roomId,
-          statusVersion: String(patch.statusVersion),
-          command: patch.meta.command ?? undefined,
-          requestId: patch.meta.requestId ?? undefined,
-        });
-      } catch {}
-
-      try {
-        window.dispatchEvent(new CustomEvent("ito:room-sync-patch", { detail: patch }));
-      } catch {}
-
-      const serverVersion = lastServerStatusVersionRef.current;
-      if (patch.statusVersion <= serverVersion) {
-        return;
-      }
-
-      rtdbPendingConfirmVersionRef.current = patch.statusVersion;
-      if (rtdbConfirmTimerRef.current !== null) {
-        clearTimeout(rtdbConfirmTimerRef.current);
-        rtdbConfirmTimerRef.current = null;
-      }
-      rtdbConfirmTimerRef.current = setTimeout(() => {
-        rtdbConfirmTimerRef.current = null;
-        const pending = rtdbPendingConfirmVersionRef.current;
-        if (pending !== patch.statusVersion) return;
-        const confirmed = lastServerStatusVersionRef.current;
-        if (confirmed >= patch.statusVersion) return;
-
-        try {
-          traceAction("room.sync.rtdb.unconfirmed.forceRefresh", {
-            roomId,
-            statusVersion: String(patch.statusVersion),
-            confirmedVersion: String(confirmed),
-          });
-        } catch {}
-        try {
-          window.dispatchEvent(
-            new CustomEvent("ito:room-force-refresh", {
-              detail: {
-                roomId,
-                reason: `room.sync.rtdb.unconfirmed:${patch.statusVersion}`,
-              },
-            })
-          );
-        } catch {}
-        try {
-          window.dispatchEvent(
-            new CustomEvent("ito:room-restart-listener", {
-              detail: {
-                roomId,
-                reason: `room.sync.rtdb.unconfirmed:${patch.statusVersion}`,
-              },
-            })
-          );
-        } catch {}
-      }, 1500);
-    };
-    const onErr = (error: Error) => {
-      setMetric("roomSnapshot", "rtdb.lastListenErrorTs", Date.now());
-      traceError("room.sync.event.listen", error, { roomId });
-    };
-
-    onValue(ref, handler, onErr);
-    return () => {
-      try {
-        offRtdb(ref, "value", handler);
-      } catch {}
-      if (rtdbConfirmTimerRef.current !== null) {
-        clearTimeout(rtdbConfirmTimerRef.current);
-        rtdbConfirmTimerRef.current = null;
-      }
-    };
-  }, [roomId]);
+  useRoomSnapshotRtdbRoomSyncBus({
+    roomId,
+    leavingRef,
+    lastServerStatusVersionRef,
+    rtdbLastEventVersionRef,
+    rtdbLastEventKeyRef,
+    rtdbConfirmTimerRef,
+    rtdbPendingConfirmVersionRef,
+  });
 
   useEffect(() => {
     // Confirm optimistic patches when Firestore catches up.
