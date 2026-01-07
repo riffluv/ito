@@ -4,7 +4,8 @@ export type BackgroundOption = BackgroundTheme;
 export type SceneryVariant = "night" | "inferno";
 export type SettingsTab = "game" | "graphics" | "sound";
 export type GraphicsTab = "background" | "animation";
-export type AnimationModeOption = "3d" | "simple";
+export type AnimationModeOption = "auto" | "3d" | "simple";
+export type CardAnimationOption = Exclude<AnimationModeOption, "auto">;
 
 export const SETTINGS_TABS: ReadonlyArray<{ key: SettingsTab; label: string }> = [
   { key: "game", label: "Game Settings" },
@@ -18,7 +19,7 @@ export const GRAPHICS_TABS: ReadonlyArray<{ key: GraphicsTab; label: string }> =
 ];
 
 export const CARD_ANIMATION_OPTIONS: ReadonlyArray<{
-  value: AnimationModeOption;
+  value: CardAnimationOption;
   title: string;
   description: string;
 }> = [
@@ -138,4 +139,3 @@ export const TOPIC_TYPE_OPTIONS: ReadonlyArray<{
     description: "じぶんたちで お題を入力して あそぶ",
   },
 ];
-
