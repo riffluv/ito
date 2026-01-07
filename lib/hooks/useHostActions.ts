@@ -18,7 +18,10 @@ import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { handleQuickStartFailure } from "@/lib/hooks/hostActions/handleQuickStartFailure";
+import { handleNextGameFailure } from "@/lib/hooks/hostActions/handleNextGameFailure";
 import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQuickStartWithNotWaitingRetry";
+import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
+import { scheduleNextGameSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleNextGameSyncWatchdogs";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
 import { useActionCooldown } from "@/lib/hooks/hostActions/useActionCooldown";
@@ -722,13 +725,13 @@ export function useHostActions({
       const includeOnline = options?.includeOnline ?? true;
       const recallSpectators =
         options?.recallSpectators ?? true;
-    markActionStart("reset");
-    setIsResetting(true);
-    if (!canProceed("reset")) {
-      finalizeAction("reset", "error");
-      setIsResetting(false);
-      return;
-    }
+      markActionStart("reset");
+      setIsResetting(true);
+      if (!canProceed("reset")) {
+        finalizeAction("reset", "error");
+        setIsResetting(false);
+        return;
+      }
       beginResetUiHold(3400);
       onStageEvent?.("reset:start");
       if (shouldPlaySound) {
@@ -762,91 +765,13 @@ export function useHostActions({
           const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
           expectedStatusVersionRef.current.reset = expectedVersion;
           setMetric("hostAction", "reset.expectedStatusVersion", expectedVersion);
-          if (typeof window !== "undefined") {
-            if (resetEarlySyncTimerRef.current !== null) {
-              window.clearTimeout(resetEarlySyncTimerRef.current);
-            }
-            resetEarlySyncTimerRef.current = window.setTimeout(() => {
-              try {
-                if (latestRoomStatusRef.current === "waiting") {
-                  return;
-                }
-                window.dispatchEvent(
-                  new CustomEvent("ito:room-force-refresh", {
-                    detail: {
-                      roomId,
-                      reason: "host.reset.earlySync",
-                    },
-                  })
-                );
-              } catch {}
-            }, 520);
-
-            if (resetStuckTimerRef.current !== null) {
-              window.clearTimeout(resetStuckTimerRef.current);
-            }
-            resetStuckTimerRef.current = window.setTimeout(() => {
-              void (async () => {
-                try {
-                  if (latestRoomStatusRef.current === "waiting") {
-                    return;
-                  }
-                  if (!db) {
-                    return;
-                  }
-                  const ref = doc(db, "rooms", roomId);
-                  const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
-                  const data = snap.data() as { status?: unknown } | undefined;
-                  const serverStatus =
-                    typeof data?.status === "string" ? data.status : null;
-                  const localStatus = latestRoomStatusRef.current ?? "unknown";
-                  if (serverStatus === "waiting" && localStatus !== "waiting") {
-                    traceAction("ui.room.reset.stuck", {
-                      roomId,
-                      localStatus,
-                      serverStatus,
-                    });
-                    try {
-                      window.dispatchEvent(
-                        new CustomEvent("ito:room-force-refresh", {
-                          detail: {
-                            roomId,
-                            reason: "host.reset.stuck",
-                          },
-                        })
-                      );
-                    } catch {}
-                    try {
-                      window.dispatchEvent(
-                        new CustomEvent("ito:room-restart-listener", {
-                          detail: {
-                            roomId,
-                            reason: "host.reset.stuck",
-                          },
-                        })
-                      );
-                    } catch {}
-                    notify({
-                      id: toastIds.genericInfo(roomId, "reset-stuck"),
-                      title: "画面の同期が遅れています",
-                      description:
-                        "最新の状態を取得します。改善しない場合はページを再読み込みしてください。",
-                      type: "warning",
-                      duration: 4200,
-                    });
-                  } else if (serverStatus) {
-                    traceAction("ui.room.reset.stuck", {
-                      roomId,
-                      localStatus,
-                      serverStatus,
-                    });
-                  }
-                } catch (error) {
-                  traceError("ui.room.reset.stuckRead", error, { roomId });
-                }
-              })();
-            }, 3200);
-          }
+          scheduleResetSyncWatchdogs({
+            roomId,
+            db,
+            latestRoomStatusRef,
+            resetEarlySyncTimerRef,
+            resetStuckTimerRef,
+          });
         }
         // Hold the UI in a waiting-like state until Firestore/FSM catches up.
         beginResetUiHold(2400);
@@ -1018,111 +943,7 @@ export function useHostActions({
           errorCode: result.errorCode,
         });
         console.warn("[nextGame] nextRound API failed:", result.reason, result.errorMessage);
-
-        const status =
-          typeof result.status === "number" ? result.status : undefined;
-        const code = result.errorCode ?? "unknown";
-        const isNetworkError =
-          status === undefined &&
-          Boolean((result.errorMessage ?? "").match(/failed to fetch|network/i));
-        const isVersionMismatch =
-          code === "room/join/version-mismatch" ||
-          code === "client_version_required" ||
-          code === "room/create/update-required" ||
-          code === "room/create/version-mismatch";
-
-        const mismatchType =
-          typeof (result.details as { mismatchType?: unknown } | null)?.mismatchType === "string"
-            ? (result.details as { mismatchType: string }).mismatchType
-            : null;
-        const mismatchHint =
-          mismatchType === "client_outdated"
-            ? "（この端末の更新が古い可能性があります）"
-            : mismatchType === "room_outdated"
-              ? "（作成直後に更新が入った可能性があります）"
-              : "";
-
-        const debugBits = [
-          typeof status === "number" ? `status:${status}` : null,
-          code ? `code:${code}` : null,
-          `reason:${result.reason}`,
-        ].filter((x): x is string => typeof x === "string" && x.length > 0);
-
-        if (isVersionMismatch) {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-version-mismatch"),
-            title: "更新が必要です",
-            description: `メインメニューで「更新を適用」後に再読み込みしてください。${mismatchHint}（${debugBits.join(", ")}）`,
-            type: "error",
-            duration: 4200,
-          });
-          clearAutoStartLock();
-          return;
-        }
-        if (status === 401 || code === "unauthorized") {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-unauthorized"),
-            title: "認証が必要です",
-            description: `再読み込みしてから再試行してください。（${debugBits.join(", ")}）`,
-            type: "error",
-            duration: 3600,
-          });
-          clearAutoStartLock();
-          return;
-        }
-        if (isNetworkError) {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-network"),
-            title: "通信に失敗しました",
-            description: `通信状態を確認して再試行してください。（${debugBits.join(", ")}）`,
-            type: "error",
-            duration: 3400,
-          });
-          clearAutoStartLock();
-          return;
-        }
-
-        if (result.reason === "forbidden") {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-forbidden"),
-            title: "ホスト権限がありません",
-            description: "権限が移動した可能性があります。",
-            type: "warning",
-            duration: 2600,
-          });
-        } else if (result.reason === "no_players") {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-no-players"),
-            title: "プレイヤーがいません",
-            description: "最低1人が入室してから開始してください。",
-            type: "warning",
-            duration: 2600,
-          });
-        } else if (result.reason === "rate-limited") {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-rate-limit"),
-            title: "処理を順番待ちしています…",
-            description: "短時間に複数の開始要求が重なりました。",
-            type: "info",
-            duration: 1600,
-          });
-        } else if (result.reason === "invalid_status") {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-invalid-status"),
-            title: "次のゲームを開始できませんでした",
-            description: `状態が更新中の可能性があります。数秒後に再試行してください。（${debugBits.join(", ")}）`,
-            type: "warning",
-            duration: 2600,
-          });
-        } else {
-          notify({
-            id: toastIds.genericInfo(roomId, "nextgame-failed"),
-            title: "次のゲームを開始できませんでした",
-            description: debugBits.length > 0 ? debugBits.join(" / ") : "もう一度お試しください。",
-            type: "warning",
-            duration: 2600,
-          });
-        }
+        handleNextGameFailure({ roomId, result });
         clearAutoStartLock();
         return;
       }
@@ -1155,82 +976,14 @@ export function useHostActions({
       onStageEvent?.("round:start");
       onStageEvent?.("round:end");
 
-      if (typeof window !== "undefined") {
-        if (nextGameEarlySyncTimerRef.current !== null) {
-          window.clearTimeout(nextGameEarlySyncTimerRef.current);
-        }
-        const requestId = result.requestId;
-        nextGameEarlySyncTimerRef.current = window.setTimeout(() => {
-          try {
-            if (latestRoomStatusRef.current === "clue") {
-              return;
-            }
-            window.dispatchEvent(
-              new CustomEvent("ito:room-force-refresh", {
-                detail: {
-                  roomId,
-                  reason: `host.nextGame.earlySync:${requestId}`,
-                },
-              })
-            );
-          } catch {}
-        }, 520);
-        nextGameStuckTimerRef.current = window.setTimeout(() => {
-          void (async () => {
-            try {
-              if (latestRoomStatusRef.current === "clue") {
-                return;
-              }
-              if (!db) {
-                return;
-              }
-              const ref = doc(db, "rooms", roomId);
-              const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
-              const data = snap.data() as { status?: unknown } | undefined;
-              const serverStatus =
-                typeof data?.status === "string" ? data.status : null;
-              if (serverStatus === "clue" && latestRoomStatusRef.current !== "clue") {
-                traceAction("ui.host.nextGame.stuck", {
-                  roomId,
-                  requestId,
-                  localStatus: latestRoomStatusRef.current ?? "unknown",
-                  serverStatus,
-                });
-                try {
-                  window.dispatchEvent(
-                    new CustomEvent("ito:room-force-refresh", {
-                      detail: {
-                        roomId,
-                        reason: `host.nextGame.stuck:${requestId}`,
-                      },
-                    })
-                  );
-                } catch {}
-                notify({
-                  id: toastIds.genericInfo(roomId, "nextgame-stuck"),
-                  title: "次のラウンドは開始されています",
-                  description:
-                    "画面の同期が遅れています。ルーム情報を再取得します。改善しない場合はページを再読み込みしてください。",
-                  type: "warning",
-                  duration: 4200,
-                });
-              } else if (serverStatus) {
-                traceAction("ui.host.nextGame.stuck", {
-                  roomId,
-                  requestId,
-                  localStatus: latestRoomStatusRef.current ?? "unknown",
-                  serverStatus,
-                });
-              }
-            } catch (error) {
-              traceError("ui.host.nextGame.stuckRead", error, {
-                roomId,
-                requestId,
-              });
-            }
-          })();
-        }, 3200);
-      }
+      scheduleNextGameSyncWatchdogs({
+        roomId,
+        requestId: result.requestId,
+        db,
+        latestRoomStatusRef,
+        nextGameEarlySyncTimerRef,
+        nextGameStuckTimerRef,
+      });
     } catch (error) {
       clearAutoStartLock();
       finalizeAction("nextGame", "error");
