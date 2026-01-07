@@ -2,21 +2,19 @@ import { notify } from "@/components/ui/notify";
 import { scheduleAddCardToProposalAtPosition } from "@/lib/game/proposalScheduler";
 import { addCardToProposal } from "@/lib/game/service";
 import type { PlayerDoc } from "@/lib/types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSoundManager } from "@/lib/audio/SoundProvider";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { useAudioResumeOnPointer } from "./useAudioResumeOnPointer";
 import { useDropSounds } from "./dropHandlerSounds";
 import {
   useDropEligibility,
 } from "./dropHandlerEligibility";
 import { createDropMetricsSession } from "./dropMetrics";
+import { useDropHandlerOptimisticRollback } from "./useDropHandlerOptimisticRollback";
 
 export const DROP_OPTIMISTIC_ENABLED =
   process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC === "1";
-
-// Align rollbackウィンドウをCentralCardBoard側（~1.7s）と揃え、
-// 遅延時の早すぎる巻き戻りを防ぐ
-const OPTIMISTIC_ROLLBACK_MS = 1700;
 
 interface UseDropHandlerProps {
   roomId: string;
@@ -86,167 +84,22 @@ export function useDropHandler({
         : [],
     [_proposal]
   );
-  const proposalSignature = useMemo(
-    () => (sanitizedProposal.length > 0 ? sanitizedProposal.join(",") : "none"),
-    [sanitizedProposal]
-  );
+  const { scheduleOptimisticRollback, clearOptimisticEntry } =
+    useDropHandlerOptimisticRollback({
+      optimisticMode,
+      roomId,
+      meId,
+      sanitizedProposal,
+      setPending,
+    });
 
-  const pointerUnlockArmedRef = useRef(false);
-  const pointerUnlockDoneRef = useRef(false);
-  const latestProposalRef = useRef<string[]>([]);
-  const optimisticEntriesRef = useRef<
-    Map<
-      string,
-      {
-        snapshot: (string | null)[];
-        timer: number | null;
-        targetIndex?: number;
-      }
-    >
-  >(new Map());
-
-  const scheduleOptimisticRollback = useCallback(
-    (pid: string, snapshot: (string | null)[], targetIndex?: number) => {
-      if (!optimisticMode) return;
-      if (typeof window === "undefined") return;
-      const existing = optimisticEntriesRef.current.get(pid);
-      if (existing?.timer) {
-        clearTimeout(existing.timer);
-      }
-      const snapshotCopy = Array.isArray(snapshot) ? snapshot.slice() : [];
-      const timer = window.setTimeout(() => {
-        const latest = latestProposalRef.current;
-        if (latest.includes(pid)) {
-          optimisticEntriesRef.current.delete(pid);
-          return;
-        }
-        setPending(() => snapshotCopy);
-        optimisticEntriesRef.current.delete(pid);
-        traceAction("interaction.drop.rollback", {
-          roomId,
-          playerId: meId,
-          index: typeof targetIndex === "number" ? targetIndex : undefined,
-        });
-        notify({
-          title: "配置を巻き戻しました",
-          description: "サーバーの結果と一致しませんでした。",
-          type: "warning",
-        });
-      }, OPTIMISTIC_ROLLBACK_MS);
-      optimisticEntriesRef.current.set(pid, {
-        snapshot: snapshotCopy,
-        timer,
-        targetIndex,
-      });
-    },
-    [meId, optimisticMode, roomId, setPending]
-  );
-
-  const clearOptimisticEntry = useCallback((pid: string) => {
-    const entry = optimisticEntriesRef.current.get(pid);
-    if (entry?.timer) {
-      clearTimeout(entry.timer);
-    }
-    if (entry) {
-      optimisticEntriesRef.current.delete(pid);
-    }
-  }, []);
-
-  useEffect(() => {
-    const audioResumeEnabled = process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER === "1";
-    if (!audioResumeEnabled || typeof window === "undefined" || !soundManager) {
-      return undefined;
-    }
-
-    if (roomStatus !== "clue") {
-      pointerUnlockArmedRef.current = false;
-      pointerUnlockDoneRef.current = false;
-      return undefined;
-    }
-    if (pointerUnlockDoneRef.current || pointerUnlockArmedRef.current) {
-      return undefined;
-    }
-
-    const handlePointer = () => {
-      pointerUnlockDoneRef.current = true;
-      pointerUnlockArmedRef.current = false;
-      soundManager.markUserInteraction();
-      void soundManager.prepareForInteraction();
-    };
-
-    pointerUnlockArmedRef.current = true;
-    window.addEventListener("pointerdown", handlePointer, { passive: true, once: true });
-
-    return () => {
-      if (pointerUnlockArmedRef.current && !pointerUnlockDoneRef.current) {
-        window.removeEventListener("pointerdown", handlePointer);
-        pointerUnlockArmedRef.current = false;
-      }
-    };
-  }, [roomStatus, soundManager]);
+  useAudioResumeOnPointer({ roomStatus, soundManager });
 
   useEffect(() => {
     if (!soundManager) return;
     if (!dealReady) return;
     void soundManager.prepareForInteraction();
   }, [dealReady, soundManager]);
-
-  useEffect(() => {
-    latestProposalRef.current = sanitizedProposal.slice();
-  }, [sanitizedProposal]);
-
-  useEffect(() => {
-    if (!optimisticMode) return;
-    const latest = latestProposalRef.current;
-    if (!Array.isArray(latest) || latest.length === 0) return;
-    const proposalIndexMap = new Map<string, number>();
-    latest.forEach((value, idx) => {
-      if (typeof value === "string" && value.length > 0) {
-        proposalIndexMap.set(value, idx);
-      }
-    });
-    if (proposalIndexMap.size === 0) return;
-    setPending((prev) => {
-      if (prev.length === 0) return prev;
-      let changed = false;
-      const next = prev.slice();
-      for (let idx = 0; idx < next.length; idx += 1) {
-        const value = next[idx];
-        if (typeof value !== "string" || value.length === 0) continue;
-        const remoteIndex = proposalIndexMap.get(value);
-        if (typeof remoteIndex !== "number") continue;
-        if (remoteIndex !== idx) continue;
-        next[idx] = null;
-        changed = true;
-        clearOptimisticEntry(value);
-      }
-      if (!changed) return prev;
-      while (next.length > 0) {
-        const tail = next[next.length - 1];
-        if (tail === null || typeof tail === "undefined") {
-          next.pop();
-          continue;
-        }
-        break;
-      }
-      return next;
-    });
-  }, [clearOptimisticEntry, optimisticMode, proposalSignature]);
-
-  const resetOptimisticEntries = useCallback(() => {
-    optimisticEntriesRef.current.forEach((entry) => {
-      if (entry.timer) {
-        clearTimeout(entry.timer);
-      }
-    });
-    optimisticEntriesRef.current.clear();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      resetOptimisticEntries();
-    };
-  }, [resetOptimisticEntries]);
 
   const canDropAtPosition = useMemo(() => {
     return (_targetIndex: number) => canDrop;
