@@ -21,18 +21,12 @@ import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
 import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
 import {
-  resetPlayerState,
-  setPlayerName,
-} from "@/lib/firebase/players";
-import {
   PRESENCE_STALE_MS,
 } from "@/lib/constants/presence";
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import {
   collectServerAssignedSeatIds,
   computeSlotCount,
-  getPresenceEligibleIds,
-  prioritizeHostId,
 } from "@/lib/game/selectors";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
@@ -58,6 +52,8 @@ import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
 import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
 import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
 import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
+import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
+import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -66,12 +62,9 @@ import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
-import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/services/roomService";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logInfo } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
-import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import {
@@ -779,23 +772,14 @@ export function RoomLayout(props: RoomLayoutProps) {
   });
 
 
-  useEffect(() => {
-    if (!room || !uid || !me) return;
-    if (room.status !== "clue") return;
-    if (!room.deal || !room.deal.seed) return;
-    if (!Array.isArray(room.deal.players) || !room.deal.players.includes(uid)) return;
-
-    assignNumberIfNeeded(roomId, uid, room).catch(() => void 0);
-  }, [
-    room?.status,
-    room?.deal?.seed,
-    room?.deal?.players,
-    uid,
+  useRoomPlayerHygiene({
     roomId,
-    me?.id,
     room,
+    uid,
     me,
-  ]);
+    players,
+    displayName,
+  });
   useEffect(() => {
     const status = room?.status ?? null;
     if (!isMember) {
@@ -824,46 +808,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     overlayStatusRef.current = status;
   }, [room?.status, isMember, showTransitionMessage, transitionMessage]);
 
-
-
-
-
-
-  const [seenRound, setSeenRound] = useState<number>(0);
-  const myPlayer = useMemo(
-    () => players.find((p) => p.id === uid),
-    [players, uid]
-  );
-
-  useEffect(() => {
-    if (!uid) return;
-    const r = room?.round || 0;
-    if (r !== seenRound) {
-      setSeenRound(r);
-      // Avoid spurious calls/errors when the server has already reset "ready" (or when the user is not a member).
-      if (myPlayer?.ready) {
-        resetPlayerReadyOnRoundChange(roomId, uid, r).catch(() => void 0);
-      }
-    }
-  }, [room?.round, uid, roomId, seenRound, myPlayer?.ready]);
-  const shouldResetPlayer = useMemo(() => {
-    if (!myPlayer) return false;
-    return (
-      myPlayer.number !== null ||
-      !!myPlayer.clue1 ||
-      myPlayer.ready ||
-      myPlayer.orderIndex !== 0
-    );
-  }, [myPlayer]);
-
-  useEffect(() => {
-    if (!uid || room?.status !== "waiting") return;
-    if (shouldResetPlayer) {
-      resetPlayerState(roomId, uid).catch(() => void 0);
-    }
-  }, [room?.status, uid, roomId, shouldResetPlayer]);
-
-
   useHostPruning({
     isHost,
     uid,
@@ -875,60 +819,16 @@ export function RoomLayout(props: RoomLayoutProps) {
   });
 
 
-  useEffect(() => {
-    if (!uid) return;
-    if (!myPlayer) return;
-    if (typeof displayName !== "string") return;
-    const trimmed = displayName.trim();
-    if (!trimmed) return;
-    const cleanName = sanitizePlainText(trimmed).slice(0, 24);
-    if (!cleanName) return;
-    const currentName = (myPlayer.name ?? "").trim();
-    if (currentName === cleanName) return;
-    setPlayerName(roomId, uid, cleanName).catch(() => void 0);
-  }, [displayName, uid, roomId, myPlayer]);
 
 
 
 
-
-
-  const unsortedBaseIds = useMemo(() => {
-    const dealPlayers = room?.deal?.players;
-    if (Array.isArray(dealPlayers)) {
-      const combined = new Set<string>([
-        ...dealPlayers,
-        ...playersWithOptimistic.map((p) => p.id),
-      ]);
-      return Array.from(combined);
-    }
-    return playersWithOptimistic.map((p) => p.id);
-  }, [room?.deal?.players, playersWithOptimistic]);
-
-
-  const baseIds = useMemo(
-    () => sortPlayersByJoinOrder(unsortedBaseIds, playersWithOptimistic),
-    [unsortedBaseIds, playersWithOptimistic]
-  );
-
-
-  const presenceEligibleIds = useMemo(
-    () =>
-      getPresenceEligibleIds({
-        baseIds,
-        onlineUids,
-        presenceReady,
-        // 表示・UI側はフォールバックを優先し、START/DEAL の厳密ガードは FSM 側で担保する
-        blockWhenNotReadyEmpty: false,
-      }),
-    [baseIds, presenceReady, onlineUids]
-  );
-
-  const hostId = room?.hostId ?? null;
-  const eligibleIds = useMemo(
-    () => prioritizeHostId({ eligibleIds: presenceEligibleIds, hostId }),
-    [hostId, presenceEligibleIds]
-  );
+  const { baseIds, eligibleIds } = useRoomEligibleIds({
+    room,
+    players: playersWithOptimistic,
+    onlineUids,
+    presenceReady,
+  });
   const { clueTargetIds, allCluesReady } = useCluePhaseHygiene({
     roomId,
     room,
