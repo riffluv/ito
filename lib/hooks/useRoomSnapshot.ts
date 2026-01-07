@@ -1,9 +1,7 @@
 "use client";
 
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import { ensureAuthSession } from "@/lib/firebase/authSession";
 import { notify } from "@/components/ui/notify";
-import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import {
   getRoomServiceErrorCode,
@@ -40,6 +38,7 @@ import { useRoomSnapshotWatchdogLoop } from "@/lib/hooks/useRoomSnapshotWatchdog
 import { useRoomSnapshotRoomListener } from "@/lib/hooks/useRoomSnapshotRoomListener";
 import { useRoomSnapshotOptimisticPlayers } from "@/lib/hooks/useRoomSnapshotOptimisticPlayers";
 import { useRoomSnapshotPrefetchedRoom } from "@/lib/hooks/useRoomSnapshotPrefetchedRoom";
+import { useRoomSnapshotPermissionRecovery } from "@/lib/hooks/useRoomSnapshotPermissionRecovery";
 
 export type RoomSyncHealth =
   | "initial"
@@ -170,7 +169,6 @@ export function useRoomSnapshot(
     retryAt: number;
   }>({ state: "unknown", retryAt: 0 });
   const roomAccessCheckRef = useRef<Promise<boolean> | null>(null);
-  const prevRoomAccessErrorRef = useRef<string | null>(null);
   const accessBlockNotifiedRef = useRef(false);
 
   // participants (players collection + RTDB presence)
@@ -220,20 +218,7 @@ export function useRoomSnapshot(
     [deferEnabled]
   );
 
-  useEffect(() => {
-    if (roomAccessError === "permission-denied") {
-      if (prevRoomAccessErrorRef.current !== "permission-denied") {
-        notifyPermissionRecovery("start", "ルームとの同期");
-      }
-      ensureAuthSession("room-access-denied").catch(() => void 0);
-    } else if (
-      prevRoomAccessErrorRef.current === "permission-denied" &&
-      roomAccessError === null
-    ) {
-      notifyPermissionRecovery("success", "ルームとの同期");
-    }
-    prevRoomAccessErrorRef.current = roomAccessError;
-  }, [roomAccessError]);
+  useRoomSnapshotPermissionRecovery({ roomAccessError });
 
   useEffect(() => {
     setRoomAccessError(null);
