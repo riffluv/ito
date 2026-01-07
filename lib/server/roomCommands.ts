@@ -87,6 +87,7 @@ export {
 export { topicCommand } from "./roomCommandsTopic";
 export { mutateProposal } from "./roomCommandsProposal";
 export { commitPlayFromClueCommand } from "./roomCommandsCommitPlay";
+export { continueAfterFailCommand } from "./roomCommandsContinueAfterFail";
 
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
   const uid = await verifyViewerIdentity(params.token);
@@ -669,42 +670,6 @@ export async function submitOrder(params: SubmitOrderParams) {
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
 
-
-export async function continueAfterFailCommand(params: { token: string; roomId: string }) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-  const snap = await roomRef.get();
-  if (!snap.exists) throw codedError("room_not_found", "room_not_found");
-  const room = snap.data() as RoomDoc | undefined;
-  if (room?.hostId && room.hostId !== uid) {
-    throw codedError("forbidden", "forbidden", "host_only");
-  }
-  if (room?.status !== "reveal" && room?.status !== "finished") {
-    throw codedError("invalid_status", "invalid_status");
-  }
-
-  await roomRef.update({
-    status: "waiting",
-    result: null,
-    order: null,
-    deal: null,
-    mvpVotes: {},
-    lastActiveAt: FieldValue.serverTimestamp(),
-    statusVersion: FieldValue.increment(1) as unknown as number,
-  });
-
-  try {
-    const playersSnap = await roomRef.collection("players").get();
-    const batch = db.batch();
-    playersSnap.forEach((d) => {
-      batch.update(d.ref, { clue1: "", ready: false, number: null, orderIndex: 0 });
-    });
-    await batch.commit();
-  } catch (error) {
-    traceError("continueAfterFail.resetPlayers", error, { roomId: params.roomId });
-  }
-}
 
 export async function setRevealPendingCommand(params: { token: string; roomId: string; pending: boolean }) {
   const uid = await verifyViewerIdentity(params.token);
