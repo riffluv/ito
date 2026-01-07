@@ -84,12 +84,14 @@ export function useBoardDragEndHandler(params: {
   return useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      if (!activeId) {
-        cancelPendingDragMove();
-        return;
-      }
+      // NOTE:
+      // DragStart → DragEnd が同一 tick で発生した場合、React の state 更新が間に合わず
+      // `activeId` がまだ null のまま DragEnd を迎えることがある。
+      // その場合でも drag セッションを確実に後片付けしないと、waitingPlayers から
+      // activeId が除外されたままになり「カードが消えた」ように見える。
+      const activePlayerId = activeId ?? String(active.id);
       traceAction("drag.end", {
-        activeId: String(active.id),
+        activeId: activePlayerId,
         overId: over ? String(over.id) : null,
       });
       cancelPendingDragMove();
@@ -105,9 +107,11 @@ export function useBoardDragEndHandler(params: {
       updateDropAnimationTarget(null);
 
       try {
+        // `activeId` がまだ反映されていない（DragStart 直後に DragEnd が来た）ケースは、
+        // 実質的に「キャンセル扱い」で後片付けだけ行う。
+        if (!activeId) return;
         if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
 
-        const activePlayerId = String(active.id);
         const overId = over ? String(over.id) : null;
         const boardRect = boardContainerRef.current?.getBoundingClientRect() ?? null;
         const decision = interpretBoardDrop({
@@ -258,4 +262,3 @@ export function useBoardDragEndHandler(params: {
     ]
   );
 }
-

@@ -88,6 +88,7 @@ export { topicCommand } from "./roomCommandsTopic";
 export { mutateProposal } from "./roomCommandsProposal";
 export { commitPlayFromClueCommand } from "./roomCommandsCommitPlay";
 export { continueAfterFailCommand } from "./roomCommandsContinueAfterFail";
+export { setRevealPendingCommand } from "./roomCommandsRevealPending";
 
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
   const uid = await verifyViewerIdentity(params.token);
@@ -670,38 +671,6 @@ export async function submitOrder(params: SubmitOrderParams) {
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
 
-
-export async function setRevealPendingCommand(params: { token: string; roomId: string; pending: boolean }) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(roomRef);
-    if (!snap.exists) throw codedError("room_not_found", "room_not_found");
-    const room = snap.data() as RoomDoc;
-    const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
-    if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
-
-    const updates: Record<string, unknown> = {
-      "ui.revealPending": params.pending,
-      lastActiveAt: FieldValue.serverTimestamp(),
-    };
-    if (params.pending) {
-      updates["ui.revealBeginAt"] = FieldValue.serverTimestamp();
-    } else {
-      updates["ui.revealBeginAt"] = FieldValue.delete();
-    }
-
-    tx.update(roomRef, updates);
-  });
-
-  traceAction("ui.revealPending.set.server", {
-    roomId: params.roomId,
-    uid,
-    pending: params.pending,
-  });
-}
 
 export async function setRoundPreparingCommand(params: { token: string; roomId: string; active: boolean }) {
   const uid = await verifyViewerIdentity(params.token);
