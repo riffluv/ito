@@ -1,7 +1,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/server/firebaseAdmin";
 import { APP_VERSION } from "@/lib/constants/appVersion";
-import { AVATAR_LIST, getAvatarByOrder } from "@/lib/utils";
+import { getAvatarByOrder } from "@/lib/utils";
 import { generateRoomId } from "@/lib/utils/roomId";
 import {
   createInitialRoomStats,
@@ -26,7 +26,6 @@ import type { OrderState } from "@/lib/game/rules";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { toMillis } from "@/lib/time";
 import { pickOne, type TopicType } from "@/lib/topics";
-import { verifyHostSession } from "@/lib/server/hostToken";
 import {
   clearRoundPreparingWithRetry,
   codedError,
@@ -39,6 +38,11 @@ import {
   sanitizeName,
   sanitizeTopicText,
 } from "@/lib/server/roomCommandShared";
+import {
+  ensurePlayerDoc,
+  verifyHostIdentity,
+  verifyViewerIdentity,
+} from "@/lib/server/roomCommandAuth";
 type WithAuth = { token: string };
 
 export type CreateRoomParams = WithAuth & {
@@ -79,97 +83,8 @@ export type SubmitOrderParams = WithAuth & {
 
 type ProposalAction = "add" | "remove" | "move";
 
-async function verifyToken(token: string): Promise<string> {
-  try {
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    const uid = decoded?.uid;
-    if (!uid) {
-      throw codedError("unauthorized", "unauthorized", "uid_missing");
-    }
-    return uid;
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("[verifyToken] failed", (error as Error)?.message);
-    throw codedError("unauthorized", "unauthorized", (error as Error | undefined)?.message);
-  }
-}
-
-async function verifyHostIdentity(
-  room: RoomDoc | undefined,
-  token: string,
-  roomId: string,
-  sessionId?: string | null
-): Promise<string> {
-  if (sessionId) {
-    const session = await verifyHostSession(sessionId, roomId);
-    if (session?.uid) {
-      return session.uid;
-    }
-  }
-  const uid = await verifyToken(token);
-  const hostId = room?.hostId;
-  const creatorId = room?.creatorId;
-  if (hostId && hostId !== uid && creatorId !== uid) {
-    throw codedError("forbidden", "forbidden", "host_only");
-  }
-  return uid;
-}
-
-async function chooseAvatar(roomId: string): Promise<string> {
-  const db = getAdminDb();
-  const snap = await db.collection("rooms").doc(roomId).collection("players").get();
-  const used = new Set<string>();
-  snap.forEach((d) => {
-    const avatar = (d.data() as { avatar?: unknown })?.avatar;
-    if (typeof avatar === "string") used.add(avatar);
-  });
-  const available = AVATAR_LIST.filter((a) => !used.has(a));
-  if (available.length === 0) {
-    return getAvatarByOrder(0);
-  }
-  const idx = Math.floor(Math.random() * available.length);
-  return available[idx]!;
-}
-
-async function ensurePlayerDoc(params: {
-  roomId: string;
-  uid: string;
-  displayName: string | null;
-}): Promise<{ joined: boolean; avatar: string | null }> {
-  const { roomId, uid } = params;
-  const displayName = params.displayName ? sanitizeName(params.displayName) : "匿名";
-  const db = getAdminDb();
-  const playerRef = db.collection("rooms").doc(roomId).collection("players").doc(uid);
-  const snap = await playerRef.get();
-  if (snap.exists) {
-    const patch: Partial<PlayerDoc> = {
-      lastSeen: FieldValue.serverTimestamp() as unknown as PlayerDoc["lastSeen"],
-    };
-    if (displayName && snap.data()?.name !== displayName) {
-      patch.name = displayName;
-    }
-    await playerRef.update(patch);
-    return { joined: false, avatar: (snap.data() as PlayerDoc | undefined)?.avatar ?? null };
-  }
-
-  const avatar = await chooseAvatar(roomId);
-  const payload: PlayerDoc = {
-    name: displayName,
-    avatar,
-    number: null,
-    clue1: "",
-    ready: false,
-    orderIndex: 0,
-    uid,
-    lastSeen: FieldValue.serverTimestamp() as unknown as PlayerDoc["lastSeen"],
-    joinedAt: FieldValue.serverTimestamp() as unknown as PlayerDoc["joinedAt"],
-  };
-  await playerRef.set(payload);
-  return { joined: true, avatar };
-}
-
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const roomName = sanitizeName(params.roomName);
   const displayName = sanitizeName(params.displayName || "匿名");
   const db = getAdminDb();
@@ -238,7 +153,7 @@ export async function createRoom(params: CreateRoomParams): Promise<{ roomId: st
 }
 
 export async function joinRoom(params: JoinRoomParams) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const { roomId } = params;
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(roomId);
@@ -300,7 +215,7 @@ export async function joinRoom(params: JoinRoomParams) {
 }
 
 export async function leaveRoom(params: LeaveRoomParams) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   if (uid !== params.uid) {
     throw codedError("forbidden", "forbidden", "uid_mismatch");
   }
@@ -310,7 +225,7 @@ export async function leaveRoom(params: LeaveRoomParams) {
 }
 
 export async function updateReady(params: UpdateReadyParams) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   await db
     .collection("rooms")
@@ -322,7 +237,7 @@ export async function updateReady(params: UpdateReadyParams) {
 }
 
 export async function submitClue(params: SubmitClueParams) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const clue = sanitizeClue(params.clue);
   const db = getAdminDb();
   await db
@@ -910,7 +825,7 @@ export async function resetRoomCommand(params: { roomId: string; recallSpectator
 }
 
 export async function submitOrder(params: SubmitOrderParams) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
 
@@ -982,7 +897,7 @@ export async function mutateProposal(params: {
   action: ProposalAction;
   targetIndex?: number | null;
 }): Promise<"ok" | "noop" | "missing-deal"> {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
 
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
@@ -1074,7 +989,7 @@ export async function mutateProposal(params: {
 }
 
 export async function commitPlayFromClueCommand(params: { token: string; roomId: string; playerId: string }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   if (uid !== params.playerId) {
     throw codedError("forbidden", "forbidden", "player_mismatch");
   }
@@ -1311,7 +1226,7 @@ export async function dealNumbersCommand(params: { token: string; roomId: string
 }
 
 export async function continueAfterFailCommand(params: { token: string; roomId: string }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const snap = await roomRef.get();
@@ -1347,7 +1262,7 @@ export async function continueAfterFailCommand(params: { token: string; roomId: 
 }
 
 export async function setRevealPendingCommand(params: { token: string; roomId: string; pending: boolean }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
 
@@ -1379,7 +1294,7 @@ export async function setRevealPendingCommand(params: { token: string; roomId: s
 }
 
 export async function setRoundPreparingCommand(params: { token: string; roomId: string; active: boolean }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
 
@@ -1399,7 +1314,7 @@ export async function setRoundPreparingCommand(params: { token: string; roomId: 
 }
 
 export async function finalizeRevealCommand(params: { token: string; roomId: string }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
 
@@ -1430,7 +1345,7 @@ export async function finalizeRevealCommand(params: { token: string; roomId: str
 }
 
 export async function pruneProposalCommand(params: { token: string; roomId: string; eligibleIds: string[] }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const proposalRef = db.collection("roomProposals").doc(params.roomId);
@@ -1481,7 +1396,7 @@ export async function updateRoomOptionsCommand(params: {
   resolveMode?: string | null;
   defaultTopicType?: string | null;
 }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const snap = await roomRef.get();
@@ -1510,7 +1425,7 @@ export async function updateRoomOptionsCommand(params: {
 }
 
 export async function castMvpVoteCommand(params: { token: string; roomId: string; targetId: string | null }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const playerRef = roomRef.collection("players").doc(uid);
@@ -1538,7 +1453,7 @@ export async function updatePlayerProfileCommand(params: {
   name?: string | null;
   avatar?: string | null;
 }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const targetId = params.playerId && params.playerId.trim().length > 0 ? params.playerId : uid;
   const db = getAdminDb();
   const playerRef = db.collection("rooms").doc(params.roomId).collection("players").doc(targetId);
@@ -1566,7 +1481,7 @@ export async function updatePlayerProfileCommand(params: {
 }
 
 export async function resetPlayerStateCommand(params: { token: string; roomId: string; playerId?: string | null }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const targetId = params.playerId && params.playerId.trim().length > 0 ? params.playerId : uid;
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
@@ -1599,7 +1514,7 @@ type TopicAction =
   | { kind: "reset" };
 
 export async function topicCommand(params: { token: string; roomId: string; action: TopicAction }) {
-  const uid = await verifyToken(params.token);
+  const uid = await verifyViewerIdentity(params.token);
   const db = getAdminDb();
   const roomRef = db.collection("rooms").doc(params.roomId);
   const roomSnap = await roomRef.get();
