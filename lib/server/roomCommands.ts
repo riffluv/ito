@@ -92,6 +92,7 @@ export { setRevealPendingCommand } from "./roomCommandsRevealPending";
 export { setRoundPreparingCommand } from "./roomCommandsRoundPreparing";
 export { finalizeRevealCommand } from "./roomCommandsFinalizeReveal";
 export { pruneProposalCommand } from "./roomCommandsPruneProposal";
+export { updateRoomOptionsCommand } from "./roomCommandsRoomOptions";
 
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
   const uid = await verifyViewerIdentity(params.token);
@@ -674,40 +675,6 @@ export async function submitOrder(params: SubmitOrderParams) {
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
 
-
-export async function updateRoomOptionsCommand(params: {
-  token: string;
-  roomId: string;
-  resolveMode?: string | null;
-  defaultTopicType?: string | null;
-}) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-  const snap = await roomRef.get();
-  if (!snap.exists) throw codedError("room_not_found", "room_not_found");
-  const room = snap.data() as RoomDoc | undefined;
-  const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
-  if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
-
-  const updates: Record<string, unknown> = {
-    lastActiveAt: FieldValue.serverTimestamp(),
-  };
-  if (params.resolveMode) {
-    updates["options.resolveMode"] = params.resolveMode;
-  }
-  if (params.defaultTopicType) {
-    updates["options.defaultTopicType"] = params.defaultTopicType;
-  }
-
-  await roomRef.update(updates);
-  traceAction("room.options.update.server", {
-    roomId: params.roomId,
-    uid,
-    resolveMode: params.resolveMode,
-    defaultTopicType: params.defaultTopicType,
-  });
-}
 
 export async function castMvpVoteCommand(params: { token: string; roomId: string; targetId: string | null }) {
   const uid = await verifyViewerIdentity(params.token);
