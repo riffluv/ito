@@ -39,6 +39,7 @@ import { useRoomSnapshotRoomListener } from "@/lib/hooks/useRoomSnapshotRoomList
 import { useRoomSnapshotOptimisticPlayers } from "@/lib/hooks/useRoomSnapshotOptimisticPlayers";
 import { useRoomSnapshotPrefetchedRoom } from "@/lib/hooks/useRoomSnapshotPrefetchedRoom";
 import { useRoomSnapshotPermissionRecovery } from "@/lib/hooks/useRoomSnapshotPermissionRecovery";
+import { useRoomSnapshotRoomIdReset } from "@/lib/hooks/useRoomSnapshotRoomIdReset";
 
 export type RoomSyncHealth =
   | "initial"
@@ -226,41 +227,28 @@ export function useRoomSnapshot(
     accessBlockNotifiedRef.current = false;
   }, [roomId]);
 
-  useEffect(() => {
-    syncStartAtRef.current = Date.now();
-    lastRoomSnapshotAtRef.current = null;
-    lastRoomSnapshotAnyAtRef.current = null;
-    lastRoomSnapshotWasFromCacheRef.current = false;
-    roomSnapshotCacheSinceRef.current = null;
-    lastListenErrorAtRef.current = null;
-    lastListenErrorCodeRef.current = null;
-    lastServerStatusVersionRef.current = 0;
-    rtdbLastEventVersionRef.current = 0;
-    rtdbLastEventKeyRef.current = "";
-    rtdbPendingConfirmVersionRef.current = 0;
-    if (rtdbConfirmTimerRef.current !== null) {
-      clearTimeout(rtdbConfirmTimerRef.current);
-      rtdbConfirmTimerRef.current = null;
-    }
-    resumeProbeRef.current = null;
-    resumeProbeSeqRef.current = 0;
-    if (resumeForceRefreshRetryTimerRef.current !== null) {
-      clearTimeout(resumeForceRefreshRetryTimerRef.current);
-      resumeForceRefreshRetryTimerRef.current = null;
-    }
-    syncEpisodeRef.current = {
-      active: false,
-      kind: null,
-      startedAt: 0,
-      lastAttemptAt: 0,
-      attempts: 0,
-      lastTraceAt: 0,
-      hardCooldownUntil: 0,
-    };
-    setSyncHealth("initial");
-    setSyncSnapshotAgeMs(null);
-    setSyncRecoveryAttempts(0);
-  }, [roomId]);
+  useRoomSnapshotRoomIdReset({
+    roomId,
+    syncStartAtRef,
+    lastRoomSnapshotAtRef,
+    lastRoomSnapshotAnyAtRef,
+    lastRoomSnapshotWasFromCacheRef,
+    roomSnapshotCacheSinceRef,
+    lastListenErrorAtRef,
+    lastListenErrorCodeRef,
+    lastServerStatusVersionRef,
+    rtdbLastEventVersionRef,
+    rtdbLastEventKeyRef,
+    rtdbConfirmTimerRef,
+    rtdbPendingConfirmVersionRef,
+    resumeProbeRef,
+    resumeProbeSeqRef,
+    resumeForceRefreshRetryTimerRef,
+    syncEpisodeRef,
+    setSyncHealth,
+    setSyncSnapshotAgeMs,
+    setSyncRecoveryAttempts,
+  });
 
   // Apply sync patches (API/RTDB) without waiting for Firestore propagation.
   useRoomSnapshotSyncPatchListener({
