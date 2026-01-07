@@ -1,0 +1,382 @@
+import { FieldValue } from "firebase-admin/firestore";
+import { getAdminDb } from "@/lib/server/firebaseAdmin";
+import { buildDealPayload, selectDealTargetPlayers } from "@/lib/game/domain";
+import { acquireRoomLock } from "@/lib/server/roomQueue";
+import { buildRoomSyncPatch, publishRoomSyncPatch } from "@/lib/server/roomSync";
+import { logRoomCommandAudit } from "@/lib/server/roomAudit";
+import { traceAction, traceError } from "@/lib/utils/trace";
+import type { RoomDoc, PlayerDoc } from "@/lib/types";
+import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
+import { generateDeterministicNumbers } from "@/lib/game/random";
+import { toMillis } from "@/lib/time";
+import { pickOne, type TopicType } from "@/lib/topics";
+import {
+  clearRoundPreparingWithRetry,
+  codedError,
+  fetchPresenceUids,
+  isTopicTypeValue,
+  loadTopicSectionsFromFs,
+  releaseLockSafely,
+  sanitizeTopicText,
+} from "@/lib/server/roomCommandShared";
+import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
+
+type WithAuth = { token: string };
+
+export async function startGameCommand(params: {
+  roomId: string;
+  allowFromFinished?: boolean;
+  allowFromClue?: boolean;
+  requestId: string;
+  sessionId?: string;
+  autoDeal?: boolean;
+  topicType?: string | null;
+  customTopic?: string | null;
+  presenceUids?: string[] | null;
+} & WithAuth): Promise<RoomSyncPatch> {
+  const db = getAdminDb();
+  const roomRef = db.collection("rooms").doc(params.roomId);
+  const roomSnapForAuth = await roomRef.get();
+  const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
+  const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId, params.sessionId);
+  const allowFromFinished = params.allowFromFinished ?? false;
+  const allowFromClue = params.allowFromClue ?? false;
+  const requestId = params.requestId;
+  let alreadyStarted = false;
+  const rateLimitMs = 700;
+  let prevStatus: RoomDoc["status"] | null = null;
+  let nextStatusVersion = 0;
+  let syncTopic: string | null | undefined = undefined;
+  let syncTopicBox: RoomDoc["topicBox"] | null | undefined = undefined;
+  const doAutoDeal = params.autoDeal === true;
+  const syncTs = Date.now();
+
+  const lockHolder = `start:${requestId}`;
+  const locked = await acquireRoomLock(params.roomId, lockHolder);
+  if (!locked) {
+    traceAction("room.start.locked", {
+      roomId: params.roomId,
+      requestId,
+      holder: lockHolder,
+    });
+    throw codedError("rate_limited", "rate_limited");
+  }
+
+  let roundPreparingActivated = false;
+  try {
+    // Start/NextGame 時の体感遅延（複数API呼び出し＋ガード）を避けるため、
+    // server-authoritative な start command 内で roundPreparing を制御する。
+    try {
+      await roomRef.update({
+        "ui.roundPreparing": true,
+        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+      });
+      roundPreparingActivated = true;
+    } catch (error) {
+      traceError("ui.roundPreparing.start.begin", error, { roomId: params.roomId });
+    }
+
+    const playersSnap = await roomRef.collection("players").get();
+
+    // 事前にプレイヤー情報・トピック・配札を用意（autoDeal時のみ） - ロック取得後に行う
+    let preparedDeal:
+      | {
+          dealPayload: ReturnType<typeof buildDealPayload>;
+          orderedPlayers: { id: string; uid?: string }[];
+          topic: string | null;
+          topicBox: TopicType | "カスタム" | null;
+        }
+      | null = null;
+
+    if (doAutoDeal) {
+      const now = Date.now();
+      const presenceUids = params.presenceUids ?? (await fetchPresenceUids(params.roomId));
+      const candidates = playersSnap.docs.map((docSnap) => {
+        const data = docSnap.data() as PlayerDoc | undefined;
+        const lastSeenRaw = (data as { lastSeen?: unknown })?.lastSeen;
+        const lastSeen = (lastSeenRaw ?? null) as number | FirebaseFirestore.Timestamp | Date | null;
+        return {
+          id: docSnap.id,
+          uid: typeof data?.uid === "string" ? data.uid : undefined,
+          lastSeen,
+        } as const;
+      });
+      const target = selectDealTargetPlayers(candidates, presenceUids, now);
+      let ordered = [...target].sort((a, b) => String(a.uid || a.id).localeCompare(String(b.uid || b.id)));
+      const eligibleCount = candidates.filter((c) => typeof c.uid === "string" && c.uid.trim().length > 0).length;
+      const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
+      if (suspectedMismatch) {
+        const fallbackOrdered = [...candidates].sort((a, b) =>
+          String(a.uid || a.id).localeCompare(String(b.uid || b.id))
+        );
+        if (fallbackOrdered.length > ordered.length) {
+          ordered = fallbackOrdered;
+        }
+      }
+      if (ordered.length === 0) {
+        throw codedError("no_players", "no_players", "no_eligible_players");
+      }
+
+      // topic 決定（nextRound と同等のロジックを流用）
+      const sections = await loadTopicSectionsFromFs();
+      const requestedTopicType = params.topicType ?? roomForAuth?.options?.defaultTopicType ?? "通常版";
+      const normalizedTopicType =
+        typeof requestedTopicType === "string" && isTopicTypeValue(requestedTopicType)
+          ? (requestedTopicType as TopicType)
+          : ("通常版" as TopicType);
+
+      let topic: string | null = null;
+      let topicBox: TopicType | "カスタム" | null =
+        (roomForAuth?.topicBox as TopicType | "カスタム" | null | undefined) ?? normalizedTopicType;
+
+      if (topicBox === "カスタム") {
+        const customText = params.customTopic ? sanitizeTopicText(params.customTopic) : null;
+        if (customText && customText.trim().length > 0) {
+          topic = customText;
+          topicBox = "カスタム";
+        } else if (roomForAuth?.topic && String(roomForAuth.topicBox) === "カスタム") {
+          topic = roomForAuth.topic;
+          topicBox = "カスタム";
+        } else {
+          const pool = sections.normal;
+          topic = pickOne(pool) || null;
+          topicBox = "通常版";
+        }
+      } else {
+        const pool =
+          normalizedTopicType === "通常版"
+            ? sections.normal
+            : normalizedTopicType === "レインボー版"
+              ? sections.rainbow
+              : sections.classic;
+        topic = pickOne(pool) || null;
+      }
+
+      const seed = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const min = 1;
+      const max = 100;
+      const playerIds = ordered.map((p) => p.id);
+      const generatedNumbers = generateDeterministicNumbers(playerIds.length, min, max, seed);
+      const dealPayload = buildDealPayload(playerIds, seed, min, max, generatedNumbers);
+
+      preparedDeal = {
+        dealPayload,
+        orderedPlayers: ordered,
+        topic,
+        topicBox,
+      };
+    }
+
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(roomRef);
+      if (!snap.exists) {
+        throw codedError("room_not_found", "room_not_found");
+      }
+      const room = snap.data() as RoomDoc;
+      prevStatus = room.status ?? null;
+      const currentStatusVersion = typeof room.statusVersion === "number" ? room.statusVersion : 0;
+
+      // Idempotent: 同じ requestId で既に clue になっていれば成功扱いで何もしない
+      if (room.startRequestId && room.startRequestId === requestId && room.status === "clue") {
+        alreadyStarted = true;
+        nextStatusVersion = currentStatusVersion;
+        syncTopic = room.topic ?? null;
+        syncTopicBox = (room.topicBox as RoomDoc["topicBox"] | null | undefined) ?? null;
+        return;
+      }
+
+      // Rate limit (per room): 拒否してクライアントにリトライさせる
+      const lastMs = toMillis(room.lastCommandAt);
+      const nowMs = Date.now();
+      const existingNumbers =
+        room && typeof room.deal === "object" && room.deal
+          ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
+          : undefined;
+      const isFreshWaiting =
+        (room.status === "waiting" || room.status === "reveal" || room.status === "finished") &&
+        (!existingNumbers || Object.keys(existingNumbers).length === 0);
+      const canBypassRateLimit = isFreshWaiting;
+      if (!canBypassRateLimit && lastMs !== null && nowMs - lastMs < rateLimitMs) {
+        throw codedError("rate_limited", "rate_limited");
+      }
+
+      // allowFromFinished が true の場合、reveal/finished 状態からも開始可能
+      // これにより「次のゲーム」ボタン押下時のレース条件を解消
+      // allowFromClue が true の場合、clue 状態からも開始可能（リトライ時のレース条件対策）
+      const validStatuses: RoomDoc["status"][] = ["waiting"];
+      if (allowFromFinished) {
+        validStatuses.push("reveal", "finished");
+      }
+      if (allowFromClue) {
+        validStatuses.push("clue");
+      }
+
+      if (!validStatuses.includes(room.status)) {
+        throw codedError("invalid_status", "invalid_status", `status_is_${room.status}`);
+      }
+      if (room.hostId && room.hostId !== uid) {
+        throw codedError("forbidden", "forbidden", "host_only");
+      }
+      nextStatusVersion = currentStatusVersion + 1;
+      const payload: Partial<RoomDoc> = {
+        status: "clue",
+        result: null,
+        deal: doAutoDeal && preparedDeal ? preparedDeal.dealPayload : null,
+        order:
+          doAutoDeal && preparedDeal
+            ? {
+                list: [],
+                lastNumber: null,
+                failed: false,
+                failedAt: null,
+                total: preparedDeal.orderedPlayers.length,
+                numbers: preparedDeal.dealPayload.numbers,
+              }
+            : null,
+        mvpVotes: {},
+        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+        ui: { ...(room.ui ?? {}), recallOpen: false, roundPreparing: false, revealPending: false },
+        startRequestId: requestId,
+        dealRequestId: doAutoDeal && preparedDeal ? requestId : room.dealRequestId ?? null,
+        lastCommandAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastCommandAt"],
+        statusVersion: nextStatusVersion,
+      };
+
+      if (doAutoDeal && preparedDeal) {
+        payload.topic = preparedDeal.topic;
+        payload.topicBox = preparedDeal.topicBox as RoomDoc["topicBox"] | null;
+        payload.topicOptions = null;
+        payload.deal = preparedDeal.dealPayload;
+        syncTopic = preparedDeal.topic;
+        syncTopicBox = (preparedDeal.topicBox as RoomDoc["topicBox"] | null) ?? null;
+      } else {
+        syncTopic = room.topic ?? null;
+        syncTopicBox = (room.topicBox as RoomDoc["topicBox"] | null | undefined) ?? null;
+      }
+
+      tx.update(roomRef, payload);
+
+      // Atomic: room + players reset must move together to avoid "room started but players stale".
+      playersSnap.forEach((docSnap) => {
+        const pid = docSnap.id;
+        if (doAutoDeal && preparedDeal) {
+          const seatIndex =
+            typeof preparedDeal.dealPayload.seatHistory?.[pid] === "number"
+              ? preparedDeal.dealPayload.seatHistory[pid]!
+              : 0;
+          tx.update(docSnap.ref, {
+            number: preparedDeal.dealPayload.numbers[pid] ?? null,
+            clue1: "",
+            ready: false,
+            orderIndex: seatIndex,
+            lastSeen: FieldValue.serverTimestamp(),
+          } satisfies Partial<PlayerDoc>);
+        } else {
+          tx.update(docSnap.ref, { number: null, clue1: "", ready: false, orderIndex: 0 });
+        }
+      });
+    });
+
+    if (alreadyStarted) {
+      traceAction("host.start.server.idempotent", { roomId: params.roomId, uid, requestId });
+      void logRoomCommandAudit({
+        roomId: params.roomId,
+        uid,
+        requestId,
+        command: "start",
+        prevStatus,
+        nextStatus: "clue",
+        note: "idempotent",
+      });
+      const sync = buildRoomSyncPatch({
+        roomId: params.roomId,
+        statusVersion: nextStatusVersion,
+        room: {
+          status: "clue",
+          topic: syncTopic,
+          topicBox: syncTopicBox,
+          ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+        },
+        command: "start",
+        requestId,
+        source: "api",
+        ts: syncTs,
+      });
+      void publishRoomSyncPatch({
+        ...sync,
+        meta: { ...sync.meta, source: "rtdb" },
+      });
+      return sync;
+    }
+
+    traceAction("host.start.server", {
+      roomId: params.roomId,
+      uid,
+      requestId,
+      allowFromFinished,
+      allowFromClue,
+      prevStatus,
+      nextStatus: "clue",
+      autoDeal: doAutoDeal ? "1" : "0",
+    });
+    void logRoomCommandAudit({
+      roomId: params.roomId,
+      uid,
+      requestId,
+      command: "start",
+      prevStatus,
+      nextStatus: "clue",
+      note: doAutoDeal ? "autoDeal" : undefined,
+    });
+
+    const sync = buildRoomSyncPatch({
+      roomId: params.roomId,
+      statusVersion: nextStatusVersion,
+      room: {
+        status: "clue",
+        topic: syncTopic,
+        topicBox: syncTopicBox,
+        ui: { roundPreparing: false, recallOpen: false, revealPending: false },
+      },
+      command: "start",
+      requestId,
+      source: "api",
+      ts: syncTs,
+    });
+    void publishRoomSyncPatch({
+      ...sync,
+      meta: { ...sync.meta, source: "rtdb" },
+    });
+    return sync;
+  } catch (error) {
+    try {
+      const failureSnap = await roomRef.get();
+      const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
+      traceError("room.start.server.failure", error, {
+        roomId: params.roomId,
+        requestId,
+        prevStatus,
+        status: failureRoom?.status ?? null,
+        roundPreparing: failureRoom?.ui?.roundPreparing ?? null,
+        startRequestId: failureRoom?.startRequestId ?? null,
+        locked: locked ? "1" : "0",
+      });
+    } catch (detailError) {
+      traceError("room.start.server.failure.detail", detailError, { roomId: params.roomId, requestId });
+    }
+    throw error;
+  } finally {
+    if (roundPreparingActivated) {
+      const cleared = await clearRoundPreparingWithRetry({
+        roomRef,
+        roomId: params.roomId,
+        context: "startGameCommand",
+      });
+      if (cleared) {
+        roundPreparingActivated = false;
+      }
+    }
+    await releaseLockSafely(params.roomId, lockHolder);
+  }
+}
+
