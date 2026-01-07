@@ -20,6 +20,14 @@ import type { PointerProfile } from "@/lib/hooks/usePointerProfile";
 import { UI_TOKENS } from "@/theme/layout";
 
 import { createInitialMagnetState, MAGNET_IDLE_MARGIN_PX } from "./constants";
+import {
+  buildDragMagnetConfig,
+  buildMouseSensorOptions,
+  buildTouchSensorOptions,
+  getMagnetDwellThresholdMs,
+  getMagnetHighlightDelayMs,
+  getMagnetThrottleParams,
+} from "./dragMagnetConfig";
 
 interface UseDragMagnetControllerOptions {
   prefersReducedMotion: boolean;
@@ -48,24 +56,11 @@ export function useDragMagnetController({
   const magnetFlushFrameRef = useRef<number | null>(null);
 
   const magnetConfig = useMemo(() => {
-    const isTouchLike = pointerProfile.isTouchOnly || pointerProfile.isCoarsePointer;
-    const snapRadius = prefersReducedMotion ? 96 : isTouchLike ? 168 : 132;
-    const snapThreshold = isTouchLike ? (prefersReducedMotion ? 34 : 30) : 24;
-    const pullExponent = prefersReducedMotion ? 1.5 : isTouchLike ? 2.35 : 1.85;
-    const settleProgress = prefersReducedMotion ? 0.9 : 0.8;
-    const overshootStart = prefersReducedMotion ? 0.95 : 0.88;
-    const overshootRatio = prefersReducedMotion ? 0.04 : isTouchLike ? 0.07 : 0.1;
-    const maxOvershootPx = prefersReducedMotion ? 6 : 12;
-    return {
-      snapRadius,
-      snapThreshold,
-      pullExponent,
-      settleProgress,
-      overshootStart,
-      overshootRatio,
-      maxOvershootPx,
-      isTouch: isTouchLike,
-    };
+    return buildDragMagnetConfig({
+      prefersReducedMotion,
+      isTouchOnly: pointerProfile.isTouchOnly,
+      isCoarsePointer: pointerProfile.isCoarsePointer,
+    });
   }, [prefersReducedMotion, pointerProfile.isCoarsePointer, pointerProfile.isTouchOnly]);
   const magnetConfigRef = useRef(magnetConfig);
   useEffect(() => {
@@ -259,7 +254,7 @@ export function useDragMagnetController({
         return;
       }
 
-      const delay = prefersReducedMotion ? 36 : 90;
+      const delay = getMagnetHighlightDelayMs(prefersReducedMotion);
       if (delay <= 0) {
         enqueueMagnetUpdate({ target: nextId });
         return;
@@ -321,34 +316,22 @@ export function useDragMagnetController({
   }, [magnetState.shouldSnap, prefersReducedMotion]);
 
   const mouseSensorOptions = useMemo(
-    () => ({
-      activationConstraint: {
-        distance: dragBoostEnabled ? 1 : pointerProfile.isCoarsePointer ? 6 : 2,
-      },
-    }),
+    () =>
+      buildMouseSensorOptions({
+        dragBoostEnabled,
+        isCoarsePointer: pointerProfile.isCoarsePointer,
+      }),
     [pointerProfile.isCoarsePointer, dragBoostEnabled]
   );
 
-  const touchSensorOptions = useMemo(() => {
-    const base = pointerProfile.isTouchOnly
-      ? {
-          delay: 45,
-          tolerance: 26,
-        }
-      : {
-          delay: 160,
-          tolerance: 8,
-        };
-    if (!dragBoostEnabled) {
-      return { activationConstraint: base };
-    }
-    return {
-      activationConstraint: {
-        delay: Math.max(12, Math.round(base.delay * 0.35)),
-        tolerance: base.tolerance + 6,
-      },
-    };
-  }, [pointerProfile.isTouchOnly, dragBoostEnabled]);
+  const touchSensorOptions = useMemo(
+    () =>
+      buildTouchSensorOptions({
+        dragBoostEnabled,
+        isTouchOnly: pointerProfile.isTouchOnly,
+      }),
+    [pointerProfile.isTouchOnly, dragBoostEnabled]
+  );
 
   const sensors = useSensors(
     useSensor(MouseSensor, mouseSensorOptions),
@@ -408,9 +391,11 @@ export function useDragMagnetController({
         const deltaY = Math.abs(dragPoint.y - previousPoint.y);
         const distanceMoved = Math.hypot(deltaX, deltaY);
         const velocityX = deltaX / deltaTime;
-        const FAST_DISTANCE = pointerProfile.isCoarsePointer ? 18 : 26;
-        const FAST_THRESHOLD = prefersReducedMotion ? 1.0 : pointerProfile.isCoarsePointer ? 1.2 : 1.6;
-        if (distanceMoved > FAST_DISTANCE && velocityX > FAST_THRESHOLD) {
+        const throttle = getMagnetThrottleParams({
+          prefersReducedMotion,
+          isCoarsePointer: pointerProfile.isCoarsePointer,
+        });
+        if (distanceMoved > throttle.fastDistance && velocityX > throttle.fastThreshold) {
           lastDragTimestampRef.current = now;
           return;
         }
@@ -427,11 +412,10 @@ export function useDragMagnetController({
       if (!hoverSlotRef.current || hoverSlotRef.current.id !== overId) {
         hoverSlotRef.current = { id: overId, enteredAt: now };
       }
-      const dwellThreshold = prefersReducedMotion
-        ? 70
-        : pointerProfile.isCoarsePointer
-          ? 110
-          : 55;
+      const dwellThreshold = getMagnetDwellThresholdMs({
+        prefersReducedMotion,
+        isCoarsePointer: pointerProfile.isCoarsePointer,
+      });
       const dwellElapsed = now - hoverSlotRef.current.enteredAt;
       if (magnetTargetRef.current !== overId && dwellElapsed < dwellThreshold) {
         return;
