@@ -44,6 +44,7 @@ import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
 import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
+import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -62,11 +63,10 @@ import type {
   ShowtimeIntentMetadata,
   ShowtimeContext,
 } from "@/lib/showtime/types";
-import { verifyPassword } from "@/lib/security/password";
 import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/services/roomService";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
-import { logDebug, logError, logInfo } from "@/lib/utils/log";
+import { logDebug, logInfo } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -82,10 +82,6 @@ import {
   resyncWaitingServiceWorker,
   setRequiredSwVersionHint,
 } from "@/lib/serviceWorker/updateChannel";
-import {
-  getCachedRoomPasswordHash,
-  storeRoomPasswordHash,
-} from "@/lib/utils/roomPassword";
 import { Box, Text, VStack, HStack } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import {
@@ -903,76 +899,17 @@ export function RoomLayout(props: RoomLayoutProps) {
     previousRoomStatusRef.current = null;
   }, [roomId]);
 
-
-  useEffect(() => {
-    if (!room) {
-      setPasswordDialogOpen(false);
-      setPasswordVerified(false);
-      return;
-    }
-    if (!roomRequiresPassword) {
-      setPasswordVerified(true);
-      setPasswordDialogOpen(false);
-      setPasswordDialogError(null);
-      return;
-    }
-    const cached = getCachedRoomPasswordHash(roomId);
-    if (cached && roomPasswordHash && cached === roomPasswordHash) {
-      setPasswordVerified(true);
-      setPasswordDialogOpen(false);
-      setPasswordDialogError(null);
-      return;
-    }
-    setPasswordVerified(false);
-    setPasswordDialogOpen(true);
-    setPasswordDialogError(null);
-  }, [
-    room,
+  const { handleRoomPasswordSubmit, handleRoomPasswordCancel } = useRoomPasswordGate({
     roomId,
     roomRequiresPassword,
     roomPasswordHash,
-    setPasswordDialogError,
-    setPasswordDialogOpen,
+    roomPasswordSalt,
+    router,
     setPasswordVerified,
-  ]);
-
-  const handleRoomPasswordSubmit = useCallback(
-    async (input: string) => {
-      if (!room) return;
-      setPasswordDialogLoading(true);
-      setPasswordDialogError(null);
-      try {
-        const ok = await verifyPassword(input.trim(), roomPasswordSalt, roomPasswordHash);
-        if (!ok) {
-          setPasswordDialogError("\u30d1\u30b9\u30ef\u30fc\u30c9\u304c\u9055\u3044\u307e\u3059");
-          return;
-        }
-        storeRoomPasswordHash(roomId, roomPasswordHash ?? "");
-        setPasswordVerified(true);
-        setPasswordDialogOpen(false);
-      } catch (error) {
-        logError("room-page", "verify-room-password-failed", error);
-        setPasswordDialogError("\u30d1\u30b9\u30ef\u30fc\u30c9\u306e\u691c\u8a3c\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
-      } finally {
-        setPasswordDialogLoading(false);
-      }
-    },
-    [
-      room,
-      roomId,
-      roomPasswordHash,
-      roomPasswordSalt,
-      setPasswordDialogError,
-      setPasswordDialogLoading,
-      setPasswordDialogOpen,
-      setPasswordVerified,
-    ]
-  );
-
-  const handleRoomPasswordCancel = useCallback(() => {
-    notify({ title: "ロビーに戻りました", type: "info" });
-    router.push("/");
-  }, [router]);
+    setPasswordDialogOpen,
+    setPasswordDialogLoading,
+    setPasswordDialogError,
+  });
 
   const fallbackNames = useMemo(() => {
     const map: Record<string, string> = {};
