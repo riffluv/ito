@@ -93,6 +93,7 @@ export { setRoundPreparingCommand } from "./roomCommandsRoundPreparing";
 export { finalizeRevealCommand } from "./roomCommandsFinalizeReveal";
 export { pruneProposalCommand } from "./roomCommandsPruneProposal";
 export { updateRoomOptionsCommand } from "./roomCommandsRoomOptions";
+export { castMvpVoteCommand } from "./roomCommandsMvpVote";
 
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
   const uid = await verifyViewerIdentity(params.token);
@@ -675,28 +676,6 @@ export async function submitOrder(params: SubmitOrderParams) {
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
 
-
-export async function castMvpVoteCommand(params: { token: string; roomId: string; targetId: string | null }) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-  const playerRef = roomRef.collection("players").doc(uid);
-  const playerSnap = await playerRef.get();
-  if (!playerSnap.exists) throw codedError("forbidden", "forbidden", "not_member");
-
-  const fieldPath = `mvpVotes.${uid}`;
-  const updates: Record<string, unknown> = {
-    lastActiveAt: FieldValue.serverTimestamp(),
-  };
-  if (!params.targetId) {
-    updates[fieldPath] = FieldValue.delete();
-  } else {
-    updates[fieldPath] = params.targetId;
-  }
-
-  await roomRef.update(updates);
-  traceAction("mvp.vote.server", { roomId: params.roomId, uid, target: params.targetId ?? "" });
-}
 
 export async function updatePlayerProfileCommand(params: {
   token: string;
