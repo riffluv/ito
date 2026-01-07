@@ -13,8 +13,6 @@ import { sanitizeRoom } from "@/lib/state/sanitize";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
-import { recordMetricDistribution } from "@/lib/perf/metricsClient";
-import { reportOpsEvent } from "@/lib/telemetry/opsMonitoring";
 import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import { applyRoomSyncPatch } from "@/lib/sync/applyRoomSyncPatch";
 import { parseRoomSyncPatch } from "@/lib/sync/roomSyncPatch";
@@ -69,6 +67,7 @@ import {
   useRoomSnapshotAutoJoin,
   type RoomJoinStatus,
 } from "@/lib/hooks/useRoomSnapshotAutoJoin";
+import { useRoomSnapshotOpsReporting } from "@/lib/hooks/useRoomSnapshotOpsReporting";
 
 export type RoomSyncHealth =
   | "initial"
@@ -147,8 +146,6 @@ export function useRoomSnapshot(
   const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
   const [roomAccessErrorDetail, setRoomAccessErrorDetail] = useState<RoomAccessErrorDetail | null>(null);
   const [joinStatus, setJoinStatus] = useState<RoomJoinStatus>("idle");
-  const lastJoinStatusRef = useRef(joinStatus);
-  const lastRoomAccessErrorRef = useRef<string | null>(null);
 
   const leavingRef = useRef(false);
   const joinCompletedRef = useRef(false);
@@ -193,7 +190,6 @@ export function useRoomSnapshot(
   const [syncHealth, setSyncHealth] = useState<RoomSyncHealth>("initial");
   const [syncSnapshotAgeMs, setSyncSnapshotAgeMs] = useState<number | null>(null);
   const [syncRecoveryAttempts, setSyncRecoveryAttempts] = useState(0);
-  const lastSyncHealthRef = useRef<RoomSyncHealth>("initial");
 
   const prefetchedAppliedRef = useRef(false);
   const deferEnabled = ROOM_SNAPSHOT_DEFER_ENABLED;
@@ -1455,90 +1451,16 @@ export function useRoomSnapshot(
     handleRoomServiceAccessError,
   });
 
-  useEffect(() => {
-    if (lastJoinStatusRef.current === joinStatus) return;
-    reportOpsEvent({
-      name: "room.join.status",
-      metric: "ops.room.join.status",
-      level: joinStatus === "retrying" ? "warning" : "info",
-      tags: { status: joinStatus },
-      extra: {
-        roomId,
-        phase: room?.status ?? null,
-        attempt: joinAttemptRef.current,
-      },
-    });
-    if (joinStatus === "retrying") {
-      reportOpsEvent({
-        name: "room.join.retrying",
-        metric: "ops.room.join.retrying",
-        level: "warning",
-        tags: { status: "retrying" },
-        extra: {
-          roomId,
-          phase: room?.status ?? null,
-          attempt: joinAttemptRef.current,
-        },
-      });
-    }
-    lastJoinStatusRef.current = joinStatus;
-  }, [joinStatus, roomId, room?.status]);
-
-  useEffect(() => {
-    if (lastRoomAccessErrorRef.current === roomAccessError) return;
-    if (roomAccessError) {
-      reportOpsEvent({
-        name: "room.access.error",
-        metric: "ops.room.access.error",
-        level: "warning",
-        tags: {
-          code: roomAccessError,
-          kind: roomAccessErrorDetail?.kind ?? "unknown",
-        },
-        extra: {
-          roomId,
-          phase: room?.status ?? null,
-          detail: roomAccessErrorDetail ?? null,
-        },
-      });
-    } else if (lastRoomAccessErrorRef.current) {
-      reportOpsEvent({
-        name: "room.access.recovered",
-        metric: "ops.room.access.recovered",
-        level: "info",
-        tags: {
-          code: lastRoomAccessErrorRef.current,
-        },
-        extra: {
-          roomId,
-          phase: room?.status ?? null,
-        },
-      });
-    }
-    lastRoomAccessErrorRef.current = roomAccessError;
-  }, [roomAccessError, roomAccessErrorDetail, roomId, room?.status]);
-
-  useEffect(() => {
-    if (lastSyncHealthRef.current === syncHealth) return;
-    const degraded =
-      syncHealth === "stale" || syncHealth === "recovering" || syncHealth === "blocked";
-    reportOpsEvent({
-      name: "room.sync.health",
-      metric: "ops.room.sync.health",
-      level: degraded ? "warning" : "info",
-      tags: { health: syncHealth },
-      extra: {
-        roomId,
-        phase: room?.status ?? null,
-      },
-    });
-    if (degraded && typeof syncSnapshotAgeMs === "number") {
-      recordMetricDistribution("ops.room.sync.staleAgeMs", syncSnapshotAgeMs, {
-        health: syncHealth,
-      });
-    }
-    lastSyncHealthRef.current = syncHealth;
-  }, [syncHealth, syncSnapshotAgeMs, roomId, room?.status]);
+  useRoomSnapshotOpsReporting({
+    roomId,
+    roomStatus: room?.status ?? null,
+    joinStatus,
+    joinAttemptRef,
+    roomAccessError,
+    roomAccessErrorDetail,
+    syncHealth,
+    syncSnapshotAgeMs,
+  });
 
   // isHost / onlinePlayers
   const isHost = useMemo(() => room?.hostId === uid, [room?.hostId, uid]);
