@@ -89,6 +89,7 @@ export { mutateProposal } from "./roomCommandsProposal";
 export { commitPlayFromClueCommand } from "./roomCommandsCommitPlay";
 export { continueAfterFailCommand } from "./roomCommandsContinueAfterFail";
 export { setRevealPendingCommand } from "./roomCommandsRevealPending";
+export { setRoundPreparingCommand } from "./roomCommandsRoundPreparing";
 
 export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
   const uid = await verifyViewerIdentity(params.token);
@@ -671,26 +672,6 @@ export async function submitOrder(params: SubmitOrderParams) {
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
 
-
-export async function setRoundPreparingCommand(params: { token: string; roomId: string; active: boolean }) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(params.roomId);
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(roomRef);
-    if (!snap.exists) throw codedError("room_not_found", "room_not_found");
-    const room = snap.data() as RoomDoc;
-    const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
-    if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
-    tx.update(roomRef, {
-      "ui.roundPreparing": params.active,
-      lastActiveAt: FieldValue.serverTimestamp(),
-    });
-  });
-
-  traceAction("ui.roundPreparing.set.server", { roomId: params.roomId, uid, active: params.active });
-}
 
 export async function finalizeRevealCommand(params: { token: string; roomId: string }) {
   const uid = await verifyViewerIdentity(params.token);
