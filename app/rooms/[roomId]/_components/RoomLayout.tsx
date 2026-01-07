@@ -65,7 +65,7 @@ import { assignNumberIfNeeded, resetPlayerReadyOnRoundChange } from "@/lib/servi
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { sortPlayersByJoinOrder } from "@/lib/utils";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
-import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { setMetric } from "@/lib/utils/metrics";
 import { sanitizePlainText } from "@/lib/utils/sanitize";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
@@ -74,13 +74,10 @@ import {
   type SpectatorHostRequest,
 } from "@/lib/spectator/v2/useSpectatorHostQueue";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
+import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
 import {
   applyServiceWorkerUpdate,
-  getWaitingServiceWorker,
   resyncWaitingServiceWorker,
-  subscribeToServiceWorkerUpdates,
-  holdForceApplyTimer,
-  releaseForceApplyTimer,
   setRequiredSwVersionHint,
 } from "@/lib/serviceWorker/updateChannel";
 import {
@@ -182,12 +179,6 @@ const resolveRevealedMs = (value: unknown): number | null => {
   }
   return null;
 };
-
-type SafeUpdateTrigger =
-  | "status:waiting"
-  | "status:reveal-finished"
-  | "status:finished-waiting"
-  | "idle";
 
 type AuthContextValue = ReturnType<typeof useAuth>;
 
@@ -693,14 +684,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const joinCounterRef = useRef(0);
   const lastRevealTsRef = useRef<number | null>(null);
   const [joinVersion, setJoinVersion] = useState(0);
-  const [hasWaitingUpdate, setHasWaitingUpdate] = useState(() =>
-    typeof window === "undefined" ? false : getWaitingServiceWorker() !== null
-  );
-  useEffect(() => {
-    return subscribeToServiceWorkerUpdates((registration) => {
-      setHasWaitingUpdate(!!registration);
-    });
-  }, []);
   const {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
@@ -712,28 +695,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     retryUpdate: retrySpectatorUpdate,
     applyUpdate: applySpectatorUpdate,
   } = useServiceWorkerUpdate();
-  const [safeUpdateAutoApplyCountdown, setSafeUpdateAutoApplyCountdown] = useState<string | null>(
-    null
-  );
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled || typeof window === "undefined" || !safeUpdateAutoApplyAt) {
-      setSafeUpdateAutoApplyCountdown(null);
-      return () => {};
-    }
-    const updateCountdown = () => {
-      const remaining = safeUpdateAutoApplyAt - Date.now();
-      if (remaining <= 0) {
-        setSafeUpdateAutoApplyCountdown("まもなく自動で更新を適用します");
-      } else {
-        setSafeUpdateAutoApplyCountdown(`${Math.ceil(remaining / 1000)}秒後に自動適用予定`);
-      }
-    };
-    updateCountdown();
-    const intervalId = window.setInterval(updateCountdown, 1000);
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [safeUpdateFeatureEnabled, safeUpdateAutoApplyAt]);
   const meId = uid || "";
   const meFromPlayers = players.find((p) => p.id === meId);
   const [optimisticMe, setOptimisticMe] = useState<(PlayerDoc & { id: string }) | null>(null);
@@ -802,8 +763,16 @@ export function RoomLayout(props: RoomLayoutProps) {
   // ルーム参加/操作の Version Contract は `room.appVersion` + server guard を唯一の真実とし、
   // ここで `requiredSwVersion` によって入室/操作をブロックしない（混同による誤案内を防ぐ）。
   const versionMismatch = false;
-  const safeUpdateActive =
-    safeUpdateFeatureEnabled && (hasWaitingUpdate || spectatorUpdateApplying || spectatorUpdateFailed);
+  const { hasWaitingUpdate, safeUpdateActive, safeUpdateAutoApplyCountdown } = useRoomSafeUpdateAutomation({
+    safeUpdateFeatureEnabled,
+    idleApplyMs,
+    forceApplyDelayMs: SAFE_UPDATE_FORCE_APPLY_DELAY_MS,
+    roomStatus: room?.status ?? null,
+    versionMismatch,
+    spectatorUpdateApplying,
+    spectatorUpdateFailed,
+    safeUpdateAutoApplyAt,
+  });
   const versionMismatchBlocksAccess = false;
   const phaseMetricRef = useRef<RoomDoc["status"] | null>(null);
   const shouldBlockUpdateOverlay = false;
@@ -968,282 +937,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     setIsLedgerOpen(false);
     previousRoomStatusRef.current = null;
   }, [roomId]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return () => {};
-    }
-
-    const clearGuardTimer = () => {
-      if (versionGuardTimerRef.current !== null) {
-        window.clearTimeout(versionGuardTimerRef.current);
-        versionGuardTimerRef.current = null;
-      }
-    };
-
-    if (!safeUpdateFeatureEnabled || (!versionMismatch && !hasWaitingUpdate)) {
-      clearGuardTimer();
-      return () => {};
-    }
-
-    clearGuardTimer();
-    return () => {
-      clearGuardTimer();
-    };
-  }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled || (!versionMismatch && !hasWaitingUpdate) || typeof document === "undefined") {
-      return () => {};
-    }
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        void resyncWaitingServiceWorker("room:visibility-refresh");
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [safeUpdateFeatureEnabled, versionMismatch, hasWaitingUpdate]);
-  const safeUpdateEnteredRef = useRef(false);
-  const safeUpdateStatusRef = useRef<string | null>(null);
-  const safeUpdateAutoApplyRef = useRef(false);
-  const idleTimerRef = useRef<number | null>(null);
-  const forceApplyTimerRef = useRef<number | null>(null);
-  const lastInteractionTsRef = useRef<number>(
-    typeof window === "undefined" ? 0 : Date.now()
-  );
-  const versionGuardTimerRef = useRef<number | null>(null);
-  const currentRoomStatus = room?.status ?? null;
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled) {
-      safeUpdateEnteredRef.current = false;
-      return;
-    }
-    if (safeUpdateActive) {
-      if (!safeUpdateEnteredRef.current) {
-        safeUpdateEnteredRef.current = true;
-        bumpMetric("safeUpdate", "deferred");
-      }
-    } else {
-      safeUpdateEnteredRef.current = false;
-    }
-  }, [safeUpdateActive, safeUpdateFeatureEnabled]);
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled) {
-      safeUpdateAutoApplyRef.current = false;
-      return;
-    }
-    if (spectatorUpdateApplying) {
-      return;
-    }
-    if (spectatorUpdateFailed) {
-      safeUpdateAutoApplyRef.current = false;
-    }
-    if (!versionMismatch && !hasWaitingUpdate) {
-      safeUpdateAutoApplyRef.current = false;
-      return;
-    }
-    if (safeUpdateAutoApplyRef.current && !spectatorUpdateFailed) {
-      return;
-    }
-    if (!hasWaitingUpdate) {
-      void resyncWaitingServiceWorker(
-        spectatorUpdateFailed ? "room:auto-retry-failed-resync" : "room:auto-init"
-      );
-      return;
-    }
-    const reason = spectatorUpdateFailed
-      ? "room:auto-retry-failed"
-      : versionMismatch
-      ? "room:auto-mismatch"
-      : "room:auto-waiting";
-    safeUpdateAutoApplyRef.current = true;
-    const applied = applyServiceWorkerUpdate({
-      reason,
-      safeMode: true,
-    });
-    if (!applied) {
-      safeUpdateAutoApplyRef.current = false;
-      void resyncWaitingServiceWorker("room:auto-retry");
-    }
-  }, [
-    safeUpdateFeatureEnabled,
-    versionMismatch,
-    hasWaitingUpdate,
-    spectatorUpdateApplying,
-    spectatorUpdateFailed,
-  ]);
-  const tryApplyServiceWorker = useCallback(
-    (reason: SafeUpdateTrigger) => {
-      if (!safeUpdateFeatureEnabled) return false;
-      if (currentRoomStatus && currentRoomStatus !== "waiting") {
-        return false;
-      }
-      const registration = getWaitingServiceWorker();
-      const waitingWorker = registration?.waiting;
-      if (!registration || !waitingWorker) {
-        return false;
-      }
-      const applied = applyServiceWorkerUpdate({
-        reason,
-        safeMode: safeUpdateActive,
-      });
-      return applied;
-    },
-    [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]
-  );
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled) {
-      safeUpdateStatusRef.current = currentRoomStatus;
-      return;
-    }
-    if (currentRoomStatus === null) {
-      safeUpdateStatusRef.current = null;
-      return;
-    }
-    const previousStatus = safeUpdateStatusRef.current;
-    if (hasWaitingUpdate) {
-      if (currentRoomStatus === "waiting" && previousStatus !== "waiting") {
-        tryApplyServiceWorker("status:waiting");
-      } else if (previousStatus === "reveal" && currentRoomStatus === "finished") {
-        tryApplyServiceWorker("status:reveal-finished");
-      } else if (previousStatus === "finished" && currentRoomStatus === "waiting") {
-        tryApplyServiceWorker("status:finished-waiting");
-      }
-    }
-    safeUpdateStatusRef.current = currentRoomStatus;
-  }, [
-    currentRoomStatus,
-    hasWaitingUpdate,
-    safeUpdateFeatureEnabled,
-    tryApplyServiceWorker,
-  ]);
-  useEffect(() => {
-    const holdReason = "room:safe-update";
-    const clearForceApplyTimer = () => {
-      if (typeof window !== "undefined" && forceApplyTimerRef.current !== null) {
-        window.clearTimeout(forceApplyTimerRef.current);
-        forceApplyTimerRef.current = null;
-      }
-    };
-    if (!safeUpdateFeatureEnabled) {
-      clearForceApplyTimer();
-      releaseForceApplyTimer(holdReason);
-      return () => {
-        clearForceApplyTimer();
-        releaseForceApplyTimer(holdReason);
-      };
-    }
-    const shouldHold = safeUpdateActive && currentRoomStatus && currentRoomStatus !== "waiting";
-    if (shouldHold) {
-      holdForceApplyTimer(holdReason);
-      if (typeof window !== "undefined") {
-        clearForceApplyTimer();
-        forceApplyTimerRef.current = window.setTimeout(() => {
-          forceApplyTimerRef.current = null;
-          releaseForceApplyTimer(holdReason);
-          const applied = applyServiceWorkerUpdate({
-            reason: "room:force-apply",
-            safeMode: safeUpdateActive,
-          });
-          if (!applied) {
-            void resyncWaitingServiceWorker("room:force-apply");
-          }
-        }, SAFE_UPDATE_FORCE_APPLY_DELAY_MS);
-      }
-    } else {
-      clearForceApplyTimer();
-      releaseForceApplyTimer(holdReason);
-    }
-    return () => {
-      clearForceApplyTimer();
-      releaseForceApplyTimer(holdReason);
-    };
-  }, [safeUpdateFeatureEnabled, safeUpdateActive, currentRoomStatus]);
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled) return;
-    if (!hasWaitingUpdate) return;
-    if (currentRoomStatus === "waiting") {
-      tryApplyServiceWorker("status:waiting");
-    }
-  }, [
-    safeUpdateFeatureEnabled,
-    hasWaitingUpdate,
-    currentRoomStatus,
-    tryApplyServiceWorker,
-  ]);
-  const resetIdleTimer = useCallback(() => {
-    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) {
-      if (typeof window !== "undefined" && idleTimerRef.current !== null) {
-        window.clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = null;
-      }
-      return;
-    }
-    if (typeof window === "undefined") return;
-    if (!hasWaitingUpdate) {
-      if (idleTimerRef.current !== null) {
-        window.clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = null;
-      }
-      return;
-    }
-    if (idleTimerRef.current !== null) {
-      window.clearTimeout(idleTimerRef.current);
-    }
-    lastInteractionTsRef.current = Date.now();
-    idleTimerRef.current = window.setTimeout(() => {
-      idleTimerRef.current = null;
-      if (!safeUpdateFeatureEnabled) return;
-      tryApplyServiceWorker("idle");
-    }, idleApplyMs);
-  }, [
-    safeUpdateFeatureEnabled,
-    idleApplyMs,
-    hasWaitingUpdate,
-    tryApplyServiceWorker,
-  ]);
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) {
-      if (typeof window !== "undefined" && idleTimerRef.current !== null) {
-        window.clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = null;
-      }
-      return () => {};
-    }
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return () => {};
-    }
-    const handleInteraction = () => {
-      lastInteractionTsRef.current = Date.now();
-      resetIdleTimer();
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        resetIdleTimer();
-      }
-    };
-    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart"];
-    for (const eventName of events) {
-      window.addEventListener(eventName, handleInteraction, true);
-    }
-    document.addEventListener("visibilitychange", handleVisibility, true);
-    resetIdleTimer();
-    return () => {
-      for (const eventName of events) {
-        window.removeEventListener(eventName, handleInteraction, true);
-      }
-      document.removeEventListener("visibilitychange", handleVisibility, true);
-      if (idleTimerRef.current !== null) {
-        window.clearTimeout(idleTimerRef.current);
-        idleTimerRef.current = null;
-      }
-    };
-  }, [safeUpdateFeatureEnabled, idleApplyMs, resetIdleTimer]);
-  useEffect(() => {
-    if (!safeUpdateFeatureEnabled || idleApplyMs <= 0) return;
-    resetIdleTimer();
-  }, [safeUpdateFeatureEnabled, idleApplyMs, hasWaitingUpdate, resetIdleTimer]);
   const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
   const hostAvailabilityTimerRef = useRef<number | null>(null);
   const hostMissingSinceRef = useRef<number | null>(null);
