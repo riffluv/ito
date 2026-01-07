@@ -64,8 +64,10 @@ import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
 import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
 import { useRoomUpdateOverlays } from "@/lib/hooks/useRoomUpdateOverlays";
 import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
+import { useRoomDealPlayers } from "@/lib/hooks/useRoomDealPlayers";
+import { useRoomPhaseMetrics } from "@/lib/hooks/useRoomPhaseMetrics";
+import { useRoomRequiredSwVersionHint } from "@/lib/hooks/useRoomRequiredSwVersionHint";
 import type { RoomDoc } from "@/lib/types";
-import { setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import {
@@ -74,7 +76,6 @@ import {
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
 import {
-  setRequiredSwVersionHint,
 } from "@/lib/serviceWorker/updateChannel";
 import { Box } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
@@ -275,22 +276,8 @@ export function RoomLayout(props: RoomLayoutProps) {
     roomStatus,
     graceMs: 15000, // 15s grace to avoid transient demotion
   });
-  const dealPlayers = useMemo((): string[] | null => {
-    const list = room?.deal?.players;
-    if (!Array.isArray(list)) {
-      return null;
-    }
-    const filtered = list.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
-    return filtered.length > 0 ? filtered : null;
-  }, [room?.deal]);
-  const requiredSwVersion = useMemo(() => {
-    const raw = room?.requiredSwVersion;
-    if (typeof raw !== "string") return "";
-    return raw.trim();
-  }, [room?.requiredSwVersion]);
-  // NOTE: `requiredSwVersion` は過去の PWA/Safe Update 用フィールド（運用上は外部で書かれる場合がある）。
-  // ルーム参加/操作の Version Contract は `room.appVersion` + server guard を唯一の真実とし、
-  // ここで `requiredSwVersion` によって入室/操作をブロックしない（混同による誤案内を防ぐ）。
+  const dealPlayers = useRoomDealPlayers(room?.deal?.players);
+  const requiredSwVersion = useRoomRequiredSwVersionHint(room?.requiredSwVersion);
   const versionMismatch = false;
   const { hasWaitingUpdate, safeUpdateActive, safeUpdateAutoApplyCountdown } = useRoomSafeUpdateAutomation({
     safeUpdateFeatureEnabled,
@@ -303,37 +290,8 @@ export function RoomLayout(props: RoomLayoutProps) {
     safeUpdateAutoApplyAt,
   });
   const versionMismatchBlocksAccess = false;
-  const phaseMetricRef = useRef<RoomDoc["status"] | null>(null);
+  useRoomPhaseMetrics({ roomStatus, isHost });
   const shouldBlockUpdateOverlay = false;
-  useEffect(() => {
-    const nextStatus = room?.status ?? null;
-    if (!nextStatus) return;
-    if (phaseMetricRef.current === nextStatus) return;
-    phaseMetricRef.current = nextStatus;
-    setMetric("phase", "status", nextStatus);
-    if (typeof performance !== "undefined") {
-      setMetric("phase", "transitionAt", Math.round(performance.now()));
-    }
-  }, [room?.status]);
-  useEffect(() => {
-    setMetric("room", "isHost", isHost ? 1 : 0);
-  }, [isHost]);
-  useEffect(() => {
-    if (requiredSwVersion) {
-      setMetric("app", "requiredSwVersion", requiredSwVersion);
-    } else {
-      setMetric("app", "requiredSwVersion", "");
-    }
-    setMetric("app", "versionMismatch", 0);
-  }, [requiredSwVersion]);
-  useEffect(() => {
-    setRequiredSwVersionHint(requiredSwVersion || null);
-  }, [requiredSwVersion]);
-  useEffect(() => {
-    return () => {
-      setRequiredSwVersionHint(null);
-    };
-  }, []);
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
