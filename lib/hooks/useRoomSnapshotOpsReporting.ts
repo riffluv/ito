@@ -4,7 +4,8 @@ import { recordMetricDistribution } from "@/lib/perf/metricsClient";
 import { reportOpsEvent } from "@/lib/telemetry/opsMonitoring";
 import { useEffect, useRef, type MutableRefObject } from "react";
 import type { RoomJoinStatus } from "@/lib/hooks/useRoomSnapshotAutoJoin";
-import type { RoomAccessErrorDetail, RoomSyncHealth } from "@/lib/hooks/useRoomSnapshot";
+import type { RoomAccessErrorDetail } from "@/lib/hooks/roomSnapshotAccess";
+import type { RoomSyncHealth } from "@/lib/hooks/useRoomSnapshot";
 
 export function useRoomSnapshotOpsReporting(params: {
   roomId: string;
@@ -116,4 +117,3 @@ export function useRoomSnapshotOpsReporting(params: {
     lastSyncHealthRef.current = syncHealth;
   }, [roomId, roomStatus, syncHealth, syncSnapshotAgeMs]);
 }
-

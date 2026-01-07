@@ -1,25 +1,19 @@
 "use client";
 
 import { db, firebaseEnabled } from "@/lib/firebase/client";
-import { notify } from "@/components/ui/notify";
 import { useParticipants } from "@/lib/hooks/useParticipants";
-import {
-  getRoomServiceErrorCode,
-  RoomServiceError,
-} from "@/lib/services/roomService";
 import { setMetric } from "@/lib/utils/metrics";
-import { traceAction, traceError } from "@/lib/utils/trace";
 import { useRoomSnapshotSyncPatchListener } from "@/lib/hooks/useRoomSnapshotSyncPatchListener";
 import {
   type RoomSnapshotWatchdogEpisode,
   type RoomSnapshotWatchdogTrigger,
 } from "@/lib/hooks/roomSnapshotWatchdog";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
-import { APP_VERSION } from "@/lib/constants/appVersion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ROOM_SNAPSHOT_DEFER_ENABLED,
 } from "@/lib/hooks/roomSnapshotConfig";
+import { useRoomSnapshotAccessHandlers, type RoomAccessErrorDetail } from "@/lib/hooks/roomSnapshotAccess";
 import { useRoomSnapshotRtdbRoomSyncBus } from "@/lib/hooks/useRoomSnapshotRtdbRoomSyncBus";
 import {
   useRoomSnapshotEnsureMemberHeartbeat,
@@ -83,21 +77,6 @@ export type RoomSnapshotState = {
   reattachPresence: () => void;
   leavingRef: React.MutableRefObject<boolean>;
 };
-
-export type RoomAccessErrorDetail =
-  | {
-      kind: "version-mismatch";
-      mismatchType: "client_outdated" | "room_outdated" | "unknown";
-      roomVersion: string | null;
-      clientVersion: string | null;
-      serverVersion: string | null;
-      source: "join" | "ensureMember";
-    }
-  | {
-      kind: "version-check-failed";
-      detail: string;
-      source: "join" | "ensureMember";
-    };
 
 type RoomSnapshotResumeProbe = {
   seq: number;
@@ -389,108 +368,16 @@ export function useRoomSnapshot(
     setSyncRecoveryAttempts,
   });
 
-  const applyRoomAccessBlock = useCallback(
-    (
-      nextError: "client-update-required" | "room-version-mismatch" | "room-version-check-failed",
-      detail: RoomAccessErrorDetail
-    ) => {
-      if (roomAccessBlocked) return;
-      traceAction("room.access.denied", { roomId, code: nextError });
-      setRoomAccessError(nextError);
-      setRoomAccessErrorDetail(detail);
-      joinCompletedRef.current = true;
-      joinLimitNotifiedRef.current = true;
-      try {
-        detach();
-      } catch {}
-
-      if (accessBlockNotifiedRef.current) return;
-      accessBlockNotifiedRef.current = true;
-
-      if (nextError === "client-update-required" && detail.kind === "version-mismatch") {
-        notify({
-          title: "アップデートが必要です",
-          description:
-            `この部屋はバージョン ${detail.roomVersion ?? "不明"} で進行中です。` +
-            `現在のバージョン (${detail.clientVersion ?? APP_VERSION}) では参加できません。` +
-            "ページを更新して最新バージョンでお試しください。",
-          type: "error",
-        });
-        return;
-      }
-
-      if (nextError === "room-version-mismatch" && detail.kind === "version-mismatch") {
-        notify({
-          title: "この部屋は別バージョンです",
-          description:
-            `この部屋はバージョン ${detail.roomVersion ?? "不明"} で進行中です。` +
-            `現在のバージョン (${detail.clientVersion ?? APP_VERSION}) からは参加・操作できません。` +
-            "更新してもこの部屋には入れないため、新しい部屋を作成するか招待を取り直してください。",
-          type: "error",
-        });
-        return;
-      }
-
-      if (nextError === "room-version-check-failed" && detail.kind === "version-check-failed") {
-        notify({
-          title: "バージョン確認に失敗しました",
-          description: "ページを更新してから、もう一度入室をお試しください。",
-          type: "error",
-        });
-      }
-    },
-    [roomAccessBlocked, roomId, detach]
-  );
-
-  const handleRoomServiceAccessError = useCallback(
-    (error: unknown, source: "join" | "ensureMember"): boolean => {
-      const code = getRoomServiceErrorCode(error);
-      if (code === "ROOM_VERSION_MISMATCH") {
-        const mismatch = error instanceof RoomServiceError ? error : null;
-        const mismatchType =
-          mismatch?.mismatchType === "client_outdated" || mismatch?.mismatchType === "room_outdated"
-            ? mismatch.mismatchType
-            : "unknown";
-        traceAction("room.access.denied.versionMismatch", {
-          roomId,
-          source,
-          mismatchType,
-          roomVersion: mismatch?.roomVersion ?? null,
-          clientVersion: mismatch?.clientVersion ?? APP_VERSION,
-          serverVersion: mismatch?.serverVersion ?? null,
-        });
-        applyRoomAccessBlock(
-          mismatchType === "client_outdated" ? "client-update-required" : "room-version-mismatch",
-          {
-            kind: "version-mismatch",
-            mismatchType,
-            roomVersion: mismatch?.roomVersion ?? null,
-            clientVersion: mismatch?.clientVersion ?? APP_VERSION,
-            serverVersion: mismatch?.serverVersion ?? null,
-            source,
-          }
-        );
-        return true;
-      }
-      if (code === "ROOM_VERSION_CHECK_FAILED") {
-        const detail =
-          error instanceof RoomServiceError ? error.checkFailedDetail ?? "unknown" : "unknown";
-        traceError("room.access.denied.versionCheckFailed", error, {
-          roomId,
-          source,
-          detail,
-        });
-        applyRoomAccessBlock("room-version-check-failed", {
-          kind: "version-check-failed",
-          detail,
-          source,
-        });
-        return true;
-      }
-      return false;
-    },
-    [applyRoomAccessBlock, roomId]
-  );
+  const { handleRoomServiceAccessError } = useRoomSnapshotAccessHandlers({
+    roomId,
+    roomAccessBlocked,
+    detach,
+    setRoomAccessError,
+    setRoomAccessErrorDetail,
+    joinCompletedRef,
+    joinLimitNotifiedRef,
+    accessBlockNotifiedRef,
+  });
 
   useRoomSnapshotEnsureMemberHeartbeat({
     roomId,
