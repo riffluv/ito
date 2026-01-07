@@ -5,7 +5,6 @@ import {
   topicControls,
 } from "@/lib/game/service";
 import { postRoundReset } from "@/lib/utils/broadcast";
-import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
 import { APP_VERSION } from "@/lib/constants/appVersion";
@@ -14,31 +13,16 @@ import {
   apiNextRound,
   type ApiError,
 } from "@/lib/services/roomApiClient";
+import {
+  generateRequestId,
+  getErrorMessage,
+  isTransientNetworkError,
+  normalizeTopicType,
+  safeActiveCounts,
+  sleep,
+} from "@/lib/host/hostActionsControllerHelpers";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, getDocFromServer } from "firebase/firestore";
-
-const generateRequestId = () =>
-  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error ?? "");
-}
-
-function isTransientNetworkError(error: unknown): boolean {
-  const apiError = error as Partial<ApiError> | null;
-  const status = typeof apiError?.status === "number" ? apiError.status : undefined;
-  if (typeof status === "number") return false;
-  const code = typeof apiError?.code === "string" ? apiError.code : undefined;
-  if (code === "timeout") return true;
-  const message = getErrorMessage(error);
-  return Boolean(message.match(/failed to fetch|network|load failed/i));
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 type HostSessionProvider = {
   getSessionId?: () => string | null;
@@ -161,31 +145,6 @@ export type NextRoundApiResult =
       errorCode?: string;
       errorMessage?: string;
     };
-
-const FALLBACK_TOPIC_TYPE = "通常版";
-
-const normalizeTopicType = (input?: string | null): string => {
-  if (!input || typeof input !== "string") return FALLBACK_TOPIC_TYPE;
-  const trimmed = input.trim();
-  if (!trimmed) return FALLBACK_TOPIC_TYPE;
-  return trimmed;
-};
-
-function safeActiveCounts(info?: PresenceInfo) {
-  const basePlayers =
-    typeof info?.playerCount === "number" && Number.isFinite(info.playerCount)
-      ? Math.max(0, info.playerCount)
-      : 0;
-  const onlineCount = Array.isArray(info?.onlineUids)
-    ? info.onlineUids.filter(
-        (id): id is string => typeof id === "string" && id.trim().length > 0
-      ).length
-    : undefined;
-  const activeCount = calculateEffectiveActive(onlineCount, basePlayers, {
-    maxDrift: 3,
-  });
-  return { activeCount, onlineCount, playerCount: basePlayers };
-}
 
 type HostActionsOverrides = {
   apiNextRound?: typeof apiNextRound;
