@@ -17,8 +17,11 @@ import { calculateEffectiveActive } from "@/lib/utils/playerCount";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
+import { handleQuickStartFailure } from "@/lib/hooks/hostActions/handleQuickStartFailure";
+import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQuickStartWithNotWaitingRetry";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
+import { useActionCooldown } from "@/lib/hooks/hostActions/useActionCooldown";
 import { usePendingVisibilityKick } from "@/lib/hooks/hostActions/usePendingVisibilityKick";
 import { usePresenceStartGate } from "@/lib/hooks/hostActions/usePresenceStartGate";
 import { useResetUiHold } from "@/lib/hooks/hostActions/useResetUiHold";
@@ -336,19 +339,7 @@ export function useHostActions({
 
   const { resetUiPending, beginResetUiHold, clearResetUiHold } = useResetUiHold({ roomStatus });
 
-  const ACTION_COOLDOWN_MS = 420;
-  const canProceed = useCallback(
-    (key: string) => {
-      const now = Date.now();
-      const last = lastActionAtRef.current[key] ?? 0;
-      if (now - last < ACTION_COOLDOWN_MS) {
-        return false;
-      }
-      lastActionAtRef.current[key] = now;
-      return true;
-    },
-    []
-  );
+  const canProceed = useActionCooldown({ cooldownMs: 420, lastActionAtRef });
 
   // NOTE: resetUiHold のタイマー管理は useResetUiHold 側で完結させる
 
@@ -471,94 +462,21 @@ export function useHostActions({
           2800
         );
 
-        let attempts = 0;
         // restart intent（次のゲーム）の場合は最初から allowFromFinished: true で呼び出す
         // これにより reset の Firestore 伝播を待たずに reveal/finished → clue に直接遷移できる
         const isRestartFlow = !!isRestartIntent;
-        let result = await hostActions.quickStartWithTopic({
+        const { result, attempts } = await runQuickStartWithNotWaitingRetry({
+          hostActions,
           roomId,
           roomStatus,
           defaultTopicType: effectiveDefaultTopicType,
-          presenceInfo: {
-            presenceReady: presenceCanStart,
-            onlineUids,
-            playerCount: basePlayerCount,
-          },
+          presenceReady: presenceCanStart,
+          onlineUids,
+          playerCount: basePlayerCount,
           currentTopic,
-          allowFromFinished: isRestartFlow,
+          isRestartFlow,
+          roundIds,
         });
-
-        // 409 invalid_status → reason: not-waiting を明示的に処理。
-        // allowFromFinished=true でリトライすることで、Firestore 伝播のレース条件を回避。
-        const MAX_RETRY_ATTEMPTS = 3;
-        while (!result.ok && result.reason === "not-waiting" && attempts < MAX_RETRY_ATTEMPTS) {
-          attempts += 1;
-          const currentStatus = result.roomStatus ?? roomStatus ?? "unknown";
-          traceAction("ui.host.quickStart.notWaiting", {
-            roomId,
-            status: currentStatus,
-            attempt: String(attempts),
-          });
-          notify({
-            id: toastIds.genericInfo(roomId, "quickstart-not-waiting"),
-            title: "前のラウンドを待機状態に戻しています…",
-            description: "少し待って再開します。",
-            type: "info",
-            duration: 1800,
-          });
-
-          // 進行中ステータスが残っている場合は待機リセットを実行
-          let resetSucceeded = false;
-          if (
-            !currentStatus ||
-            currentStatus === "finished" ||
-            currentStatus === "reveal" ||
-            currentStatus === "clue"
-          ) {
-            try {
-              await hostActions.resetRoomToWaitingWithPrune({
-                roomId,
-                roundIds,
-                onlineUids,
-                includeOnline: false,
-                recallSpectators: false,
-              });
-              resetSucceeded = true;
-            } catch (error) {
-              traceError("ui.host.quickStart.notWaitingReset", error, { roomId });
-              // リセット失敗をユーザーに通知（握りつぶさない）
-              console.warn("[quickStart] reset failed during retry", error);
-              notify({
-                id: toastIds.genericInfo(roomId, "quickstart-reset-failed"),
-                title: "リセット処理に問題が発生しました",
-                description: "もう一度お試しください。改善しない場合はページを再読み込みしてください。",
-                type: "warning",
-                duration: 3000,
-              });
-            }
-          }
-
-          // Firestore の伝播を待つ（リトライ回数に応じて待ち時間を増加）
-          // リセット失敗時は待ち時間を長めに取る
-          const baseWaitMs = resetSucceeded ? 700 : 1200;
-          const waitMs = baseWaitMs + attempts * 350;
-          await new Promise((resolve) => setTimeout(resolve, waitMs));
-
-          // リトライ時は allowFromFinished=true + allowFromClue=true でレース条件に対応
-          result = await hostActions.quickStartWithTopic({
-            roomId,
-            roomStatus,
-            defaultTopicType: effectiveDefaultTopicType,
-            presenceInfo: {
-              presenceReady: presenceCanStart,
-              onlineUids,
-              playerCount: basePlayerCount,
-            },
-            currentTopic,
-            allowFromFinished: true,
-            allowFromClue: true,
-          });
-        }
 
         traceAction("ui.host.quickStart.result", {
           roomId,
@@ -578,172 +496,16 @@ export function useHostActions({
         );
 
         if (!result.ok) {
-          const failureCategory = (() => {
-            if (result.reason === "auth-error") return "auth";
-            if (result.reason === "rate-limited") return "rate_limited";
-            if (result.reason === "presence-not-ready") return "presence";
-            if (result.reason === "not-waiting") return "invalid_status";
-            if (result.reason === "host-mismatch") return "forbidden";
-            if (result.reason === "needs-custom-topic") return "needs_custom_topic";
-            if (result.reason === "callable-error") {
-              const code = result.errorCode ?? "";
-              if (
-                code === "room/join/version-mismatch" ||
-                code === "client_version_required" ||
-                code === "room/create/update-required" ||
-                code === "room/create/version-mismatch"
-              ) {
-                return "version-mismatch";
-              }
-              if (typeof result.status !== "number") {
-                const msg = (result.errorMessage ?? "").toLowerCase();
-                if (msg.includes("failed to fetch") || msg.includes("network")) {
-                  return "network";
-                }
-              }
-              if (result.status === 401) return "auth";
-              return "api";
-            }
-            return "unknown";
-          })();
-          // 失敗理由を明示的にログ出力（デバッグ用）
-          traceAction("ui.host.quickStart.failed", {
+          handleQuickStartFailure({
             roomId,
-            requestId: result.requestId,
-            reason: result.reason,
-            category: failureCategory,
-            roomStatus: result.roomStatus ?? undefined,
-            status: typeof result.status === "number" ? String(result.status) : undefined,
-            errorCode: result.errorCode ?? undefined,
-            attempts: String(attempts),
+            roomStatus,
+            result,
+            attempts,
+            ensurePresenceReady: () => void ensurePresenceReady(),
+            setCustomStartPending,
+            setCustomText,
+            setCustomOpen,
           });
-          console.warn("[quickStart] failed:", result.reason, {
-            roomId,
-            requestId: result.requestId,
-            roomStatus: result.roomStatus,
-            status: result.status,
-            url: result.url,
-            errorCode: result.errorCode,
-            errorMessage: result.errorMessage,
-            details: result.details,
-          });
-
-          if (result.reason === "presence-not-ready") {
-            ensurePresenceReady();
-          } else if (result.reason === "rate-limited") {
-            notify({
-              id: toastIds.genericInfo(roomId, "quickstart-rate-limited"),
-              title: "少し間をおいて再試行しています…",
-              description: "短時間に複数の開始要求が重なりました。",
-              type: "info",
-              duration: 1600,
-            });
-          } else if (result.reason === "host-mismatch") {
-            notify({
-              id: toastIds.genericInfo(roomId, "host-mismatch"),
-              title: "ホスト権限の確定を待っています",
-              description: "権限が移動した直後は数秒後にもう一度お試しください",
-              type: "warning",
-              duration: 2600,
-            });
-          } else if (result.reason === "auth-error") {
-            notify({
-              id: toastIds.genericInfo(roomId, "quickstart-auth"),
-              title: "認証を更新できませんでした",
-              description: "ブラウザを再読み込みして再試行してください。",
-              type: "error",
-              duration: 2600,
-            });
-          } else if (result.reason === "needs-custom-topic") {
-            setCustomStartPending(true);
-            setCustomText("");
-            setCustomOpen(true);
-          } else if (result.reason === "functions-unavailable") {
-            throw new Error("firebase-functions-unavailable");
-          } else if (result.reason === "not-waiting") {
-            notify({
-              id: toastIds.genericInfo(roomId, "quickstart-not-waiting-failed"),
-              title: "ゲームを開始できませんでした",
-              description: "前のラウンドが終了処理中の可能性があります。数秒後にもう一度お試しください。",
-              type: "warning",
-              duration: 2600,
-            });
-          } else if (result.reason === "callable-error") {
-            const status =
-              typeof result.status === "number" ? result.status : undefined;
-            const code = result.errorCode ?? "unknown";
-            const isNetworkError =
-              status === undefined &&
-              Boolean((result.errorMessage ?? "").match(/failed to fetch|network/i));
-            const isVersionMismatch =
-              code === "room/join/version-mismatch" ||
-              code === "client_version_required" ||
-              code === "room/create/update-required" ||
-              code === "room/create/version-mismatch";
-
-            const mismatchType =
-              typeof (result.details as { mismatchType?: unknown } | null)?.mismatchType === "string"
-                ? (result.details as { mismatchType: string }).mismatchType
-                : null;
-            const mismatchHint =
-              mismatchType === "client_outdated"
-                ? "（この端末の更新が古い可能性があります）"
-                : mismatchType === "room_outdated"
-                  ? "（作成直後に更新が入った可能性があります）"
-                  : "";
-
-            const debugBits = [
-              typeof status === "number" ? `status:${status}` : null,
-              code ? `code:${code}` : null,
-              `reason:${result.reason}`,
-            ].filter((x): x is string => typeof x === "string" && x.length > 0);
-
-            if (isVersionMismatch) {
-              notify({
-                id: toastIds.genericInfo(roomId, "quickstart-version-mismatch"),
-                title: "更新が必要です",
-                description: `メインメニューで「更新を適用」後に再読み込みしてください。${mismatchHint}（${debugBits.join(", ")}）`,
-                type: "error",
-                duration: 4200,
-              });
-            } else if (status === 401 || code === "unauthorized") {
-              notify({
-                id: toastIds.genericInfo(roomId, "quickstart-unauthorized"),
-                title: "認証が必要です",
-                description: `再読み込みしてから再試行してください。（${debugBits.join(", ")}）`,
-                type: "error",
-                duration: 3600,
-              });
-            } else if (isNetworkError) {
-              notify({
-                id: toastIds.genericInfo(roomId, "quickstart-network"),
-                title: "通信に失敗しました",
-                description: `通信状態を確認して再試行してください。（${debugBits.join(", ")}）`,
-                type: "error",
-                duration: 3400,
-              });
-            } else {
-              const hint =
-                status === 409
-                  ? "状態が更新中の可能性があります。数秒待って再試行してください。"
-                  : "しばらく待って再試行してください。";
-              notify({
-                id: toastIds.genericInfo(roomId, "quickstart-callable-error"),
-                title: "ゲーム開始に失敗しました",
-                description: `${hint}（${debugBits.join(", ")}）`,
-                type: "error",
-                duration: 3600,
-              });
-            }
-          } else {
-            notify({
-              id: toastIds.genericInfo(roomId, "quickstart-unknown"),
-              title: "ゲーム開始に失敗しました",
-              description: `reason: ${result.reason}`,
-              type: "error",
-              duration: 3200,
-            });
-          }
           abortAction("quickStart");
           return false;
         }
