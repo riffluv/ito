@@ -36,7 +36,7 @@ import {
   getPresenceEligibleIds,
   prioritizeHostId,
 } from "@/lib/game/selectors";
-import { clearRevealPending, pruneProposalByEligible } from "@/lib/game/service";
+import { pruneProposalByEligible } from "@/lib/game/service";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
@@ -57,6 +57,9 @@ import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
 import { usePopPulse } from "@/lib/hooks/usePopPulse";
 import { useRedirectGuard } from "@/lib/hooks/useRedirectGuard";
 import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
+import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
+import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
+import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -679,16 +682,12 @@ export function RoomLayout(props: RoomLayoutProps) {
   const { approveRejoin: approveSpectatorRejoin, rejectRejoin: rejectSpectatorRejoin } = spectatorSession.actions;
 
 
-  // reveal到達時のフラグクリーンアップ（冪等・ホストのみ実行）
-  useEffect(() => {
-    if (!isHost) return;
-    const pending = room?.ui?.revealPending === true;
-    const status = room?.status;
-    if (!pending) return;
-    if (status === 'reveal' || status === 'finished') {
-      void clearRevealPending(roomId);
-    }
-  }, [isHost, room?.ui?.revealPending, room?.status, roomId]);
+  useRoomRevealPendingCleanup({
+    roomId,
+    isHost,
+    revealPending: room?.ui?.revealPending === true,
+    roomStatus,
+  });
   const { playerJoinOrderRef, joinVersion } = usePlayerJoinOrderTracker(players);
   const lastRevealTsRef = useRef<number | null>(null);
   const {
@@ -902,10 +901,14 @@ export function RoomLayout(props: RoomLayoutProps) {
   });
   useRoomSelfOnlineMetric({ uid, onlineUids });
 
-  const isSoloMember = useMemo(
-    () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
-    [isMember, players, uid]
-  );
+  const { isSoloMember, previousHostStillMember } = useHostClaimDerivations({
+    uid,
+    isMember,
+    players,
+    lastKnownHostId,
+    presenceReady,
+    onlineUids,
+  });
 
   const hostClaimCandidateId = useHostClaimCandidateId({
     roomId: room?.id ?? null,
@@ -992,12 +995,7 @@ export function RoomLayout(props: RoomLayoutProps) {
 
 
 
-  const spectatorJoinStatus = useMemo(() => {
-    if (room?.status === "waiting") {
-      return joinStatus;
-    }
-    return joinStatus === "joined" ? "joined" : "idle";
-  }, [joinStatus, room?.status]);
+  const spectatorJoinStatus = useSpectatorJoinStatus({ joinStatus, roomStatus });
   const hasOptimisticSeat =
     !!optimisticMe &&
     (joinEstablished || seatAcceptanceActive) &&
@@ -1213,18 +1211,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   ]);
 
 
-
-  const previousHostStillMember = useMemo(() => {
-    if (!lastKnownHostId) return false;
-    if (uid && lastKnownHostId === uid) return false;
-    const hostPlayerExists = players.some((p) => p.id === lastKnownHostId);
-    if (!hostPlayerExists) return false;
-    if (!presenceReady) return true;
-    if (Array.isArray(onlineUids) && onlineUids.includes(lastKnownHostId)) {
-      return true;
-    }
-    return false;
-  }, [lastKnownHostId, players, onlineUids, uid, presenceReady]);
 
   const hostClaimStatus = useHostClaim({
     roomId,
