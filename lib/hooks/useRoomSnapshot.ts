@@ -20,9 +20,6 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { APP_VERSION } from "@/lib/constants/appVersion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  loadPrefetchedRoom,
-} from "@/lib/prefetch/prefetchRoomExperience";
-import {
   ROOM_SNAPSHOT_DEFER_ENABLED,
 } from "@/lib/hooks/roomSnapshotConfig";
 import { useRoomSnapshotRtdbRoomSyncBus } from "@/lib/hooks/useRoomSnapshotRtdbRoomSyncBus";
@@ -42,6 +39,7 @@ import {
 import { useRoomSnapshotWatchdogLoop } from "@/lib/hooks/useRoomSnapshotWatchdogLoop";
 import { useRoomSnapshotRoomListener } from "@/lib/hooks/useRoomSnapshotRoomListener";
 import { useRoomSnapshotOptimisticPlayers } from "@/lib/hooks/useRoomSnapshotOptimisticPlayers";
+import { useRoomSnapshotPrefetchedRoom } from "@/lib/hooks/useRoomSnapshotPrefetchedRoom";
 
 export type RoomSyncHealth =
   | "initial"
@@ -314,28 +312,14 @@ export function useRoomSnapshot(
     setLoading(partLoading === true || roomLoaded === false);
   }, [partLoading, roomLoaded]);
 
-  // Apply prefetched room
-  useEffect(() => {
-    if (!roomId || typeof window === "undefined") {
-      prefetchedAppliedRef.current = false;
-      return;
-    }
-    const cached = loadPrefetchedRoom(roomId);
-    if (!cached) {
-      prefetchedAppliedRef.current = false;
-      return;
-    }
-    if (room?.id === roomId) {
-      return;
-    }
-    prefetchedAppliedRef.current = true;
-    const startedAt = typeof performance !== "undefined" ? performance.now() : null;
-    enqueueCommit(() => {
-      prefetchedAppliedRef.current = true;
-      setRoom({ id: roomId, ...(cached as RoomDoc) });
-      setRoomLoaded(true);
-    }, startedAt);
-  }, [roomId, room?.id, enqueueCommit]);
+  useRoomSnapshotPrefetchedRoom({
+    roomId,
+    currentRoomId: room?.id ?? null,
+    prefetchedAppliedRef,
+    enqueueCommit,
+    setRoom,
+    setRoomLoaded,
+  });
 
   const clearRoomAccessErrorDetail = useCallback(() => {
     setRoomAccessErrorDetail(null);
