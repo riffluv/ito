@@ -40,6 +40,7 @@ import { useRoomSnapshotOptimisticPlayers } from "@/lib/hooks/useRoomSnapshotOpt
 import { useRoomSnapshotPrefetchedRoom } from "@/lib/hooks/useRoomSnapshotPrefetchedRoom";
 import { useRoomSnapshotPermissionRecovery } from "@/lib/hooks/useRoomSnapshotPermissionRecovery";
 import { useRoomSnapshotRoomIdReset } from "@/lib/hooks/useRoomSnapshotRoomIdReset";
+import { useRoomSnapshotExternalControls } from "@/lib/hooks/useRoomSnapshotExternalControls";
 
 export type RoomSyncHealth =
   | "initial"
@@ -560,6 +561,12 @@ export function useRoomSnapshot(
     ]
   );
 
+  const externalControls = useRoomSnapshotExternalControls({
+    detachNow: detach,
+    reattachPresence: reattachNow,
+    leavingRef,
+  });
+
   return {
     room,
     players,
@@ -575,8 +582,6 @@ export function useRoomSnapshot(
     roomAccessError,
     roomAccessErrorDetail,
     sync,
-    detachNow: detach,
-    reattachPresence: reattachNow,
-    leavingRef,
+    ...externalControls,
   };
 }
