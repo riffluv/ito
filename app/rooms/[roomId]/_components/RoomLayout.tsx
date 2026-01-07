@@ -50,6 +50,7 @@ import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
 import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
 import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
 import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
+import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -706,12 +707,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     }
     return [...players, optimisticMe];
   }, [players, optimisticMe]);
-  const {
-    normalizedDisplayName,
-    resolveSpectatorDisplayName,
-    playersSignature,
-    fallbackNames,
-  } = useRoomDisplayNameHelpers({
+  const { resolveSpectatorDisplayName, playersSignature, fallbackNames } = useRoomDisplayNameHelpers({
     players: playersWithOptimistic,
     roomHostId: room?.hostId ?? null,
     roomHostName: room?.hostName ?? null,
@@ -1181,89 +1177,22 @@ export function RoomLayout(props: RoomLayoutProps) {
     optimisticMe,
     setOptimisticMe,
   ]);
-  useEffect(() => {
-    if (!uid) {
-      if (optimisticMe) {
-        setOptimisticMe(null);
-      }
-      return;
-    }
-    if (isSpectatorMode) {
-      if (optimisticMe) {
-        setOptimisticMe(null);
-      }
-      return;
-    }
-    if (meFromPlayers) {
-      if (optimisticMe) {
-        setOptimisticMe(null);
-      }
-      return;
-    }
-    const shouldHoldOptimisticSeat =
-      joinEstablished || seatRequestPending || seatAcceptanceActive;
-    if (!shouldHoldOptimisticSeat) {
-      if (optimisticMe) {
-        setOptimisticMe(null);
-      }
-      return;
-    }
-    const baseName = normalizedDisplayName;
-    setOptimisticMe((prev) => {
-      if (
-        prev &&
-        prev.id === uid &&
-        prev.name === baseName &&
-        prev.uid === uid
-      ) {
-        return prev;
-      }
-      return {
-        id: uid,
-        name: baseName,
-        avatar: prev?.avatar || "",
-        number: null,
-        clue1: "",
-        ready: false,
-        orderIndex: 0,
-        uid,
-      };
-    });
-  }, [
+  useRoomOptimisticSeatHold({
     uid,
-    optimisticMe,
     isSpectatorMode,
     meFromPlayers,
+    me,
     joinEstablished,
     seatRequestPending,
     seatAcceptanceActive,
-    normalizedDisplayName,
-  ]);
+    seatRequestAccepted,
+    displayName,
+    optimisticMe,
+    setOptimisticMe,
+  });
 
   // 観戦理由の判定（文言出し分け用）
   const waitingToRejoin = roomStatus === "waiting";
-
-  useEffect(() => {
-    if (!seatRequestAccepted) return;
-    if (!uid) return;
-    if (me) return;
-    const baseName = normalizedDisplayName;
-    setOptimisticMe((prev) => {
-      if (prev && prev.id === uid) {
-        return prev;
-      }
-      return {
-        id: uid,
-        name: baseName,
-        avatar: prev?.avatar || "",
-        number: null,
-        clue1: "",
-        ready: false,
-        orderIndex: 0,
-        uid,
-      } as PlayerDoc & { id: string };
-    });
-  }, [seatRequestAccepted, uid, me, normalizedDisplayName]);
 
   useSpectatorStateLogging({
     roomId,
