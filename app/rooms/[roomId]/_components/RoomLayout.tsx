@@ -26,7 +26,6 @@ import {
 import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
 import {
   collectServerAssignedSeatIds,
-  computeSlotCount,
 } from "@/lib/game/selectors";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
@@ -53,6 +52,7 @@ import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCle
 import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
 import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
 import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
+import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
 import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
 import type {
   RoomMachineClientEvent,
@@ -62,7 +62,8 @@ import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
-import type { PlayerDoc, RoomDoc } from "@/lib/types";
+import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
+import type { RoomDoc } from "@/lib/types";
 import { logInfo } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
@@ -123,17 +124,6 @@ const formatSpectatorHostError = (code: string): string => {
 };
 
 type AuthContextValue = ReturnType<typeof useAuth>;
-
-type LedgerSnapshot = {
-  players: (PlayerDoc & { id: string })[];
-  orderList: string[];
-  topic: string | null;
-  failed: boolean;
-  roomId: string;
-  myId: string;
-  mvpVotes: Record<string, string> | null;
-  stats: RoomDoc["stats"] | null;
-};
 
 export type RoomLayoutProps = RoomStateSnapshot & {
   roomId: string;
@@ -214,10 +204,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     },
     [sendRoomEvent]
   );
-
-  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
-  const [lastLedgerSnapshot, setLastLedgerSnapshot] = useState<LedgerSnapshot | null>(null);
-  const previousRoomStatusRef = useRef<RoomDoc["status"] | null>(room.status ?? null);
   const [transitionMessage, setTransitionMessage] = useState<string | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
   const overlayStatusRef = useRef<string | null>(null);
@@ -378,43 +364,21 @@ export function RoomLayout(props: RoomLayoutProps) {
   const orderProposal = room?.order?.proposal;
   const roundPreparing = room?.ui?.roundPreparing === true;
   const roundPreparingHold = useRoundPreparingHold(roundPreparing, ROUND_PREPARING_HOLD_MS);
-  const ledgerOrderList = useMemo(() => {
-    if (!Array.isArray(orderList)) return [];
-    return (orderList as (string | null | undefined)[])
-      .map((value) => (typeof value === "string" ? value.trim() : ""))
-      .filter((value): value is string => value.length > 0);
-  }, [orderList]);
-  const buildLedgerSnapshot = useCallback(
-    (): LedgerSnapshot => ({
-      players: playersWithOptimistic,
-      orderList: ledgerOrderList,
-      topic: room.topic ?? null,
-      failed: !!room.order?.failed,
-      roomId,
-      myId: meId,
-      mvpVotes: room.mvpVotes ?? null,
-      stats: room.stats ?? null,
-    }),
-    [
-      ledgerOrderList,
-      meId,
-      playersWithOptimistic,
-      room.mvpVotes,
-      room.order?.failed,
-      room.stats,
-      room.topic,
-      roomId,
-    ]
-  );
-  useEffect(() => {
-    if (room.status !== "finished") return;
-    setLastLedgerSnapshot(buildLedgerSnapshot());
-  }, [room.status, buildLedgerSnapshot]);
-  useEffect(() => {
-    setLastLedgerSnapshot(null);
-    setIsLedgerOpen(false);
-    previousRoomStatusRef.current = null;
-  }, [roomId]);
+  const {
+    isLedgerOpen,
+    usingLedgerSnapshot,
+    effectiveLedgerData,
+    canOpenLedger,
+    ledgerButtonLabel,
+    ledgerContextLabel,
+    handleOpenLedger,
+    handleCloseLedger,
+  } = useRoomLedgerState({
+    roomId,
+    room,
+    players: playersWithOptimistic,
+    myId: meId,
+  });
 
   const { handleRoomPasswordSubmit, handleRoomPasswordCancel } = useRoomPasswordGate({
     roomId,
@@ -837,16 +801,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     isHost,
   });
 
-  // 戦績モーダルは finished → その他 への遷移時に自動で閉じる（再オープンは手動で可）。
-  useEffect(() => {
-    const previousStatus = previousRoomStatusRef.current;
-    const currentStatus = room.status;
-    if (previousStatus === "finished" && currentStatus !== "finished" && isLedgerOpen) {
-      setIsLedgerOpen(false);
-    }
-    previousRoomStatusRef.current = currentStatus;
-  }, [room.status, isLedgerOpen]);
-
   const [optimisticProposalOverrides, setOptimisticProposalOverrides] = useState<
     Record<string, "placed" | "removed">
   >({});
@@ -944,95 +898,21 @@ export function RoomLayout(props: RoomLayoutProps) {
     return next;
   }, [sanitizedServerProposal, optimisticProposalOverrides]);
 
-  const slotCount = useMemo(
-    () =>
-      computeSlotCount({
-        status: room?.status || "waiting",
-        orderList: orderList ?? [],
-        dealPlayers: Array.isArray(roomDealPlayers) ? roomDealPlayers : [],
-        proposal: Array.isArray(orderProposal) ? orderProposal : [],
-        presenceReady,
-        onlineUids,
-        playersCount: playersWithOptimistic.length,
-        playerIds: playersWithOptimistic.map((p) => p.id),
-      }),
-    [
-      room?.status,
+  const { slotCount, submittedPlayerIds, canStartSorting, meHasPlacedCard, baseOverlayMessage } =
+    useRoomBoardDerivations({
+      room,
       orderList,
       roomDealPlayers,
       orderProposal,
+      players,
+      playersWithOptimistic,
+      eligibleIds,
       presenceReady,
       onlineUids,
-      playersWithOptimistic,
-    ]
-  );
-  
-
-  const submittedPlayerIds = useMemo(() => {
-    const ids = new Set<string>();
-    const proposal = room?.order?.proposal;
-    if (Array.isArray(proposal)) {
-      proposal.forEach((pid) => {
-        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
-      });
-    }
-    if (Array.isArray(orderList)) {
-      orderList.forEach((pid) => {
-        if (typeof pid === "string" && pid.trim().length > 0) ids.add(pid);
-      });
-    }
-    return Array.from(ids);
-  }, [room?.order?.proposal, orderList]);
-
-  const canStartSorting = useMemo(() => {
-    const resolveMode = room?.options?.resolveMode;
-    const roomStatus = room?.status;
-    if (resolveMode !== "sort-submit" || roomStatus !== "clue") return false;
-    const playerMap = new Map(players.map((p) => [p.id, p]));
-    const placedIds = new Set(room?.order?.proposal ?? []);
-    let waitingCount = 0;
-    for (const id of eligibleIds) {
-      const candidate = playerMap.get(id);
-      if (candidate && !placedIds.has(candidate.id)) waitingCount += 1;
-    }
-    return waitingCount === 0;
-  }, [room?.order?.proposal, room?.options?.resolveMode, room?.status, players, eligibleIds]);
-
-  const meHasPlacedCard = submittedPlayerIds.includes(meId);
-  const playerCount = playersWithOptimistic.length;
-  let baseOverlayMessage: string | null = null;
-  if (room && isMember) {
-    const status = room.status ?? null;
-    if (status === "waiting") {
-      baseOverlayMessage = `メンバー待機中（参加人数：${playerCount}人）`;
-    } else if (status === "clue") {
-      baseOverlayMessage = "連想ワード入力中";
-    } else if (status === "reveal") {
-      baseOverlayMessage = "判定中…";
-    } else if (status === "finished") {
-      baseOverlayMessage = "結果を確認中…";
-    }
-  }
-  const displayRoomName = stripMinimalTag(room?.name) || "";
-  const usingLedgerSnapshot = room.status !== "finished" && !!lastLedgerSnapshot;
-  const ledgerData = room.status === "finished" ? buildLedgerSnapshot() : lastLedgerSnapshot;
-  const effectiveLedgerData = ledgerData ?? buildLedgerSnapshot();
-  // 戦績ボタン制御（MinimalChat 側のみで使用）
-  const canOpenLedger = room.status === "finished" || !!lastLedgerSnapshot;
-  const ledgerButtonLabel = room.status === "finished" ? "戦績を見る" : "前の戦績を見る";
-  const ledgerContextLabel = usingLedgerSnapshot ? "前ラウンドの戦績を表示中" : null;
-  const handleOpenLedger = useCallback(() => {
-    if (room.status === "finished" || lastLedgerSnapshot) {
-      setIsLedgerOpen(true);
-      return;
-    }
-    notify({
-      id: "ledger-unavailable",
-      type: "info",
-      title: "まだ戦績がありません",
-      description: "ラウンドを1回終えると戦績を見返せます。",
+      meId,
+      isMember,
     });
-  }, [room.status, lastLedgerSnapshot]);
+  const displayRoomName = stripMinimalTag(room?.name) || "";
 
   // Layout nodes split to avoid JSX nesting pitfalls
   const headerNode = undefined;
@@ -1575,7 +1455,7 @@ export function RoomLayout(props: RoomLayoutProps) {
         }}
         ledger={{
           isOpen: isLedgerOpen && !!effectiveLedgerData,
-          onClose: () => setIsLedgerOpen(false),
+          onClose: handleCloseLedger,
           players: effectiveLedgerData?.players ?? [],
           orderList: effectiveLedgerData?.orderList ?? [],
           topic: effectiveLedgerData?.topic ?? null,
