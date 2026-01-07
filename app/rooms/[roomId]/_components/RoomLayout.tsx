@@ -47,6 +47,8 @@ import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
 import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
 import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLeave";
 import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
+import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
+import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -679,11 +681,8 @@ export function RoomLayout(props: RoomLayoutProps) {
       void clearRevealPending(roomId);
     }
   }, [isHost, room?.ui?.revealPending, room?.status, roomId]);
-  const [lastKnownHostId, setLastKnownHostId] = useState<string | null>(null);
-  const playerJoinOrderRef = useRef<Map<string, number>>(new Map());
-  const joinCounterRef = useRef(0);
+  const { playerJoinOrderRef, joinVersion } = usePlayerJoinOrderTracker(players);
   const lastRevealTsRef = useRef<number | null>(null);
-  const [joinVersion, setJoinVersion] = useState(0);
   const {
     isUpdateReady: spectatorUpdateReady,
     isApplying: spectatorUpdateApplying,
@@ -929,6 +928,11 @@ export function RoomLayout(props: RoomLayoutProps) {
   const stableHostId =
     typeof room?.hostId === "string" ? room.hostId.trim() : "";
 
+  const lastKnownHostId = useLastKnownHostId({
+    creatorId: room?.creatorId ?? null,
+    stableHostId,
+  });
+
   const { presenceLastSeenRef, hostLikelyUnavailable } = useRoomHostAvailability({
     presenceReady,
     presenceDegraded,
@@ -1033,33 +1037,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     const timer = setTimeout(() => setRedirectGuard(false), 1200);
     return () => window.clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    let updated = false;
-    for (const player of players) {
-      if (!playerJoinOrderRef.current.has(player.id)) {
-        playerJoinOrderRef.current.set(player.id, joinCounterRef.current++);
-        updated = true;
-      }
-    }
-    if (updated) {
-      setJoinVersion((value) => value + 1);
-    }
-  }, [players]);
-
-  useEffect(() => {
-    if (lastKnownHostId || !room?.creatorId) return;
-    const trimmedCreator = room.creatorId.trim();
-    if (trimmedCreator) {
-      setLastKnownHostId(trimmedCreator);
-    }
-  }, [room?.creatorId, lastKnownHostId]);
-
-  useEffect(() => {
-    if (stableHostId) {
-      setLastKnownHostId(stableHostId);
-    }
-  }, [stableHostId]);
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
