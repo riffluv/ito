@@ -42,6 +42,7 @@ import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
 import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
+import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -901,28 +902,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     setIsLedgerOpen(false);
     previousRoomStatusRef.current = null;
   }, [roomId]);
-  const presenceLastSeenRef = useRef<Map<string, number>>(new Map());
-  const hostAvailabilityTimerRef = useRef<number | null>(null);
-  const hostMissingSinceRef = useRef<number | null>(null);
-  const [hostLikelyUnavailable, setHostLikelyUnavailable] = useState(false);
-  const clearHostAvailabilityTimer = useCallback(() => {
-    if (hostAvailabilityTimerRef.current !== null) {
-      window.clearTimeout(hostAvailabilityTimerRef.current);
-      hostAvailabilityTimerRef.current = null;
-    }
-  }, []);
-  const onlineUidSignature = useMemo(
-    () => (Array.isArray(onlineUids) ? onlineUids.join(",") : "_"),
-    [onlineUids]
-  );
-  useEffect(() => {
-    if (!presenceReady) return;
-    if (!Array.isArray(onlineUids)) return;
-    const nowTs = Date.now();
-    for (const uid of onlineUids) {
-      presenceLastSeenRef.current.set(uid, nowTs);
-    }
-  }, [presenceReady, onlineUidSignature, onlineUids]);
 
 
   useEffect(() => {
@@ -1011,70 +990,14 @@ export function RoomLayout(props: RoomLayoutProps) {
   const stableHostId =
     typeof room?.hostId === "string" ? room.hostId.trim() : "";
 
-  useEffect(() => {
-    const presenceAvailable =
-      presenceReady || presenceDegraded || Array.isArray(onlineUids);
-    if (!presenceAvailable) {
-      hostMissingSinceRef.current = null;
-      setHostLikelyUnavailable(false);
-      clearHostAvailabilityTimer();
-      return;
-    }
-    if (!stableHostId) {
-      hostMissingSinceRef.current = null;
-      setHostLikelyUnavailable(true);
-      clearHostAvailabilityTimer();
-      return;
-    }
-    if (uid && stableHostId === uid) {
-      hostMissingSinceRef.current = null;
-      setHostLikelyUnavailable(false);
-      clearHostAvailabilityTimer();
-      return;
-    }
-    if (Array.isArray(onlineUids) && onlineUids.includes(stableHostId)) {
-      hostMissingSinceRef.current = null;
-      setHostLikelyUnavailable(false);
-      clearHostAvailabilityTimer();
-      return;
-    }
-
-    const now = Date.now();
-    if (!hostMissingSinceRef.current) {
-      hostMissingSinceRef.current = now;
-      clearHostAvailabilityTimer();
-    }
-
-    const missingElapsed = now - (hostMissingSinceRef.current ?? now);
-    const remaining = HOST_UNAVAILABLE_GRACE_MS - missingElapsed;
-    if (remaining <= 0) {
-      setHostLikelyUnavailable(true);
-      clearHostAvailabilityTimer();
-      return;
-    }
-
-    setHostLikelyUnavailable(false);
-    if (hostAvailabilityTimerRef.current === null) {
-      hostAvailabilityTimerRef.current = window.setTimeout(() => {
-        hostAvailabilityTimerRef.current = null;
-        setHostLikelyUnavailable(true);
-      }, remaining + 50);
-    }
-  }, [
+  const { presenceLastSeenRef, hostLikelyUnavailable } = useRoomHostAvailability({
     presenceReady,
     presenceDegraded,
-    stableHostId,
-    uid,
     onlineUids,
-    clearHostAvailabilityTimer,
-  ]);
-  useEffect(() => {
-    return () => clearHostAvailabilityTimer();
-  }, [clearHostAvailabilityTimer]);
-
-  useEffect(() => {
-    setMetric("room", "hostLikelyUnavailable", hostLikelyUnavailable ? 1 : 0);
-  }, [hostLikelyUnavailable]);
+    hostId: stableHostId,
+    viewerUid: uid,
+    graceMs: HOST_UNAVAILABLE_GRACE_MS,
+  });
   const isSelfOnline = useMemo(() => {
     if (!uid) return false;
     return Array.isArray(onlineUids) && onlineUids.includes(uid);
@@ -1145,6 +1068,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     joinVersion,
     presenceReady,
     onlineUids,
+    presenceLastSeenRef,
     hostLikelyUnavailable,
   ]);
 
