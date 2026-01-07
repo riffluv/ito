@@ -35,15 +35,15 @@ export function useBoardPendingState(params: {
 
   const updatePendingState = useCallback<PendingStateUpdater>(
     (updater) => {
-      setPending((prev) => {
-        const next = updater(prev);
-        if (next === prev) return prev;
-        return shallowArrayEqual(prev, next) ? prev : next;
-      });
+      const prev = pendingRef.current;
+      const next = updater(prev);
+      if (next === prev) return;
+      if (shallowArrayEqual(prev, next)) return;
+      pendingRef.current = next;
+      setPending(next);
     },
     [setPending]
   );
 
   return { pendingRef, updatePendingState };
 }
-

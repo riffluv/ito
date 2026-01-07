@@ -1,4 +1,3 @@
-import { notify } from "@/components/ui/notify";
 import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
 import {
@@ -20,6 +19,7 @@ import {
   buildRenderedProposalForSignature,
   sanitizeOptimisticProposal,
 } from "./optimisticReorder";
+import { useOptimisticDropRollback } from "./useOptimisticDropRollback";
 
 type PendingStateUpdater = (updater: (prev: (string | null)[]) => (string | null)[]) => void;
 
@@ -133,31 +133,15 @@ export function useOptimisticProposalState(params: {
     [optimisticProposal, pendingHasContent, optimisticReturningIds.length]
   );
 
-  const dropRollbackTimersRef = useRef<Map<string, number>>(new Map());
-  const dropRollbackSnapshotsRef = useRef<Map<string, (string | null)[]>>(
-    new Map()
-  );
   const forceResyncTimerRef = useRef<number | null>(null);
   const optimisticSessionRef = useRef(0);
 
-  const clearDropRollbackTimer = useCallback((playerId?: string) => {
-    if (!playerId) {
-      if (typeof window !== "undefined") {
-        dropRollbackTimersRef.current.forEach((timer) =>
-          window.clearTimeout(timer)
-        );
-      }
-      dropRollbackTimersRef.current.clear();
-      dropRollbackSnapshotsRef.current.clear();
-      return;
-    }
-    const timer = dropRollbackTimersRef.current.get(playerId);
-    if (typeof window !== "undefined" && typeof timer === "number") {
-      window.clearTimeout(timer);
-    }
-    dropRollbackTimersRef.current.delete(playerId);
-    dropRollbackSnapshotsRef.current.delete(playerId);
-  }, []);
+  const { scheduleDropRollback, clearDropRollbackTimer } = useOptimisticDropRollback({
+    latestActiveProposalRef,
+    prefersReducedMotion,
+    updatePendingState,
+    onOptimisticProposalChange,
+  });
 
   const clearForceResyncTimer = useCallback(() => {
     if (forceResyncTimerRef.current) {
@@ -173,7 +157,6 @@ export function useOptimisticProposalState(params: {
       }
       clearForceResyncTimer();
       clearDropRollbackTimer();
-      dropRollbackSnapshotsRef.current.clear();
       const returningMap = returningTimeoutsRef.current;
       returningMap.forEach((timeout) => clearTimeout(timeout));
       returningMap.clear();
@@ -228,41 +211,6 @@ export function useOptimisticProposalState(params: {
       });
     },
     [boardProposal]
-  );
-
-  const scheduleDropRollback = useCallback(
-    (playerId: string, snapshot: (string | null)[]) => {
-      if (typeof window === "undefined") return;
-      clearDropRollbackTimer(playerId);
-      dropRollbackSnapshotsRef.current.set(playerId, snapshot.slice());
-      const timeoutMs = prefersReducedMotion ? 1400 : 1700;
-      const handle = window.setTimeout(() => {
-        dropRollbackTimersRef.current.delete(playerId);
-        const latestServerProposal = latestActiveProposalRef.current;
-        if (latestServerProposal.includes(playerId)) {
-          dropRollbackSnapshotsRef.current.delete(playerId);
-          return;
-        }
-        const rollback = dropRollbackSnapshotsRef.current.get(playerId);
-        dropRollbackSnapshotsRef.current.delete(playerId);
-        if (!rollback) return;
-        updatePendingState(() => rollback.slice());
-        onOptimisticProposalChange?.(playerId, null);
-        notify({
-          title: "配置を巻き戻しました",
-          description: "サーバー反映が遅延したためローカル状態をリセットしました。",
-          type: "info",
-          duration: 1400,
-        });
-      }, timeoutMs);
-      dropRollbackTimersRef.current.set(playerId, handle);
-    },
-    [
-      clearDropRollbackTimer,
-      onOptimisticProposalChange,
-      prefersReducedMotion,
-      updatePendingState,
-    ]
   );
 
   const lastServerSignatureRef = useRef<string | null>(null);
@@ -369,8 +317,6 @@ export function useOptimisticProposalState(params: {
   }, [clearOptimisticProposal, setOptimisticReturningIds, updatePendingState]);
 
   useEffect(() => {
-    const dropRollbackTimers = dropRollbackTimersRef.current;
-    const dropRollbackSnapshots = dropRollbackSnapshotsRef.current;
     return () => {
       if (
         typeof window !== "undefined" &&
@@ -379,11 +325,6 @@ export function useOptimisticProposalState(params: {
         window.clearTimeout(forceResyncTimerRef.current);
         forceResyncTimerRef.current = null;
       }
-      if (typeof window !== "undefined" && dropRollbackTimers.size > 0) {
-        dropRollbackTimers.forEach((timer) => window.clearTimeout(timer));
-        dropRollbackTimers.clear();
-      }
-      dropRollbackSnapshots.clear();
     };
   }, []);
 
