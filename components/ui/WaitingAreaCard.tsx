@@ -15,52 +15,48 @@ interface WaitingAreaCardProps {
   gameStarted?: boolean;
 }
 
-function WaitingAreaCardComponent({
-  player,
-  isDraggingEnabled = false,
-  meId,
-  optimisticReset = false,
-  gameStarted = false,
-}: WaitingAreaCardProps) {
-  // 連想ワードの有効性を厳密にチェック（空文字列も無効とする）
+function buildWaitingCardViewModel(params: {
+  player: PlayerDoc & { id: string };
+  optimisticReset: boolean;
+  gameStarted: boolean;
+}) {
+  const { player, optimisticReset, gameStarted } = params;
   const hasValidClue = !!(player?.clue1 && player.clue1.trim() !== "");
   const ready = !optimisticReset && hasValidClue;
 
   const PROMPT_LABEL = "Add your hint.";
+  const displayClue = ready ? player?.clue1?.trim() || "" : gameStarted ? PROMPT_LABEL : WAITING_LABEL;
 
-  const displayClue = useMemo(() => {
-    if (ready) {
-      return player?.clue1?.trim() || "";
-    }
-    return gameStarted ? PROMPT_LABEL : WAITING_LABEL;
-  }, [gameStarted, player?.clue1, ready]);
+  const base = createWaitingCardViewModel({ player, ready });
+  if (!ready) {
+    return { ...base, clue: displayClue };
+  }
+  return {
+    ...base,
+    clue: player.clue1?.trim() || base.clue,
+    variant: base.variant,
+    flipped: false,
+  };
+}
 
-  const cardViewModel = useMemo(() => {
-    const base = createWaitingCardViewModel({ player, ready });
-    if (!ready) {
-      return {
-        ...base,
-        clue: displayClue,
-      };
-    }
-    return {
-      ...base,
-      clue: player.clue1?.trim() || base.clue,
-      variant: base.variant,
-      flipped: false,
-    };
-  }, [player, ready, displayClue]);
+function DraggableWaitingAreaCard({
+  player,
+  optimisticReset,
+  gameStarted,
+}: {
+  player: PlayerDoc & { id: string };
+  optimisticReset: boolean;
+  gameStarted: boolean;
+}) {
+  const cardViewModel = useMemo(
+    () => buildWaitingCardViewModel({ player, optimisticReset, gameStarted }),
+    [player, optimisticReset, gameStarted]
+  );
 
-  // ドラッグ機能（連想ワード確定後のみ有効）
-  const draggable =
-    isDraggingEnabled && ready && (meId ? player.id === meId : false);
-  const { attributes, listeners, setNodeRef, isDragging } =
-    useDraggable({
-      id: player.id,
-      // 本人のカード以外はドラッグ不可。連想ワード未確定も不可。
-      disabled:
-        !draggable,
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: player.id,
+    disabled: false,
+  });
 
   const baseStyle: CSSProperties = isDragging
     ? {
@@ -70,14 +66,13 @@ function WaitingAreaCardComponent({
         transition: "none",
       }
     : {
-        cursor: draggable ? "grab" : "default",
+        cursor: "grab",
         transition: "transform 0.28s ease",
       };
   const style: CSSProperties = {
     ...baseStyle,
-    // Prevent mobile browsers from treating the gesture as scroll, which can
-    // cancel the drag and lead to "dropped but not submitted" feeling.
-    ...(draggable ? { touchAction: "none" } : {}),
+    // Prevent mobile browsers from treating the gesture as scroll, which can cancel the drag.
+    touchAction: "none",
   };
 
   return (
@@ -91,11 +86,78 @@ function WaitingAreaCardComponent({
       data-waiting-card="true"
       data-player-id={player.id}
       data-player-name={player.name || "匿名"}
-      {...(draggable ? listeners : {})}
-      {...(draggable ? attributes : {})}
+      {...listeners}
+      {...attributes}
     >
       <GameCard {...cardViewModel} />
     </Box>
+  );
+}
+
+function StaticWaitingAreaCard({
+  player,
+  draggableHint,
+  optimisticReset,
+  gameStarted,
+}: {
+  player: PlayerDoc & { id: string };
+  draggableHint: boolean;
+  optimisticReset: boolean;
+  gameStarted: boolean;
+}) {
+  const cardViewModel = useMemo(
+    () => buildWaitingCardViewModel({ player, optimisticReset, gameStarted }),
+    [player, optimisticReset, gameStarted]
+  );
+  const style: CSSProperties = {
+    cursor: draggableHint ? "grab" : "default",
+    transition: "transform 0.28s ease",
+  };
+
+  return (
+    <Box
+      style={style}
+      bg="transparent"
+      aria-grabbed="false"
+      aria-label={player.name ? `${player.name}のカード` : "カード"}
+      data-waiting-card="true"
+      data-player-id={player.id}
+      data-player-name={player.name || "匿名"}
+    >
+      <GameCard {...cardViewModel} />
+    </Box>
+  );
+}
+
+function WaitingAreaCardComponent({
+  player,
+  isDraggingEnabled = false,
+  meId,
+  optimisticReset = false,
+  gameStarted = false,
+}: WaitingAreaCardProps) {
+  const hasValidClue = !!(player?.clue1 && player.clue1.trim() !== "");
+  const ready = !optimisticReset && hasValidClue;
+  const draggable =
+    isDraggingEnabled && ready && typeof meId === "string" && meId.length > 0 && player.id === meId;
+
+  if (draggable) {
+    return (
+      <DraggableWaitingAreaCard
+        player={player}
+        optimisticReset={optimisticReset}
+        gameStarted={gameStarted}
+      />
+    );
+  }
+
+  return (
+    <StaticWaitingAreaCard
+      player={player}
+      draggableHint={isDraggingEnabled && typeof meId === "string" && player.id === meId}
+      optimisticReset={optimisticReset}
+      gameStarted={gameStarted}
+    />
   );
 }
 

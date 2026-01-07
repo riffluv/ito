@@ -11,6 +11,7 @@ type PrefetchOptions = {
 };
 
 const PREFETCH_SOUND_IDS: SoundId[] = [
+  "card_flip",
   "card_deal",
   "card_place",
   "drop_success",

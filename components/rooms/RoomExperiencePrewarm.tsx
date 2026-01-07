@@ -58,6 +58,15 @@ const scheduleIdleTask = (task: () => void, timeout = 900) => {
   return () => window.clearTimeout(handle);
 };
 
+const scheduleSoonTask = (task: () => void) => {
+  if (typeof window === "undefined") {
+    task();
+    return () => {};
+  }
+  const handle = window.setTimeout(task, 0);
+  return () => window.clearTimeout(handle);
+};
+
 export function RoomExperiencePrewarm({
   roomId,
   roomStatus,
@@ -85,17 +94,20 @@ export function RoomExperiencePrewarm({
     prewarmedRoomRef.current = roomId;
 
     let cancelled = false;
-    const cancel = scheduleIdleTask(() => {
-      if (cancelled) return;
-      void prefetchRoomExperience(roomId, { priority: true });
-      if (!skipHeavy) {
-        void import("@/lib/pixi/victoryRays").catch(() => undefined);
+    const cancelSoon = scheduleSoonTask(() => {
+      if (!cancelled) {
+        void prefetchRoomExperience(roomId, { priority: true });
       }
+    });
+    const cancelIdle = scheduleIdleTask(() => {
+      if (cancelled || skipHeavy) return;
+      void import("@/lib/pixi/victoryRays").catch(() => undefined);
     });
 
     return () => {
       cancelled = true;
-      cancel();
+      cancelSoon();
+      cancelIdle();
     };
   }, [roomId, shouldPrewarm, skipHeavy]);
 

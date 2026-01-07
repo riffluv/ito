@@ -336,23 +336,12 @@ function InteractiveBoardBase({
     };
   }, [activeId, dragTilt, magnetState.strength, magnetEnterPulse, prefersReducedMotion]);
 
-  // 初期のみ Always で計測し、その後は WhileDragging に切り替えて負荷を下げる
-  const [measuringStrategy, setMeasuringStrategy] = useState<MeasuringStrategy>(
-    MeasuringStrategy.Always
-  );
-  useEffect(() => {
-    const timer = window.setTimeout(
-      () => setMeasuringStrategy(MeasuringStrategy.WhileDragging),
-      280
-    );
-    return () => window.clearTimeout(timer);
-  }, []);
-
+  // Drag 中の Rect 計測コストを抑える（レイアウトは drag 中に基本固定のため）
   const measuring = useMemo<DndContextProps["measuring"]>(
     () => ({
-      droppable: { strategy: measuringStrategy },
+      droppable: { strategy: MeasuringStrategy.BeforeDragging },
     }),
-    [measuringStrategy]
+    []
   );
 
   return (
