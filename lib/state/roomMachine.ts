@@ -28,6 +28,7 @@ import {
   type SanitizedPlayer,
 } from "./roomMachineUtils";
 import { computeTargetIds } from "./roomMachineDerivations";
+import { createRoomMachineEffects } from "./roomMachineEffects";
 
 export type SpectatorReason = "mid-game" | "waiting-open" | "waiting-closed" | "version-mismatch" | null;
 export type SpectatorStatus =
@@ -156,6 +157,8 @@ export function createRoomMachine(input: RoomMachineInput) {
       handleGameError(error, `ルーム操作: ${action}`, true);
     }
   };
+
+  const effects = createRoomMachineEffects({ deps, reportActionError });
 
   return createMachine(
     {
@@ -427,6 +430,7 @@ export function createRoomMachine(input: RoomMachineInput) {
     },
     {
       actions: {
+        ...effects,
         // NOTE: Safe Update の hold/release は useRoomMachineController でページ単位で管理するため、
         // フェーズ別制御は no-op にした。部屋にいる間は waiting 含め常に hold される。
         holdInGameAutoApplyAction: () => {
@@ -549,40 +553,6 @@ export function createRoomMachine(input: RoomMachineInput) {
             room: { ...context.room, status: "waiting" as const },
           };
         }),
-        callStartGame: ({ context }) => {
-          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          void deps.startGame(context.roomId, requestId).catch((error) => {
-            reportActionError("startGame", error);
-          });
-        },
-        callDealNumbers: ({ context }) => {
-          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          void deps.dealNumbers(context.roomId, { requestId }).catch((error) => {
-            reportActionError("dealNumbers", error);
-          });
-        },
-        callSubmitOrder: ({ context, event }) => {
-          if (event.type !== "SUBMIT_ORDER") return;
-          const list = sanitizeOrderList(event.list);
-          void deps.submitSortedOrder(context.roomId, list).catch((error) => {
-            reportActionError("submitSortedOrder", error);
-          });
-        },
-        callFinalizeReveal: ({ context }) => {
-          void deps.finalizeReveal(context.roomId).catch((error) => {
-            reportActionError("finalizeReveal", error);
-          });
-        },
-        callReset: ({ context, event }) => {
-          if (event.type !== "RESET") return;
-          const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          const optionsWithId = { ...(event.options ?? {}), requestId } as ResetRoomOptions & { requestId: string };
-          void deps
-            .resetRoomWithPrune(context.roomId, event.keepIds, optionsWithId)
-            .catch((error) => {
-              reportActionError("resetRoomWithPrune", error);
-            });
-        },
         spectatorEnter: assign(({ context, event }) => {
           if (event.type !== "SPECTATOR_ENTER") return context;
           return {
