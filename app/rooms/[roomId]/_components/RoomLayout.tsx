@@ -51,6 +51,7 @@ import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker
 import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
 import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
 import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
+import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -696,17 +697,8 @@ export function RoomLayout(props: RoomLayoutProps) {
     retryUpdate: retrySpectatorUpdate,
     applyUpdate: applySpectatorUpdate,
   } = useServiceWorkerUpdate();
-  const meId = uid || "";
-  const meFromPlayers = players.find((p) => p.id === meId);
-  const [optimisticMe, setOptimisticMe] = useState<(PlayerDoc & { id: string }) | null>(null);
-  const me = meFromPlayers ?? optimisticMe ?? null;
-  const playersWithOptimistic = useMemo(() => {
-    if (!optimisticMe) return players;
-    if (players.some((p) => p.id === optimisticMe.id)) {
-      return players;
-    }
-    return [...players, optimisticMe];
-  }, [players, optimisticMe]);
+  const { meId, meFromPlayers, optimisticMe, setOptimisticMe, me, playersWithOptimistic } =
+    useRoomMeWithOptimisticPlayers({ uid, players });
   const { resolveSpectatorDisplayName, playersSignature, fallbackNames } = useRoomDisplayNameHelpers({
     players: playersWithOptimistic,
     roomHostId: room?.hostId ?? null,
