@@ -15,62 +15,30 @@ import {
   bootstrapBackgroundTheme,
   DEFAULT_BACKGROUND_THEME,
   persistBackgroundTheme,
-  type BackgroundTheme,
 } from "@/lib/pixi/backgroundPreference";
 import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
 import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
 import PIXI from "@/lib/pixi/instance";
 import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
 import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
-
-type BackgroundOption = BackgroundTheme;
-type SceneryVariant = "night" | "inferno";
-type SettingsTab = "game" | "graphics" | "sound";
-type GraphicsTab = "background" | "animation";
-type AnimationModeOption = "3d" | "simple";
-
-const SETTINGS_TABS: ReadonlyArray<{ key: SettingsTab; label: string }> = [
-  { key: "game", label: "Game Settings" },
-  { key: "graphics", label: "Graphics Settings" },
-  { key: "sound", label: "Sound Settings" },
-];
-
-const GRAPHICS_TABS: ReadonlyArray<{ key: GraphicsTab; label: string }> = [
-  { key: "background", label: "背景" },
-  { key: "animation", label: "アニメ" },
-];
-
-const CARD_ANIMATION_OPTIONS: ReadonlyArray<{
-  value: AnimationModeOption;
-  title: string;
-  description: string;
-}> = [
-  {
-    value: "3d",
-    title: "3D回転",
-    description: "カードが立体的に回転します（おすすめ）",
-  },
-  {
-    value: "simple",
-    title: "シンプル",
-    description: "回転を省いて軽量表示にします",
-  },
-];
-
-// 背景タイプからバリエーションへのマッピング
-const getVariantFromBackground = (bg: BackgroundOption): SceneryVariant | null => {
-  if (bg === "pixi-dq") return "night";
-  if (bg === "pixi-inferno") return "inferno";
-  return null;
-};
-
-// バリエーションから背景タイプへのマッピング
-const getBackgroundFromVariant = (variant: SceneryVariant): BackgroundOption => {
-  if (variant === "night") return "pixi-dq";
-  if (variant === "inferno") return "pixi-inferno";
-  return "pixi-dq";
-};
-
+import {
+  BACKGROUND_LABEL_MAP,
+  BACKGROUND_OPTIONS,
+  CARD_ANIMATION_OPTIONS,
+  GRAPHICS_TABS,
+  MODE_OPTIONS,
+  SCENERY_VARIANTS,
+  SETTINGS_TABS,
+  SOUND_FEATURE_LOCKED,
+  SOUND_LOCK_MESSAGE,
+  TOPIC_TYPE_OPTIONS,
+  getBackgroundFromVariant,
+  getVariantFromBackground,
+  type BackgroundOption,
+  type GraphicsTab,
+  type SceneryVariant,
+  type SettingsTab,
+} from "@/components/settings/settingsModalModel";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -143,58 +111,6 @@ export function SettingsModal({
     playSettingsClose();
     onClose();
   }, [onClose, playSettingsClose]);
-
-  const SOUND_FEATURE_LOCKED = false;
-  const soundLockMessage =
-    "サウンド素材を制作中です。準備ができ次第ここで設定できます。";
-
-  const backgroundLabelMap: Record<BackgroundOption, string> = {
-    css: "CSS はいけい",
-    "pixi-simple": "Pixi ライト",
-    "pixi-dq": "山はいいよね（夜）",
-    "pixi-inferno": "山はいいよね（煉獄）",
-  };
-
-  const backgroundOptions: {
-    value: BackgroundOption | "scenery"; // "scenery" は山はいいよねグループ
-    title: string;
-    description: string;
-    hasVariants?: boolean;
-  }[] = [
-    {
-      value: "css",
-      title: "CSS はいけい",
-      description: "けいりょうな CSS グラデーション。すべての環境で安定。",
-    },
-    {
-      value: "pixi-simple",
-      title: "Pixi はいけい",
-      description: "黒ベースの PixiJS 背景。",
-    },
-    {
-      value: "scenery",
-      title: "山はいいよね。 pixiJS",
-      description: "和みそうな、景色 PixiJS 背景。",
-      hasVariants: true,
-    },
-  ];
-
-  const sceneryVariants: {
-    value: SceneryVariant;
-    label: string;
-    description: string;
-  }[] = [
-    {
-      value: "night",
-      label: "夜",
-      description: "星空と山々の夜景",
-    },
-    {
-      value: "inferno",
-      label: "煉獄",
-      description: "地獄の炎と溶岩",
-    },
-  ];
 
   const [forceAnimations, setForceAnimations] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
@@ -369,37 +285,6 @@ export function SettingsModal({
     }
   };
 
-  const modeOptions = [
-    {
-      value: "sort-submit",
-      title: "みんなで ならべる",
-      description: "ぜんいん カードを ならべてから はんてい",
-    },
-  ];
-
-  const topicTypeOptions = [
-    {
-      value: "通常版",
-      title: "通常版",
-      description: "バランスの取れた定番のお題",
-    },
-    {
-      value: "レインボー版",
-      title: "レインボー版",
-      description: "カラフルで創造的なお題",
-    },
-    {
-      value: "クラシック版",
-      title: "クラシック版",
-      description: "シンプルで分かりやすいお題",
-    },
-    {
-      value: "カスタム",
-      title: "カスタム",
-      description: "じぶんたちで お題を入力して あそぶ",
-    },
-  ];
-
   // Pixi背景の描画とDOM同期
   useEffect(() => {
     const destroyGraphics = () => {
@@ -573,7 +458,7 @@ export function SettingsModal({
                     どうやって あそぶか
                   </Text>
                   <Stack gap={2}>
-                    {modeOptions.map((option) => {
+                    {MODE_OPTIONS.map((option) => {
                       const isSelected = resolveMode === option.value;
                       return (
                         <Box
@@ -672,7 +557,7 @@ export function SettingsModal({
                     おだいの しゅるい
                   </Text>
                   <Stack gap={2}>
-                    {topicTypeOptions.map((option) => {
+                    {TOPIC_TYPE_OPTIONS.map((option) => {
                       const isSelected = defaultTopicType === option.value;
                       return (
                         <Box
@@ -886,10 +771,10 @@ export function SettingsModal({
                     はいけい モード
                   </Text>
                   <Text fontSize="xs" color={UI_TOKENS.COLORS.textMuted} mb={3}>
-                    げんざい: {backgroundLabelMap[backgroundType]}
+                    げんざい: {BACKGROUND_LABEL_MAP[backgroundType]}
                   </Text>
                   <Stack gap={2}>
-                    {backgroundOptions.map((opt) => {
+                    {BACKGROUND_OPTIONS.map((opt) => {
                       // sceneryグループの場合は特別処理
                       if (opt.value === "scenery") {
                         const currentVariant = getVariantFromBackground(backgroundType);
@@ -995,7 +880,7 @@ export function SettingsModal({
                                   バリエーション:
                                 </Text>
                                 <HStack gap={2}>
-                                  {sceneryVariants.map((variant) => {
+                        {SCENERY_VARIANTS.map((variant) => {
                                     const isVariantSelected = currentVariant === variant.value;
 
                                     return (
@@ -1401,7 +1286,7 @@ export function SettingsModal({
               SOUND_FEATURE_LOCKED ? (
                 <SoundSettingsPlaceholder
                   locked={SOUND_FEATURE_LOCKED}
-                  message={soundLockMessage}
+                  message={SOUND_LOCK_MESSAGE}
                   masterVolume={soundSettings.masterVolume}
                   muted={soundSettings.muted}
                   soundManagerReady={Boolean(soundManager)}
