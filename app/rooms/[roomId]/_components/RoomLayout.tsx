@@ -41,6 +41,7 @@ import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
 import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
+import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -809,44 +810,7 @@ export function RoomLayout(props: RoomLayoutProps) {
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
   const roundPreparing = room?.ui?.roundPreparing === true;
-  const [roundPreparingHold, setRoundPreparingHold] = useState(false);
-  const roundPreparingHoldUntilRef = useRef(0);
-  const roundPreparingHoldTimerRef = useRef<number | null>(null);
-  const clearRoundPreparingHoldTimer = useCallback(() => {
-    if (roundPreparingHoldTimerRef.current !== null) {
-      window.clearTimeout(roundPreparingHoldTimerRef.current);
-      roundPreparingHoldTimerRef.current = null;
-    }
-  }, []);
-  useEffect(() => () => clearRoundPreparingHoldTimer(), [clearRoundPreparingHoldTimer]);
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      setRoundPreparingHold(roundPreparing);
-      return;
-    }
-    if (roundPreparing) {
-      roundPreparingHoldUntilRef.current = Date.now() + ROUND_PREPARING_HOLD_MS;
-      clearRoundPreparingHoldTimer();
-      roundPreparingHoldTimerRef.current = window.setTimeout(() => {
-        roundPreparingHoldTimerRef.current = null;
-        setRoundPreparingHold(false);
-      }, ROUND_PREPARING_HOLD_MS);
-      setRoundPreparingHold(true);
-      return;
-    }
-    const remaining = roundPreparingHoldUntilRef.current - Date.now();
-    if (remaining > 0) {
-      clearRoundPreparingHoldTimer();
-      roundPreparingHoldTimerRef.current = window.setTimeout(() => {
-        roundPreparingHoldTimerRef.current = null;
-        setRoundPreparingHold(false);
-      }, remaining);
-      setRoundPreparingHold(true);
-    } else {
-      clearRoundPreparingHoldTimer();
-      setRoundPreparingHold(false);
-    }
-  }, [roundPreparing, clearRoundPreparingHoldTimer]);
+  const roundPreparingHold = useRoundPreparingHold(roundPreparing, ROUND_PREPARING_HOLD_MS);
   const prevRoundPreparingRef = useRef<boolean | null>(null);
   useEffect(() => {
     const prev = prevRoundPreparingRef.current;
