@@ -45,6 +45,8 @@ import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
 import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
 import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
+import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLeave";
+import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -968,21 +970,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const [forcedExitReason, setForcedExitReason] = useState<
     "game-in-progress" | "version-mismatch" | null
   >(null);
-
-  const spectatorStateLogRef = useRef<{
-    roomStatus: string | null;
-    isMember: boolean;
-    canAccess: boolean;
-    forcedExitReason: typeof forcedExitReason;
-    spectatorReason: typeof spectatorReason;
-    spectatorNode: typeof fsmSpectatorNode;
-    joinStatus: typeof joinStatus;
-    playersSignature: string;
-    waitingToRejoin: boolean;
-  } | null>(null);
-  const spectatorLeaveTimerRef = useRef<number | null>(null);
-  const spectatorEnterTimerRef = useRef<number | null>(null);
-  const spectatorCandidateRef = useRef<boolean>(false);
   const {
     isSpectatorMode,
     seatRequestTimedOut,
@@ -1142,11 +1129,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     spectatorNode: fsmSpectatorNode,
   });
 
-  // 最新の candidate を参照できるように保持
-  useEffect(() => {
-    spectatorCandidateRef.current = spectatorCandidate;
-  }, [spectatorCandidate]);
-
   useEffect(() => {
     traceAction("spectator.candidate", {
       roomId,
@@ -1193,84 +1175,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     spectatorJoinStatus,
   ]);
 
-  useEffect(() => {
-    // クリーンアップ: タイマーが残らないようにする
-    return () => {
-      if (spectatorLeaveTimerRef.current !== null) {
-        window.clearTimeout(spectatorLeaveTimerRef.current);
-        spectatorLeaveTimerRef.current = null;
-      }
-      if (spectatorEnterTimerRef.current !== null) {
-        window.clearTimeout(spectatorEnterTimerRef.current);
-        spectatorEnterTimerRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    // 既に観戦中 → candidate が false に一瞬揺らいでも即 leave/reset しない（デバウンス）
-    if (!spectatorCandidate) {
-      if (spectatorEnterTimerRef.current !== null) {
-        window.clearTimeout(spectatorEnterTimerRef.current);
-        spectatorEnterTimerRef.current = null;
-      }
-      if (fsmSpectatorNode === "idle") {
-        return;
-      }
-      // 観戦申請中 / 受理待ち中は触らない
-      if (seatRequestPending || seatAcceptanceActive || forcedExitReason) {
-        return;
-      }
-      if (spectatorLeaveTimerRef.current !== null) {
-        window.clearTimeout(spectatorLeaveTimerRef.current);
-      }
-      spectatorLeaveTimerRef.current = window.setTimeout(() => {
-        if (!spectatorCandidateRef.current) {
-          emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
-          emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-        }
-      }, 700); // 揺らぎ吸収のため 700ms デバウンス
-      return;
-    }
-
-    // candidate が true に戻ったら leave デバウンスを解除
-    if (spectatorLeaveTimerRef.current !== null) {
-      window.clearTimeout(spectatorLeaveTimerRef.current);
-      spectatorLeaveTimerRef.current = null;
-    }
-
-    // 既に観戦状態なら何もしない
-    if (fsmSpectatorNode !== "idle") {
-      return;
-    }
-    if (mustSpectateMidGame) {
-      return;
-    }
-    if (spectatorEnterTimerRef.current !== null) {
-      window.clearTimeout(spectatorEnterTimerRef.current);
-    }
-    spectatorEnterTimerRef.current = window.setTimeout(() => {
-      emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: spectatorEnterReason });
-    }, 220);
-  }, [
-    emitSpectatorEvent,
-    fsmSpectatorNode,
-    spectatorCandidate,
-    spectatorEnterReason,
-    seatRequestPending,
-    seatAcceptanceActive,
-    forcedExitReason,
-    mustSpectateMidGame,
-  ]);
-
-  useEffect(() => {
-    if (!uid) return;
-    if (!isSpectatorMode) return;
-    if (!isMember && !isHost && !hasOptimisticSeat) return;
-    if (seatRequestPending || seatAcceptanceActive) return;
-    emitSpectatorEvent({ type: "SPECTATOR_LEAVE" });
-    emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-  }, [
+  useSpectatorAutoEnterLeave({
     uid,
     isSpectatorMode,
     isMember,
@@ -1278,8 +1183,13 @@ export function RoomLayout(props: RoomLayoutProps) {
     hasOptimisticSeat,
     seatRequestPending,
     seatAcceptanceActive,
+    forcedExitReason,
+    spectatorCandidate,
+    spectatorEnterReason,
+    mustSpectateMidGame,
+    fsmSpectatorNode,
     emitSpectatorEvent,
-  ]);
+  });
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
   useEffect(() => {
     traceAction("spectator.mode", {
@@ -1409,41 +1319,11 @@ export function RoomLayout(props: RoomLayoutProps) {
     });
   }, [seatRequestAccepted, uid, me, normalizedDisplayName]);
 
-  useEffect(() => {
-    const nextState = {
-      roomStatus: room?.status ?? null,
-      spectatorNode: fsmSpectatorNode,
-      isMember,
-      canAccess,
-      forcedExitReason,
-      spectatorReason,
-      joinStatus,
-      playersSignature,
-      waitingToRejoin,
-    };
-    const prev = spectatorStateLogRef.current;
-    if (
-      !prev ||
-      prev.roomStatus !== nextState.roomStatus ||
-      prev.isMember !== nextState.isMember ||
-      prev.canAccess !== nextState.canAccess ||
-      prev.forcedExitReason !== nextState.forcedExitReason ||
-      prev.spectatorReason !== nextState.spectatorReason ||
-      prev.spectatorNode !== nextState.spectatorNode ||
-      prev.joinStatus !== nextState.joinStatus ||
-      prev.playersSignature !== nextState.playersSignature ||
-      prev.waitingToRejoin !== nextState.waitingToRejoin
-    ) {
-      spectatorStateLogRef.current = nextState;
-      logDebug("room-page", "spectator-state", {
-        roomId,
-        uid,
-        ...nextState,
-      });
-    }
-  }, [
-    room?.status,
-    fsmSpectatorNode,
+  useSpectatorStateLogging({
+    roomId,
+    uid,
+    roomStatus: room?.status ?? null,
+    spectatorNode: fsmSpectatorNode,
     isMember,
     canAccess,
     forcedExitReason,
@@ -1451,9 +1331,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     joinStatus,
     playersSignature,
     waitingToRejoin,
-    roomId,
-    uid,
-  ]);
+  });
 
   const skipForcedExit = !uid || !isMember;
 
