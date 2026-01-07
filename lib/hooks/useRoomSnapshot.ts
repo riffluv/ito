@@ -41,6 +41,7 @@ import { useRoomSnapshotPrefetchedRoom } from "@/lib/hooks/useRoomSnapshotPrefet
 import { useRoomSnapshotPermissionRecovery } from "@/lib/hooks/useRoomSnapshotPermissionRecovery";
 import { useRoomSnapshotRoomIdReset } from "@/lib/hooks/useRoomSnapshotRoomIdReset";
 import { useRoomSnapshotExternalControls } from "@/lib/hooks/useRoomSnapshotExternalControls";
+import { useRoomSnapshotSyncState } from "@/lib/hooks/useRoomSnapshotSyncState";
 
 export type RoomSyncHealth =
   | "initial"
@@ -541,25 +542,15 @@ export function useRoomSnapshot(
     [players, onlineUids]
   );
 
-  const sync: RoomSyncState = useMemo(
-    () => ({
-      health: roomAccessBlocked ? "blocked" : syncHealth,
-      lastSnapshotTs: lastRoomSnapshotAtRef.current,
-      snapshotAgeMs:
-        syncHealth === "stale" || syncHealth === "recovering"
-          ? syncSnapshotAgeMs
-          : null,
-      lastListenErrorTs: lastListenErrorAtRef.current,
-      lastListenErrorCode: lastListenErrorCodeRef.current,
-      recoveryAttempts: syncRecoveryAttempts,
-    }),
-    [
-      roomAccessBlocked,
-      syncHealth,
-      syncSnapshotAgeMs,
-      syncRecoveryAttempts,
-    ]
-  );
+  const sync: RoomSyncState = useRoomSnapshotSyncState({
+    roomAccessBlocked,
+    syncHealth,
+    syncSnapshotAgeMs,
+    syncRecoveryAttempts,
+    lastRoomSnapshotAtRef,
+    lastListenErrorAtRef,
+    lastListenErrorCodeRef,
+  });
 
   const externalControls = useRoomSnapshotExternalControls({
     detachNow: detach,
