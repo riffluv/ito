@@ -53,6 +53,10 @@ import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers
 import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
 import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
 import { useJoinEstablished } from "@/lib/hooks/useJoinEstablished";
+import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
+import { usePopPulse } from "@/lib/hooks/usePopPulse";
+import { useRedirectGuard } from "@/lib/hooks/useRedirectGuard";
+import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -896,13 +900,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     viewerUid: uid,
     graceMs: HOST_UNAVAILABLE_GRACE_MS,
   });
-  const isSelfOnline = useMemo(() => {
-    if (!uid) return false;
-    return Array.isArray(onlineUids) && onlineUids.includes(uid);
-  }, [onlineUids, uid]);
-  useEffect(() => {
-    setMetric("room", "selfOnline", isSelfOnline ? 1 : 0);
-  }, [isSelfOnline]);
+  useRoomSelfOnlineMetric({ uid, onlineUids });
 
   const isSoloMember = useMemo(
     () => isMember && players.length === 1 && players[0]?.id === (uid ?? ""),
@@ -924,8 +922,8 @@ export function RoomLayout(props: RoomLayoutProps) {
   });
 
 
-  const [pop, setPop] = useState(false);
-  const [redirectGuard, setRedirectGuard] = useState(true);
+  const pop = usePopPulse(me?.number, 180);
+  const redirectGuard = useRedirectGuard(1200);
   const [forcedExitReason, setForcedExitReason] = useState<
     "game-in-progress" | "version-mismatch" | null
   >(null);
@@ -988,31 +986,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     sendRoomEvent: emitSpectatorEvent,
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => setRedirectGuard(false), 1200);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    if (typeof me?.number === "number") {
-      setPop(true);
-      timeoutId = setTimeout(() => setPop(false), 180);
-    }
-
-    return () => {
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-    };
-  }, [me?.number]);
-
-  const needName = !displayName || !String(displayName).trim();
-
-  const handleSubmitName = useCallback(async (name: string) => {
-    setDisplayName(name);
-  }, [setDisplayName]);
+  const { needName, handleSubmitName } = useDisplayNameGate({ displayName, setDisplayName });
 
 
 
