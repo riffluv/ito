@@ -11,7 +11,6 @@ import {
   type ApplyServiceWorkerOptions,
   type ClearResult,
   type SafeUpdateContext,
-  type SafeUpdateEvent,
   type SafeUpdatePhase,
   type SafeUpdateSnapshot,
 } from "./safeUpdateMachine";
@@ -21,26 +20,20 @@ import {
   addUpdateListener,
   getCurrentSnapshot,
   getCurrentWaitingRegistration,
-  notifyUpdateChannelListeners,
   removeSnapshotListener,
   removeUpdateListener,
-  setCurrentSnapshot,
-  setCurrentWaitingRegistration,
   type SnapshotListener,
   type UpdateListener,
 } from "./updateChannelState";
 import { attachUpdateChannelBroadcastListener } from "./updateChannelBroadcast";
-import { createActor, type ActorRefFrom, type StateFrom } from "xstate";
+import { handleSafeUpdateStateChange, resolvePhase } from "./updateChannelSnapshot";
+import { createActor, type ActorRefFrom } from "xstate";
 
 export type { ApplyServiceWorkerOptions, SafeUpdatePhase, SafeUpdateSnapshot };
 export { getRequiredSwVersionHint, setRequiredSwVersionHint };
 
-type SafeUpdateSnapshotState = StateFrom<typeof safeUpdateMachine>;
-
 const BROADCAST_CHANNEL_NAME = "ito-safe-update-v1";
 const IN_GAME_HOLD_KEY = "in-game";
-
-let previousPhase: SafeUpdatePhase = "idle";
 
 const isBrowser =
   typeof window !== "undefined" && typeof navigator !== "undefined" && "serviceWorker" in navigator;
@@ -67,75 +60,6 @@ const safeUpdateMachine = createSafeUpdateMachine({
   now,
 });
 
-function resolvePhase(state: SafeUpdateSnapshotState): SafeUpdatePhase {
-  const value = state.value;
-  return typeof value === "string" ? (value as SafeUpdatePhase) : "idle";
-}
-
-function createSnapshot(state: SafeUpdateSnapshotState): SafeUpdateSnapshot {
-  const phase = resolvePhase(state);
-  const {
-    waitingSince,
-    waitingVersion,
-    lastCheckAt,
-    lastError,
-    autoApplySuppressed,
-    pendingReload,
-    applyReason,
-    autoApplyAt,
-    retryCount,
-  } = state.context;
-  return {
-    phase,
-    waitingSince,
-    waitingVersion,
-    lastCheckAt,
-    lastError,
-    autoApplySuppressed,
-    pendingReload,
-    applyReason,
-    autoApplyAt,
-    retryCount,
-  };
-}
-
-function handleStateChange(state: SafeUpdateSnapshotState) {
-  setCurrentWaitingRegistration(state.context.waitingRegistration ?? null);
-  const nextSnapshot = createSnapshot(state);
-  const nextPhase = nextSnapshot.phase;
-  const eventType = ((state as unknown as { event?: SafeUpdateEvent }).event?.type) ?? "INIT";
-  const previousSnapshot = getCurrentSnapshot();
-  const changed =
-    nextPhase !== previousSnapshot.phase ||
-    nextSnapshot.lastError !== previousSnapshot.lastError ||
-    nextSnapshot.pendingReload !== previousSnapshot.pendingReload ||
-    nextSnapshot.autoApplySuppressed !== previousSnapshot.autoApplySuppressed ||
-    nextSnapshot.autoApplyAt !== previousSnapshot.autoApplyAt ||
-    nextSnapshot.waitingSince !== previousSnapshot.waitingSince ||
-    nextSnapshot.retryCount !== previousSnapshot.retryCount ||
-    nextSnapshot.waitingVersion !== previousSnapshot.waitingVersion;
-
-  setCurrentSnapshot(nextSnapshot);
-
-  const transitionChanged =
-    ((state as unknown as { changed?: boolean }).changed ?? false) ||
-    nextPhase !== previousSnapshot.phase;
-
-  if (transitionChanged && previousPhase !== nextPhase) {
-    traceAction("safeUpdate.transition", {
-      from: previousPhase,
-      to: nextPhase,
-      event: eventType,
-      version: nextSnapshot.waitingVersion ?? null,
-    });
-    previousPhase = nextPhase;
-  }
-
-  if (changed) {
-    notifyUpdateChannelListeners(nextSnapshot);
-  }
-}
-
 let safeUpdateActor: ActorRefFrom<typeof safeUpdateMachine> | null = null;
 
 function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
@@ -143,7 +67,7 @@ function ensureActor(): ActorRefFrom<typeof safeUpdateMachine> | null {
     return safeUpdateActor;
   }
   safeUpdateActor = createActor(safeUpdateMachine);
-  safeUpdateActor.subscribe(handleStateChange);
+  safeUpdateActor.subscribe(handleSafeUpdateStateChange);
   safeUpdateActor.start();
   void resyncWaitingServiceWorker("actor-init");
   return safeUpdateActor;
