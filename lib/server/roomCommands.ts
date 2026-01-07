@@ -1,10 +1,6 @@
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/server/firebaseAdmin";
-import { APP_VERSION } from "@/lib/constants/appVersion";
-import { getAvatarByOrder } from "@/lib/utils";
-import { generateRoomId } from "@/lib/utils/roomId";
 import {
-  createInitialRoomStats,
   normalizeProposalCompact,
   validateSubmitList,
   buildDealPayload,
@@ -12,12 +8,10 @@ import {
   buildRevealOutcomePayload,
 } from "@/lib/game/domain";
 import { acquireRoomLock } from "@/lib/server/roomQueue";
-import { leaveRoomServer } from "@/lib/server/roomActions";
 import { buildRoomSyncPatch, publishRoomSyncPatch } from "@/lib/server/roomSync";
 import { logRoomCommandAudit } from "@/lib/server/roomAudit";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc, PlayerDoc } from "@/lib/types";
-import { normalizeVersion } from "@/lib/server/roomVersionGate";
 import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import { generateDeterministicNumbers } from "@/lib/game/random";
 import { toMillis } from "@/lib/time";
@@ -29,48 +23,13 @@ import {
   isTopicTypeValue,
   loadTopicSectionsFromFs,
   releaseLockSafely,
-  safeTraceAction,
-  sanitizeClue,
-  sanitizeName,
   sanitizeTopicText,
 } from "@/lib/server/roomCommandShared";
 import {
-  ensurePlayerDoc,
   verifyHostIdentity,
   verifyViewerIdentity,
 } from "@/lib/server/roomCommandAuth";
 type WithAuth = { token: string };
-
-export type CreateRoomParams = WithAuth & {
-  roomName: string;
-  displayName: string;
-  displayMode?: string | null;
-  options?: RoomDoc["options"];
-  passwordHash?: string | null;
-  passwordSalt?: string | null;
-  passwordVersion?: number | null;
-};
-
-export type JoinRoomParams = WithAuth & {
-  roomId: string;
-  displayName: string | null;
-};
-
-export type LeaveRoomParams = WithAuth & {
-  roomId: string;
-  uid: string;
-  displayName?: string | null;
-};
-
-export type UpdateReadyParams = WithAuth & {
-  roomId: string;
-  ready: boolean;
-};
-
-export type SubmitClueParams = WithAuth & {
-  roomId: string;
-  clue: string;
-};
 
 export type SubmitOrderParams = WithAuth & {
   roomId: string;
@@ -96,176 +55,11 @@ export { updateRoomOptionsCommand } from "./roomCommandsRoomOptions";
 export { castMvpVoteCommand } from "./roomCommandsMvpVote";
 export { updatePlayerProfileCommand } from "./roomCommandsPlayerProfile";
 export { resetPlayerStateCommand } from "./roomCommandsResetPlayerState";
-
-export async function createRoom(params: CreateRoomParams): Promise<{ roomId: string; appVersion: string }> {
-  const uid = await verifyViewerIdentity(params.token);
-  const roomName = sanitizeName(params.roomName);
-  const displayName = sanitizeName(params.displayName || "匿名");
-  const db = getAdminDb();
-  const createdAt = FieldValue.serverTimestamp() as unknown as Timestamp;
-  const lastActiveAt = FieldValue.serverTimestamp() as unknown as Timestamp;
-
-  const basePayload = {
-    name: roomName,
-    hostId: uid,
-    hostName: displayName,
-    creatorId: uid,
-    creatorName: displayName,
-    appVersion: normalizeVersion(APP_VERSION) ?? APP_VERSION,
-    options: params.options ?? {},
-    status: "waiting",
-    createdAt,
-    lastActiveAt,
-    closedAt: null,
-    expiresAt: Timestamp.fromDate(new Date(Date.now() + 12 * 60 * 60 * 1000)),
-    topic: null,
-    topicOptions: null,
-    topicBox: null,
-    result: null,
-    stats: createInitialRoomStats(),
-    requiresPassword: !!params.passwordHash,
-    passwordHash: params.passwordHash ?? null,
-    passwordSalt: params.passwordSalt ?? null,
-    passwordVersion: params.passwordVersion ?? null,
-    deal: null,
-    order: null,
-    mvpVotes: {},
-    round: 0,
-    ui: { recallOpen: true },
-    statusVersion: 0,
-  } as unknown as RoomDoc & { createdAt: Timestamp; lastActiveAt: Timestamp };
-
-  const MAX_ATTEMPTS = 8;
-  let roomId: string | null = null;
-  for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
-    const candidate = generateRoomId();
-    const ref = db.collection("rooms").doc(candidate);
-    const existing = await ref.get();
-    if (existing.exists) continue;
-    await ref.set(basePayload);
-    await ref.collection("players").doc(uid).set({
-      name: displayName,
-      avatar: getAvatarByOrder(0),
-      number: null,
-      clue1: "",
-      ready: false,
-      orderIndex: 0,
-      uid,
-      lastSeen: FieldValue.serverTimestamp(),
-      joinedAt: FieldValue.serverTimestamp(),
-    } satisfies PlayerDoc);
-    roomId = candidate;
-    break;
-  }
-
-  if (!roomId) {
-    throw codedError("room_id_allocation_failed", "room_id_allocation_failed");
-  }
-
-  safeTraceAction("room.create.server", { roomId, uid });
-  return { roomId, appVersion: basePayload.appVersion ?? APP_VERSION };
-}
-
-export async function joinRoom(params: JoinRoomParams) {
-  const uid = await verifyViewerIdentity(params.token);
-  const { roomId } = params;
-  const db = getAdminDb();
-  const roomRef = db.collection("rooms").doc(roomId);
-  const roomSnap = await roomRef.get();
-  if (!roomSnap.exists) {
-    throw codedError("room_not_found", "room_not_found");
-  }
-  const room = roomSnap.data() as RoomDoc | undefined;
-  const status = room?.status ?? "waiting";
-  const recallOpen = room?.ui?.recallOpen ?? true;
-  const hostId = room?.hostId ?? null;
-
-  const dealPlayers = Array.isArray(room?.deal?.players) ? room!.deal!.players : [];
-  const seatHistory =
-    room?.deal && typeof room.deal === "object" && "seatHistory" in room.deal
-      ? ((room.deal as { seatHistory?: Record<string, number> }).seatHistory ?? {})
-      : {};
-  const orderList = Array.isArray(room?.order?.list) ? room!.order!.list : [];
-  const orderProposal = Array.isArray(room?.order?.proposal) ? room!.order!.proposal : [];
-  const wasSeated =
-    dealPlayers.includes(uid) ||
-    typeof seatHistory?.[uid] === "number" ||
-    orderList.includes(uid) ||
-    orderProposal.includes(uid);
-
-  const isHost = hostId === uid;
-
-  if (!isHost && status !== "waiting" && !wasSeated) {
-    throw codedError("in_progress", "room_in_progress");
-  }
-
-  if (!isHost && status === "waiting" && recallOpen === false && !wasSeated) {
-    throw codedError("recall_closed", "room_recall_closed");
-  }
-
-  const result = await ensurePlayerDoc({
-    roomId,
-    uid,
-    displayName: params.displayName,
-  });
-
-  await roomRef.update({
-    lastActiveAt: FieldValue.serverTimestamp(),
-  });
-
-  traceAction("room.join.server", { roomId, uid, joined: result.joined });
-
-  if (result.joined) {
-    try {
-      await roomRef.collection("chat").add({
-        sender: "system",
-        text: `${sanitizeName(params.displayName ?? "匿名")} さんが参加しました`,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    } catch {}
-  }
-
-  return result;
-}
-
-export async function leaveRoom(params: LeaveRoomParams) {
-  const uid = await verifyViewerIdentity(params.token);
-  if (uid !== params.uid) {
-    throw codedError("forbidden", "forbidden", "uid_mismatch");
-  }
-
-  await leaveRoomServer(params.roomId, uid, params.displayName ?? null);
-  traceAction("room.leave.server", { roomId: params.roomId, uid });
-}
-
-export async function updateReady(params: UpdateReadyParams) {
-  const uid = await verifyViewerIdentity(params.token);
-  const db = getAdminDb();
-  await db
-    .collection("rooms")
-    .doc(params.roomId)
-    .collection("players")
-    .doc(uid)
-    .update({ ready: params.ready, lastSeen: FieldValue.serverTimestamp() });
-  traceAction("player.ready.server", { roomId: params.roomId, uid, ready: params.ready });
-}
-
-export async function submitClue(params: SubmitClueParams) {
-  const uid = await verifyViewerIdentity(params.token);
-  const clue = sanitizeClue(params.clue);
-  const db = getAdminDb();
-  await db
-    .collection("rooms")
-    .doc(params.roomId)
-    .collection("players")
-    .doc(uid)
-    .update({
-      clue1: clue,
-      ready: true,
-      lastSeen: FieldValue.serverTimestamp(),
-    });
-  traceAction("clue.submit.server", { roomId: params.roomId, uid });
-}
+export { createRoom, type CreateRoomParams } from "./roomCommandsCreateRoom";
+export { joinRoom, type JoinRoomParams } from "./roomCommandsJoinRoom";
+export { leaveRoom, type LeaveRoomParams } from "./roomCommandsLeaveRoom";
+export { updateReady, type UpdateReadyParams } from "./roomCommandsReady";
+export { submitClue, type SubmitClueParams } from "./roomCommandsSubmitClue";
 
 export async function startGameCommand(params: {
   roomId: string;
@@ -677,4 +471,3 @@ export async function submitOrder(params: SubmitOrderParams) {
   });
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
-
