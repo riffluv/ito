@@ -6,7 +6,6 @@ import { notify } from "@/components/ui/notify";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import {
-  ensureMember,
   joinRoomFully,
   getRoomServiceErrorCode,
   RoomServiceError,
@@ -54,7 +53,6 @@ import {
   DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS,
   DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS,
   DEFAULT_ROOM_SNAPSHOT_TRACE_INTERVAL_MS,
-  ENSURE_MEMBER_MIN_INTERVAL_MS,
   JOIN_RETRY_BACKOFF_FACTOR,
   MAX_JOIN_RETRIES,
   MAX_JOIN_RETRY_DELAY_MS,
@@ -69,6 +67,10 @@ import {
   ROOM_SNAPSHOT_WATCHDOG_INTERVAL_MS,
 } from "@/lib/hooks/roomSnapshotConfig";
 import { useRoomSnapshotRtdbRoomSyncBus } from "@/lib/hooks/useRoomSnapshotRtdbRoomSyncBus";
+import {
+  useRoomSnapshotEnsureMemberHeartbeat,
+  type EnsureMemberHeartbeat,
+} from "@/lib/hooks/useRoomSnapshotEnsureMemberHeartbeat";
 
 export type RoomSyncHealth =
   | "initial"
@@ -125,13 +127,6 @@ export type RoomAccessErrorDetail =
       detail: string;
       source: "join" | "ensureMember";
     };
-
-type EnsureMemberHeartbeat = {
-  roomId: string;
-  uid: string;
-  displayName: string | null | undefined;
-  timestamp: number;
-};
 
 type RoomSnapshotResumeProbe = {
   seq: number;
@@ -1432,29 +1427,18 @@ export function useRoomSnapshot(
     [applyRoomAccessBlock, roomId]
   );
 
-  // ensureMember heartbeat
-  useEffect(() => {
-    if (!room || !uid || !firebaseEnabled) return;
-    if (roomAccessBlocked) return;
-    const recallClosedForJoin =
-      room.status === "waiting" &&
-      room.ui?.recallOpen === false &&
-      !isMember &&
-      room.hostId !== uid;
-    if (recallClosedForJoin) return;
-    const now = Date.now();
-    const last = ensureMemberHeartbeatRef.current;
-    if (last && now - last.timestamp < ENSURE_MEMBER_MIN_INTERVAL_MS) return;
-    ensureMemberHeartbeatRef.current = {
-      roomId,
-      uid,
-      displayName,
-      timestamp: now,
-    };
-    ensureMember({ roomId, uid, displayName, clientVersion: APP_VERSION }).catch((error) => {
-      handleRoomServiceAccessError(error, "ensureMember");
-    });
-  }, [room, uid, roomId, displayName, roomAccessBlocked, handleRoomServiceAccessError, isMember]);
+  useRoomSnapshotEnsureMemberHeartbeat({
+    roomId,
+    uid,
+    displayName,
+    room,
+    isMember,
+    firebaseEnabled,
+    roomAccessBlocked,
+    leavingRef,
+    ensureMemberHeartbeatRef,
+    handleRoomServiceAccessError,
+  });
 
   // auto join / join retry loop
   useEffect(() => {
@@ -1666,33 +1650,6 @@ export function useRoomSnapshot(
     }
     lastSyncHealthRef.current = syncHealth;
   }, [syncHealth, syncSnapshotAgeMs, roomId, room?.status]);
-
-  // ensureMember heartbeat via background interval
-  useEffect(() => {
-    if (!firebaseEnabled || !uid || !room || leavingRef.current) {
-      return undefined;
-    }
-    if (roomAccessBlocked) {
-      return undefined;
-    }
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const last = ensureMemberHeartbeatRef.current;
-      if (last && now - last.timestamp < ENSURE_MEMBER_MIN_INTERVAL_MS) return;
-      ensureMemberHeartbeatRef.current = {
-        roomId,
-        uid,
-        displayName,
-        timestamp: now,
-      };
-      ensureMember({ roomId, uid, displayName, clientVersion: APP_VERSION }).catch((error) => {
-        handleRoomServiceAccessError(error, "ensureMember");
-      });
-    }, ENSURE_MEMBER_MIN_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [roomId, uid, room, displayName, roomAccessBlocked, handleRoomServiceAccessError]);
 
   // isHost / onlinePlayers
   const isHost = useMemo(() => room?.hostId === uid, [room?.hostId, uid]);
