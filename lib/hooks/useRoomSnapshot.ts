@@ -6,13 +6,11 @@ import { notify } from "@/components/ui/notify";
 import { notifyPermissionRecovery } from "@/lib/firebase/permissionGuard";
 import { useParticipants } from "@/lib/hooks/useParticipants";
 import {
-  joinRoomFully,
   getRoomServiceErrorCode,
   RoomServiceError,
 } from "@/lib/services/roomService";
 import { sanitizeRoom } from "@/lib/state/sanitize";
 import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { logDebug, logError } from "@/lib/utils/log";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { recordMetricDistribution } from "@/lib/perf/metricsClient";
@@ -49,13 +47,9 @@ import {
   type PlayerOptimisticPatchEventDetail,
 } from "@/lib/hooks/roomSnapshotOptimisticPatches";
 import {
-  BASE_JOIN_RETRY_DELAY_MS,
   DEFAULT_ROOM_SNAPSHOT_RECOVERY_COOLDOWN_MS,
   DEFAULT_ROOM_SNAPSHOT_RECOVERY_SLOW_COOLDOWN_MS,
   DEFAULT_ROOM_SNAPSHOT_TRACE_INTERVAL_MS,
-  JOIN_RETRY_BACKOFF_FACTOR,
-  MAX_JOIN_RETRIES,
-  MAX_JOIN_RETRY_DELAY_MS,
   ROOM_SNAPSHOT_CACHE_ONLY_RESUME_STALE_MS,
   ROOM_SNAPSHOT_CACHE_ONLY_STALE_MS,
   ROOM_SNAPSHOT_DEFER_ENABLED,
@@ -71,6 +65,10 @@ import {
   useRoomSnapshotEnsureMemberHeartbeat,
   type EnsureMemberHeartbeat,
 } from "@/lib/hooks/useRoomSnapshotEnsureMemberHeartbeat";
+import {
+  useRoomSnapshotAutoJoin,
+  type RoomJoinStatus,
+} from "@/lib/hooks/useRoomSnapshotAutoJoin";
 
 export type RoomSyncHealth =
   | "initial"
@@ -104,7 +102,7 @@ export type RoomSnapshotState = {
   onlinePlayers: (PlayerDoc & { id: string })[];
   isMember: boolean;
   isHost: boolean;
-  joinStatus: "idle" | "joining" | "retrying" | "joined";
+  joinStatus: RoomJoinStatus;
   roomAccessError: string | null;
   roomAccessErrorDetail: RoomAccessErrorDetail | null;
   sync: RoomSyncState;
@@ -148,9 +146,7 @@ export function useRoomSnapshot(
   const [loading, setLoading] = useState(true);
   const [roomAccessError, setRoomAccessError] = useState<string | null>(null);
   const [roomAccessErrorDetail, setRoomAccessErrorDetail] = useState<RoomAccessErrorDetail | null>(null);
-  const [joinStatus, setJoinStatus] = useState<
-    "idle" | "joining" | "retrying" | "joined"
-  >("idle");
+  const [joinStatus, setJoinStatus] = useState<RoomJoinStatus>("idle");
   const lastJoinStatusRef = useRef(joinStatus);
   const lastRoomAccessErrorRef = useRef<string | null>(null);
 
@@ -1440,131 +1436,24 @@ export function useRoomSnapshot(
     handleRoomServiceAccessError,
   });
 
-  // auto join / join retry loop
-  useEffect(() => {
-    if (!firebaseEnabled) return;
-    if (!uid || !room) return;
-    if (leavingRef.current) return;
-    if (roomAccessBlocked) return;
-    if (!normalizedDisplayName) return;
-
-    const recallClosedForJoin =
-      room.status === "waiting" &&
-      room.ui?.recallOpen === false &&
-      !isMember &&
-      room.hostId !== uid;
-
-    const clearRetryTimer = () => {
-      if (joinRetryTimerRef.current) {
-        clearTimeout(joinRetryTimerRef.current);
-        joinRetryTimerRef.current = null;
-      }
-    };
-
-    if (recallClosedForJoin) {
-      joinAttemptRef.current = 0;
-      joinCompletedRef.current = false;
-      joinLimitNotifiedRef.current = false;
-      clearRetryTimer();
-      if (joinStatus !== "idle") {
-        setJoinStatus("idle");
-      }
-      return;
-    }
-
-    if (room.status === "waiting") {
-      const alreadyJoined = joinCompletedRef.current;
-      if (alreadyJoined) {
-        clearRetryTimer();
-        return;
-      }
-      if (joinInFlightRef.current) return;
-
-      clearRetryTimer();
-      const attemptBeforeCall = joinAttemptRef.current;
-      const joinTask = joinRoomFully({
-        roomId,
-        uid,
-        displayName: normalizedDisplayName,
-        notifyChat: true,
-      })
-        .then(() => {
-          joinCompletedRef.current = true;
-          joinAttemptRef.current = 0;
-          joinLimitNotifiedRef.current = false;
-          clearRetryTimer();
-          setJoinStatus("joined");
-        })
-        .catch((error) => {
-          const code = getRoomServiceErrorCode(error);
-          if (code === "ROOM_VERSION_MISMATCH" || code === "ROOM_VERSION_CHECK_FAILED") {
-            handleRoomServiceAccessError(error, "join");
-            joinCompletedRef.current = true;
-            joinLimitNotifiedRef.current = true;
-            clearRetryTimer();
-            setJoinStatus("idle");
-            return;
-          }
-
-          joinCompletedRef.current = false;
-          const nextAttempt = attemptBeforeCall + 1;
-          joinAttemptRef.current = nextAttempt;
-          const cappedAttempt = Math.min(Math.max(nextAttempt, 1), MAX_JOIN_RETRIES);
-          const delay = Math.min(
-            BASE_JOIN_RETRY_DELAY_MS *
-              Math.pow(JOIN_RETRY_BACKOFF_FACTOR, Math.max(cappedAttempt - 1, 0)),
-            MAX_JOIN_RETRY_DELAY_MS
-          );
-          const reachedLimit = nextAttempt > MAX_JOIN_RETRIES;
-
-          if (reachedLimit && !joinLimitNotifiedRef.current) {
-            joinLimitNotifiedRef.current = true;
-            notify({
-              title: "接続を再試行しています",
-              description: "参加処理が続けて失敗しています。ネットワークを確認しつつ、このまま再試行します。",
-              type: "warning",
-            });
-          }
-
-          logDebug("room-snapshot", "joinRoomFully-retry", {
-            roomId,
-            uid,
-            delay,
-            reachedLimit,
-          });
-
-          clearRetryTimer();
-          joinRetryTimerRef.current = setTimeout(() => {
-            joinRetryTimerRef.current = null;
-            setJoinStatus("retrying");
-          }, delay);
-
-          if (reachedLimit) {
-            logError("room-snapshot", "joinRoomFully-max-retries-keep-retrying", {
-              error,
-              roomId,
-              uid,
-              attempt: nextAttempt,
-            });
-          }
-        })
-        .finally(() => {
-          joinInFlightRef.current = null;
-        });
-
-      joinInFlightRef.current = joinTask;
-      setJoinStatus("joining");
-      joinTask.catch(() => void 0);
-    } else {
-      joinAttemptRef.current = 0;
-      if (joinRetryTimerRef.current) {
-        clearTimeout(joinRetryTimerRef.current);
-        joinRetryTimerRef.current = null;
-      }
-      const joined = room && isMember;
-      setJoinStatus(joined ? "joined" : "idle");
-    }
-  }, [roomId, uid, room, normalizedDisplayName, isMember, roomAccessBlocked, joinStatus, handleRoomServiceAccessError]);
+  useRoomSnapshotAutoJoin({
+    firebaseEnabled,
+    uid,
+    room,
+    leavingRef,
+    roomAccessBlocked,
+    isMember,
+    normalizedDisplayName,
+    roomId,
+    joinStatus,
+    setJoinStatus,
+    joinCompletedRef,
+    joinInFlightRef,
+    joinRetryTimerRef,
+    joinAttemptRef,
+    joinLimitNotifiedRef,
+    handleRoomServiceAccessError,
+  });
 
   useEffect(() => {
     if (lastJoinStatusRef.current === joinStatus) return;
