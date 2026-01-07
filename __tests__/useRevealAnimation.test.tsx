@@ -4,6 +4,13 @@ import { useEffect } from "react";
 
 const finalizeRevealMock = jest.fn().mockResolvedValue(undefined);
 
+const originalRequestIdleCallback = (
+  window as unknown as { requestIdleCallback?: unknown }
+).requestIdleCallback;
+const originalCancelIdleCallback = (
+  window as unknown as { cancelIdleCallback?: unknown }
+).cancelIdleCallback;
+
 jest.mock("@/lib/game/room", () => ({
   finalizeReveal: (...args: unknown[]) => finalizeRevealMock(...args),
 }));
@@ -64,6 +71,19 @@ jest.mock("@/lib/utils/log", () => ({
 }));
 
 describe("useRevealAnimation", () => {
+  beforeEach(() => {
+    // Ensure deterministic reveal prewarm scheduling (avoid cross-test idle callback pollution)
+    (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback = undefined;
+    (window as unknown as { cancelIdleCallback?: unknown }).cancelIdleCallback = undefined;
+  });
+
+  afterEach(() => {
+    (window as unknown as { requestIdleCallback?: unknown }).requestIdleCallback =
+      originalRequestIdleCallback;
+    (window as unknown as { cancelIdleCallback?: unknown }).cancelIdleCallback =
+      originalCancelIdleCallback;
+  });
+
   it("reveals all cards and schedules finalize for 3+ players", async () => {
     finalizeRevealMock.mockClear();
     const orderList = ["a", "b", "c"];

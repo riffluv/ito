@@ -49,6 +49,7 @@ import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLea
 import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
 import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
 import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
+import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
 import type {
   RoomMachineClientEvent,
 } from "@/lib/state/roomMachine";
@@ -705,28 +706,18 @@ export function RoomLayout(props: RoomLayoutProps) {
     }
     return [...players, optimisticMe];
   }, [players, optimisticMe]);
-  const playerNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const player of playersWithOptimistic) {
-      map.set(player.id, player.name ?? "");
-    }
-    return map;
-  }, [playersWithOptimistic]);
-  const resolveSpectatorDisplayName = useCallback(
-    (viewerUid: string | null) => {
-      if (!viewerUid) return "観戦者";
-      const name = playerNameById.get(viewerUid)?.trim();
-      if (name && name.length > 0) {
-        return name;
-      }
-      return `観戦者(${viewerUid.slice(0, 6)})`;
-    },
-    [playerNameById]
-  );
-  const playersSignature = useMemo(
-    () => playersWithOptimistic.map((p) => p.id).join(","),
-    [playersWithOptimistic]
-  );
+  const {
+    normalizedDisplayName,
+    resolveSpectatorDisplayName,
+    playersSignature,
+    fallbackNames,
+  } = useRoomDisplayNameHelpers({
+    players: playersWithOptimistic,
+    roomHostId: room?.hostId ?? null,
+    roomHostName: room?.hostName ?? null,
+    uid,
+    displayName,
+  });
   const lastSeenAsMemberRef = useRef<number | null>(null);
   useEffect(() => {
     if (isMember) {
@@ -736,15 +727,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const wasMemberRecently =
     lastSeenAsMemberRef.current !== null &&
     Date.now() - lastSeenAsMemberRef.current < 15000; // 15s grace to avoid transient demotion
-  const normalizedDisplayName = useMemo(() => {
-    if (typeof displayName === "string") {
-      const trimmed = displayName.trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
-    }
-    return "匿名";
-  }, [displayName]);
   const dealPlayers = useMemo((): string[] | null => {
     const list = room?.deal?.players;
     if (!Array.isArray(list)) {
@@ -911,19 +893,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     setPasswordDialogLoading,
     setPasswordDialogError,
   });
-
-  const fallbackNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    if (room?.hostId && room?.hostName) {
-      map[room.hostId] = room.hostName;
-    }
-    const trimmedDisplayName =
-      typeof displayName === "string" ? displayName.trim() : "";
-    if (uid && trimmedDisplayName) {
-      map[uid] = trimmedDisplayName;
-    }
-    return map;
-  }, [room?.hostId, room?.hostName, uid, displayName]);
 
   const stableHostId =
     typeof room?.hostId === "string" ? room.hostId.trim() : "";
