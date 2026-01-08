@@ -29,6 +29,7 @@ import {
   useOptimizedRooms,
 } from "@/lib/hooks/useOptimizedRooms";
 import { verifyPassword } from "@/lib/security/password";
+import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import {
   getCachedRoomPasswordHash,
@@ -49,11 +50,6 @@ import {
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-type WindowWithIdleCallback = Window & {
-  requestIdleCallback?: (callback: () => void) => number;
-  cancelIdleCallback?: (handle: number) => void;
-};
 
 export default function MainMenu() {
   const router = useRouter();
@@ -79,7 +75,7 @@ export default function MainMenu() {
   const [showJoinableOnly, setShowJoinableOnly] = useState(false);
 
   useEffect(() => {
-    const prefetchRules = () => {
+    return scheduleIdleTask(() => {
       try {
         router.prefetch("/rules");
       } catch (error) {
@@ -87,28 +83,13 @@ export default function MainMenu() {
           logDebug("main-menu", "prefetch-rules-skipped", error);
         }
       }
-    };
-
-    const idleWindow = window as WindowWithIdleCallback;
-    const idleCallback = idleWindow.requestIdleCallback;
-    if (typeof idleCallback === "function") {
-      const idleHandle = idleCallback(prefetchRules);
-      return () => {
-        idleWindow.cancelIdleCallback?.(idleHandle);
-      };
-    }
-
-    const timeoutId = window.setTimeout(prefetchRules, 0);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
+    }, { timeoutMs: 2000, delayMs: 0 });
   }, [router]);
 
   // Pixi背景用の軽量プリウォーム（描画はしない）
   useEffect(() => {
-    const idleWindow = window as WindowWithIdleCallback;
     const workerUrl = buildPixiWorkerUrl();
-    const prewarm = () => {
+    return scheduleIdleTask(() => {
       // 1) Pixi本体を事前読み込み
       import("@/lib/pixi/loadPixi")
         .then((mod) => mod.loadPixi().catch(() => void 0))
@@ -125,15 +106,7 @@ export default function MainMenu() {
           // ignore
         }
       }
-    };
-
-    const idleCallback = idleWindow.requestIdleCallback;
-    if (typeof idleCallback === "function") {
-      const handle = idleCallback(prewarm);
-      return () => idleWindow.cancelIdleCallback?.(handle);
-    }
-    const timeoutId = window.setTimeout(prewarm, 300);
-    return () => window.clearTimeout(timeoutId);
+    }, { timeoutMs: 2000, delayMs: 300 });
   }, []);
 
   useEffect(() => {
@@ -325,13 +298,13 @@ export default function MainMenu() {
           },
           async () => {
             try {
-              (window as WindowWithIdleCallback).requestIdleCallback?.(() => {
+              scheduleIdleTask(() => {
                 try {
                   router.prefetch(`/rooms/${room.id}`);
                 } catch (idleError) {
                   logDebug("main-menu", "prefetch-room-skipped", idleError);
                 }
-              });
+              }, { timeoutMs: 2000 });
             } catch (idleScheduleError) {
               logDebug(
                 "main-menu",
