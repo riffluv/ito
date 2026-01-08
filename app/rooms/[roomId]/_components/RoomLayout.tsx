@@ -10,12 +10,12 @@
 import { RoomMainNode } from "./RoomMainNode";
 import { RoomSidebarNode } from "./RoomSidebarNode";
 import type { RoomStateSnapshot } from "./RoomStateProvider";
+import { RoomHandDockNode } from "./RoomHandDockNode";
 
 import { SpectatorHUD } from "@/components/rooms/SpectatorHUD";
 import { RoomView } from "@/components/rooms/RoomView";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import { AppButton } from "@/components/ui/AppButton";
-import MiniHandDock from "@/components/ui/MiniHandDock";
 import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { useAuth } from "@/context/AuthContext";
@@ -88,6 +88,36 @@ const HOST_UNAVAILABLE_GRACE_MS = Math.max(
 const SPECTATOR_HOST_PANEL_ENABLED = false;
 
 type AuthContextValue = ReturnType<typeof useAuth>;
+
+function getPhaseMessage(params: {
+  showRejoinOverlay: boolean;
+  roundPreparing: boolean;
+  roundPreparingHold: boolean;
+  baseOverlayMessage: string | null;
+  forcedExitReason: string | null;
+}): string | null {
+  const {
+    showRejoinOverlay,
+    roundPreparing,
+    roundPreparingHold,
+    baseOverlayMessage,
+    forcedExitReason,
+  } = params;
+
+  if (showRejoinOverlay) {
+    return "ルームへ再参加中です...";
+  }
+  if (roundPreparing || roundPreparingHold) {
+    return "カードを配布しています…";
+  }
+  if (baseOverlayMessage) {
+    return baseOverlayMessage;
+  }
+  if (forcedExitReason === "game-in-progress") {
+    return "通信が一時的に不安定です。復帰待機中...";
+  }
+  return null;
+}
 
 export type RoomLayoutProps = RoomStateSnapshot & {
   roomId: string;
@@ -760,33 +790,24 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   const showRejoinOverlay =
     (seatRequestPending || seatAcceptanceActive) && !isSpectatorMode && !isMember;
-  let phaseMessage: string | null = null;
-  if (showRejoinOverlay) {
-    phaseMessage = "ルームへ再参加中です...";
-  } else if (roundPreparing || roundPreparingHold) {
-    phaseMessage = "カードを配布しています…";
-  } else if (baseOverlayMessage) {
-    phaseMessage = baseOverlayMessage;
-  } else if (forcedExitReason === "game-in-progress") {
-    phaseMessage = "通信が一時的に不安定です。復帰待機中...";
-  }
+  const phaseMessage = getPhaseMessage({
+    showRejoinOverlay,
+    roundPreparing,
+    roundPreparingHold,
+    baseOverlayMessage,
+    forcedExitReason,
+  });
 
   const handNode = showHand ? (
-    <MiniHandDock
+    <RoomHandDockNode
       roomId={roomId}
+      room={room}
       me={me}
-      resolveMode={room.options?.resolveMode}
       proposal={proposalForUi}
       eligibleIds={eligibleIds}
       cluesReady={allCluesReady}
       isHost={isHost}
-      roomStatus={room.status}
-      statusVersion={room.statusVersion ?? 0}
-      defaultTopicType={room.options?.defaultTopicType || "\u901a\u5e38\u7248"}
-      topicBox={room.topicBox ?? null}
-      allowContinueAfterFail={!!room.options?.allowContinueAfterFail}
-      roomName={displayRoomName}
-      currentTopic={room.topic || null}
+      displayRoomName={displayRoomName}
       onlineUids={onlineUids}
       playerCount={players.length}
       roundIds={clueTargetIds}
