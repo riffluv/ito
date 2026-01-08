@@ -12,6 +12,7 @@ import {
   RoomStateProvider,
   useRoomStateContext,
 } from "./RoomStateProvider";
+import { RoomGuardCenteredCard } from "./RoomGuardCenteredCard";
 import {
   useRoomComponentPrefetch,
   useRoomCoreAssetPreload,
@@ -142,65 +143,39 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     };
 
     return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "520px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text
-              fontSize={{ base: "xl", md: "2xl" }}
-              fontWeight="800"
-              fontFamily="monospace"
-              letterSpacing="0.1em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              mb={3}
-            >
-              ▼ ACCESS DENIED ▼
-            </Text>
-            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="700" lineHeight={1.6}>
-              認証情報が無効か、部屋へのアクセス権がありません
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              いったん再ログインしてから部屋に入り直すか、ホストに参加権限を確認してください。
-            </Text>
-          </Box>
-          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
-            <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
-              再読み込み
-            </AppButton>
-            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
-              ロビーへ戻る
-            </AppButton>
-          </HStack>
+      <RoomGuardCenteredCard maxW={{ base: "90%", md: "520px" }}>
+        <Box textAlign="center" mb={5}>
+          <Text
+            fontSize={{ base: "xl", md: "2xl" }}
+            fontWeight="800"
+            fontFamily="monospace"
+            letterSpacing="0.1em"
+            textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+            mb={3}
+          >
+            ▼ ACCESS DENIED ▼
+          </Text>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="700" lineHeight={1.6}>
+            認証情報が無効か、部屋へのアクセス権がありません
+          </Text>
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={3}
+          >
+            いったん再ログインしてから部屋に入り直すか、ホストに参加権限を確認してください。
+          </Text>
         </Box>
-      </Box>
+        <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+          <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
+            再読み込み
+          </AppButton>
+          <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+            ロビーへ戻る
+          </AppButton>
+        </HStack>
+      </RoomGuardCenteredCard>
     );
   }
 
@@ -238,59 +213,33 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     };
 
     return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "560px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
-              アップデートが必要です
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) のままでは参加できません。
-              更新を適用してから再度お試しください。
-            </Text>
-          </Box>
-          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
-            <AppButton palette="brand" size="md" onClick={handleApplyUpdate}>
-              今すぐ更新
-            </AppButton>
-            <AppButton palette="gray" variant="outline" size="md" onClick={handleHardReload}>
-              ハードリロード
-            </AppButton>
-            <AppButton palette="gray" variant="outline" size="md" onClick={handleBackToLobby}>
-              ロビーへ戻る
-            </AppButton>
-          </HStack>
+      <RoomGuardCenteredCard maxW={{ base: "90%", md: "560px" }}>
+        <Box textAlign="center" mb={5}>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+            アップデートが必要です
+          </Text>
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={3}
+          >
+            この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) のままでは参加できません。
+            更新を適用してから再度お試しください。
+          </Text>
         </Box>
-      </Box>
+        <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+          <AppButton palette="brand" size="md" onClick={handleApplyUpdate}>
+            今すぐ更新
+          </AppButton>
+          <AppButton palette="gray" variant="outline" size="md" onClick={handleHardReload}>
+            ハードリロード
+          </AppButton>
+          <AppButton palette="gray" variant="outline" size="md" onClick={handleBackToLobby}>
+            ロビーへ戻る
+          </AppButton>
+        </HStack>
+      </RoomGuardCenteredCard>
     );
   }
 
@@ -312,53 +261,27 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     };
 
     return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "560px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
-              この部屋は別バージョンです
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) からは参加・操作できません。
-              更新してもこの部屋には入れないため、新しい部屋を作成するか招待を取り直してください。
-            </Text>
-          </Box>
-          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
-            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
-              ロビーへ戻る
-            </AppButton>
-          </HStack>
+      <RoomGuardCenteredCard maxW={{ base: "90%", md: "560px" }}>
+        <Box textAlign="center" mb={5}>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+            この部屋は別バージョンです
+          </Text>
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={3}
+          >
+            この部屋はバージョン {roomVersion} で進行中です。現在のバージョン ({clientVersion}) からは参加・操作できません。
+            更新してもこの部屋には入れないため、新しい部屋を作成するか招待を取り直してください。
+          </Text>
         </Box>
-      </Box>
+        <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+          <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+            ロビーへ戻る
+          </AppButton>
+        </HStack>
+      </RoomGuardCenteredCard>
     );
   }
 
@@ -382,57 +305,31 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     };
 
     return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "560px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
-              バージョン確認に失敗しました
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              {detail ? `詳細: ${detail}` : null}
-              {detail ? <br /> : null}
-              ページを再読み込みしてから、もう一度入室をお試しください。
-            </Text>
-          </Box>
-          <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
-            <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
-              再読み込み
-            </AppButton>
-            <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
-              ロビーへ戻る
-            </AppButton>
-          </HStack>
+      <RoomGuardCenteredCard maxW={{ base: "90%", md: "560px" }}>
+        <Box textAlign="center" mb={5}>
+          <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="800" lineHeight={1.6}>
+            バージョン確認に失敗しました
+          </Text>
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={3}
+          >
+            {detail ? `詳細: ${detail}` : null}
+            {detail ? <br /> : null}
+            ページを再読み込みしてから、もう一度入室をお試しください。
+          </Text>
         </Box>
-      </Box>
+        <HStack justify="center" gap={4} pt={1} flexWrap="wrap">
+          <AppButton palette="gray" variant="outline" size="md" onClick={handleRetry}>
+            再読み込み
+          </AppButton>
+          <AppButton palette="brand" size="md" onClick={handleBackToLobby}>
+            ロビーへ戻る
+          </AppButton>
+        </HStack>
+      </RoomGuardCenteredCard>
     );
   }
 
@@ -458,72 +355,41 @@ function RoomGuardContent(props: RoomGuardContentProps) {
     };
 
     return (
-      <Box
-        h="100dvh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        px={4}
-        bg="rgba(8,9,15,1)"
-      >
-        <Box
-          position="relative"
-          border={`3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`}
-          borderRadius={0}
-          boxShadow={UI_TOKENS.SHADOWS.panelDistinct}
-          bg="rgba(8,9,15,0.9)"
-          color={UI_TOKENS.COLORS.textBase}
-          px={{ base: 6, md: 8 }}
-          py={{ base: 6, md: 7 }}
-          maxW={{ base: "90%", md: "520px" }}
-          _before={{
-            content: '""',
-            position: "absolute",
-            inset: "8px",
-            border: `1px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            pointerEvents: "none",
-          }}
-        >
-          <Box textAlign="center" mb={5}>
-            <Text
-              fontSize={{ base: "xl", md: "2xl" }}
-              fontWeight="800"
-              fontFamily="monospace"
-              letterSpacing="0.1em"
-              textShadow="2px 2px 0 rgba(0,0,0,0.8)"
-              mb={3}
-            >
-              ▼ 404 - Not Found ▼
-            </Text>
-            <Text
-              fontSize={{ base: "lg", md: "xl" }}
-              fontWeight="700"
-              lineHeight={1.6}
-              textShadow="1px 1px 0 rgba(0,0,0,0.8)"
-            >
-              おっと、部屋が見つかりません
-            </Text>
-            <Text
-              fontSize={{ base: "md", md: "lg" }}
-              color={UI_TOKENS.COLORS.whiteAlpha80}
-              lineHeight={1.7}
-              mt={3}
-            >
-              部屋が削除されたか、URLが間違っているようです
-            </Text>
-          </Box>
-          <Box display="flex" justifyContent="center">
-            <AppButton
-              onClick={handleBackToLobby}
-              palette="brand"
-              size="md"
-              minW="180px"
-            >
-              ロビーへ戻る
-            </AppButton>
-          </Box>
+      <RoomGuardCenteredCard maxW={{ base: "90%", md: "520px" }}>
+        <Box textAlign="center" mb={5}>
+          <Text
+            fontSize={{ base: "xl", md: "2xl" }}
+            fontWeight="800"
+            fontFamily="monospace"
+            letterSpacing="0.1em"
+            textShadow="2px 2px 0 rgba(0,0,0,0.8)"
+            mb={3}
+          >
+            ▼ 404 - Not Found ▼
+          </Text>
+          <Text
+            fontSize={{ base: "lg", md: "xl" }}
+            fontWeight="700"
+            lineHeight={1.6}
+            textShadow="1px 1px 0 rgba(0,0,0,0.8)"
+          >
+            おっと、部屋が見つかりません
+          </Text>
+          <Text
+            fontSize={{ base: "md", md: "lg" }}
+            color={UI_TOKENS.COLORS.whiteAlpha80}
+            lineHeight={1.7}
+            mt={3}
+          >
+            部屋が削除されたか、URLが間違っているようです
+          </Text>
         </Box>
-      </Box>
+        <Box display="flex" justifyContent="center">
+          <AppButton onClick={handleBackToLobby} palette="brand" size="md" minW="180px">
+            ロビーへ戻る
+          </AppButton>
+        </Box>
+      </RoomGuardCenteredCard>
     );
   }
 
