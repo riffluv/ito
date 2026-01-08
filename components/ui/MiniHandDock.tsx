@@ -23,6 +23,13 @@ import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
 import { QuickStartProgressIndicator } from "./mini-hand-dock/QuickStartProgressIndicator";
 import { RightEdgeControls } from "./mini-hand-dock/RightEdgeControls";
 import { WaitingHostStartPanel } from "./mini-hand-dock/WaitingHostStartPanel";
+import {
+  isCustomModeSelectable as isCustomModeSelectableFlag,
+  shouldShowCustomTopicPen,
+  shouldShowNextGameButton,
+  shouldShowWaitingHostStartPanel,
+} from "./mini-hand-dock/miniHandDockUiFlags";
+import { deriveEffectiveRoomStatus } from "./mini-hand-dock/miniHandDockStatus";
 import { useDefaultTopicTypeOverride } from "./mini-hand-dock/useDefaultTopicTypeOverride";
 import { useRevealAnimatingState } from "./mini-hand-dock/useRevealAnimatingState";
 import {
@@ -190,11 +197,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   });
 
   const effectiveDefaultTopicType = hostDefaultTopicType;
-  const optimisticResetting =
-    (resetUiPending || isResetting) && roomStatus !== "waiting";
-  const effectiveRoomStatus = optimisticResetting ? "waiting" : roomStatus;
+  const { effectiveRoomStatus } = deriveEffectiveRoomStatus({
+    roomStatus,
+    resetUiPending,
+    isResetting,
+  });
 
-  // 以降のフェーズ分岐は optimisticResetting を反映した値を使う
+  // 以降のフェーズ分岐は、reset中は waiting 扱いにした値を使う
   const phaseStatus = effectiveRoomStatus;
 
   const seinoTransitionBlocked = useSeinoTransitionBlocker(phaseStatus);
@@ -243,9 +252,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     updateOptimisticProposal: updateOptimisticProposalOverride,
   });
 
-  const isCustomModeSelectable =
-    topicBox === "カスタム" ||
-    (!topicBox && effectiveDefaultTopicType === "カスタム");
+  const isCustomModeSelectable = isCustomModeSelectableFlag({
+    topicBox,
+    effectiveDefaultTopicType,
+  });
   const shouldShowSeinoButton =
     !!isHost && isSortMode && phaseStatus === "clue" && allSubmitted;
 
@@ -372,9 +382,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         text={effectiveSpinnerText}
       />
 
-      {phaseStatus === "waiting" &&
-        !preparing &&
-        (isHost || hostClaimActive) && (
+      {shouldShowWaitingHostStartPanel({
+        phaseStatus,
+        preparing,
+        isHost: !!isHost,
+        hostClaimActive,
+      }) && (
           <WaitingHostStartPanel
             isHost={!!isHost}
             hostClaimMessage={hostClaimMessage}
@@ -390,12 +403,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         )}
 
       {/* 次のゲームボタン (フッターパネルとカードの間) */}
-      {isHost &&
-        ((phaseStatus === "reveal" && !!allowContinueAfterFail) ||
-          phaseStatus === "finished") &&
-        !autoStartLocked &&
-        !isRestarting &&
-        !(phaseStatus === "reveal" && isRevealAnimating) && (
+      {shouldShowNextGameButton({
+        phaseStatus,
+        isHost: !!isHost,
+        allowContinueAfterFail: !!allowContinueAfterFail,
+        autoStartLocked,
+        isRestarting,
+        isRevealAnimating,
+      }) && (
           <NextGameButton
             onClick={handleNextGame}
             disabled={
@@ -451,11 +466,11 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {/* 右端: 共通ボタン (設定・退出のみ) */}
       <RightEdgeControls
-        showCustomTopicPen={
-          !isHost &&
-          isCustomModeSelectable &&
-          (phaseStatus === "waiting" || phaseStatus === "clue")
-        }
+        showCustomTopicPen={shouldShowCustomTopicPen({
+          phaseStatus,
+          isHost: !!isHost,
+          isCustomModeSelectable,
+        })}
         showLedgerButton={showLedgerButton}
         interactionDisabled={interactionDisabled}
         onOpenCustomTopic={openCustomTopic}
