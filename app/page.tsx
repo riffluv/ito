@@ -5,11 +5,21 @@ import { RoomCard } from "@/components/RoomCard";
 import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import { SupporterCTA } from "@/components/site/SupporterCTA";
 import { AppButton } from "@/components/ui/AppButton";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { Pagination } from "@/components/ui/Pagination";
 import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { notify } from "@/components/ui/notify";
+import { KnightCharacter } from "@/components/main-menu/KnightCharacter";
+import { buildPixiWorkerUrl } from "@/components/main-menu/buildPixiWorkerUrl";
+import type { LobbyRoom } from "@/components/main-menu/types";
+import {
+  filterLobbyRooms,
+  filterLobbyRoomsByOptions,
+  filterLobbyRoomsBySearch,
+  sortLobbyRooms,
+} from "@/components/main-menu/roomListDerivations";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { stripMinimalTag } from "@/lib/game/displayMode";
@@ -19,8 +29,6 @@ import {
   useOptimizedRooms,
 } from "@/lib/hooks/useOptimizedRooms";
 import { verifyPassword } from "@/lib/security/password";
-import { toMillis } from "@/lib/time";
-import type { RoomDoc } from "@/lib/types";
 import { logDebug, logError, logInfo } from "@/lib/utils/log";
 import {
   getCachedRoomPasswordHash,
@@ -36,73 +44,16 @@ import {
   Image,
   Text,
   useDisclosure,
-  VStack,
+	VStack,
 } from "@chakra-ui/react";
-import type { FieldValue, Timestamp } from "firebase/firestore";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-// ナイトキャラ
-function KnightCharacter() {
-  const knightImage = "/images/knight1.webp";
-  const knightAlt = "序の紋章III Male Knight";
-
-  return (
-    <Image
-      src={knightImage}
-      alt={knightAlt}
-      boxSize={{ base: "16", md: "20", lg: "24" }}
-      objectFit="contain"
-      filter="drop-shadow(0 6px 16px rgba(0,0,0,0.6))"
-      css={{
-        // Dragon Quest-style: pixel art friendly size
-        imageRendering: "pixelated", // Keep crisp pixel art
-        "@container (max-width: 600px)": {
-          width: scaleForDpi("3.5rem"), // 56px for mobile
-          height: scaleForDpi("3.5rem"),
-        },
-        "@container (min-width: 600px) and (max-width: 900px)": {
-          width: scaleForDpi("4.5rem"), // 72px for tablet
-          height: scaleForDpi("4.5rem"),
-        },
-        "@container (min-width: 900px)": {
-          width: scaleForDpi("6rem"), // 96px for desktop
-          height: scaleForDpi("6rem"),
-        },
-      }}
-    />
-  );
-}
-
-type LobbyRoom = (RoomDoc & { id: string }) & {
-  expiresAt?: Timestamp | Date | number | FieldValue | null;
-  lastActiveAt?: Timestamp | Date | number | FieldValue | null;
-  createdAt?: Timestamp | Date | number | FieldValue | null;
-  deal?: RoomDoc["deal"];
-};
 
 type WindowWithIdleCallback = Window & {
   requestIdleCallback?: (callback: () => void) => number;
   cancelIdleCallback?: (handle: number) => void;
 };
-
-const buildPixiWorkerUrl = () => {
-  if (typeof window === "undefined") return null;
-  const assetPrefix =
-    (globalThis as typeof globalThis & { __NEXT_DATA__?: { assetPrefix?: string } })
-      ?.__NEXT_DATA__?.assetPrefix ?? process.env.NEXT_PUBLIC_ASSET_PREFIX ?? "";
-  const prefix = assetPrefix.replace(/\/$/, "");
-  const base = /^https?:\/\//i.test(prefix)
-    ? prefix
-    : `${window.location.origin}${prefix}`;
-  const cacheBust = process.env.NEXT_PUBLIC_APP_VERSION
-    ? `?v=${process.env.NEXT_PUBLIC_APP_VERSION}`
-    : "";
-  return `${base}/workers/pixi-background-worker.js${cacheBust}`;
-};
-
-const scaleForDpi = (value: string) => `calc(${value} * var(--dpi-scale))`;
 
 export default function MainMenu() {
   const router = useRouter();
@@ -281,97 +232,37 @@ export default function MainMenu() {
   );
 
   const filteredRooms = useMemo(() => {
-    const now = Date.now();
-    const inProgressDisplayMs = 15 * 60 * 1000; // 15min
+    const nowMs = Date.now();
     const recentWindowMs =
       Number(process.env.NEXT_PUBLIC_LOBBY_RECENT_MS) || 5 * 60 * 1000;
-    const createdWindowMs = 10 * 60 * 1000;
-
-    return rooms.filter((room) => {
-      const expiresAtMs = toMillis(room.expiresAt);
-      if (expiresAtMs && expiresAtMs <= now) {
-        return false;
-      }
-
-      const status = room.status as RoomDoc["status"] | "completed";
-      if (status === "finished" || status === "completed") {
-        return false;
-      }
-
-      const activeCount = lobbyCounts[room.id] ?? 0;
-      const lastActiveMs = toMillis(room.lastActiveAt);
-      const createdMs = toMillis(room.createdAt);
-      const newestMs = Math.max(lastActiveMs, createdMs);
-
-      const inProgress = status !== "waiting";
-      if (inProgress) {
-        if (activeCount > 0) {
-          return true;
-        }
-        return newestMs > 0 && now - newestMs <= inProgressDisplayMs;
-      }
-
-      if (activeCount > 0) {
-        return true;
-      }
-
-      if (newestMs > 0 && now - newestMs <= recentWindowMs) {
-        return true;
-      }
-
-      if (createdMs > 0 && now - createdMs <= createdWindowMs) {
-        return true;
-      }
-
-      return false;
+    return filterLobbyRooms({
+      rooms,
+      lobbyCounts,
+      nowMs,
+      recentWindowMs,
+      inProgressDisplayMs: 15 * 60 * 1000,
+      createdWindowMs: 10 * 60 * 1000,
     });
   }, [rooms, lobbyCounts]);
 
   const optionFilteredRooms = useMemo(() => {
-    return filteredRooms.filter((room) => {
-      if (hideLockedRooms && room.requiresPassword) {
-        return false;
-      }
-      if (showJoinableOnly && room.status !== "waiting") {
-        return false;
-      }
-      return true;
+    return filterLobbyRoomsByOptions({
+      rooms: filteredRooms,
+      hideLockedRooms,
+      showJoinableOnly,
     });
   }, [filteredRooms, hideLockedRooms, showJoinableOnly]);
 
   const searchFilteredRooms = useMemo(() => {
-    if (!debouncedSearch) return optionFilteredRooms;
-    const query = debouncedSearch.toLowerCase();
-    return optionFilteredRooms.filter((room) => {
-      const baseName =
-        stripMinimalTag(room.name)?.toString().toLowerCase() ?? "";
-      const hostName = room.hostName?.toLowerCase?.() ?? "";
-      const creatorName = room.creatorName?.toLowerCase?.() ?? "";
-      return (
-        baseName.includes(query) ||
-        hostName.includes(query) ||
-        creatorName.includes(query)
-      );
+    return filterLobbyRoomsBySearch({
+      rooms: optionFilteredRooms,
+      debouncedSearch,
     });
   }, [optionFilteredRooms, debouncedSearch]);
 
   // ソート順: 人数多い → 新規作成 → 最終アクティブ
   const sortedRooms = useMemo(() => {
-    const list = [...searchFilteredRooms];
-    list.sort((a, b) => {
-      const countA = lobbyCounts[a.id] ?? 0;
-      const countB = lobbyCounts[b.id] ?? 0;
-      if ((countB > 0 ? 1 : 0) !== (countA > 0 ? 1 : 0)) {
-        return (countB > 0 ? 1 : 0) - (countA > 0 ? 1 : 0);
-      }
-      const createdA = toMillis(a.createdAt);
-      const createdB = toMillis(b.createdAt);
-      if (createdA !== createdB) {
-        return createdB - createdA;
-      }
-      return toMillis(b.lastActiveAt) - toMillis(a.lastActiveAt);
-    });
-    return list;
+    return sortLobbyRooms({ rooms: searchFilteredRooms, lobbyCounts });
   }, [searchFilteredRooms, lobbyCounts]);
 
   const pageSize =
