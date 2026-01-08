@@ -5,8 +5,8 @@ import { RoomCard } from "@/components/RoomCard";
 import { RoomPasswordPrompt } from "@/components/RoomPasswordPrompt";
 import { SupporterCTA } from "@/components/site/SupporterCTA";
 import { AppButton } from "@/components/ui/AppButton";
-import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { Pagination } from "@/components/ui/Pagination";
+import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { RichBlackBackground } from "@/components/ui/RichBlackBackground";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { useTransition } from "@/components/ui/TransitionProvider";
@@ -45,7 +45,7 @@ import {
   Image,
   Text,
   useDisclosure,
-	VStack,
+  VStack,
 } from "@chakra-ui/react";
 import { BookOpen, Plus, RefreshCw, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -261,6 +261,69 @@ export default function MainMenu() {
   const hasNextPage = pageIndex < totalPages - 1;
   const activeSearch = debouncedSearch.length > 0;
   const displaySearchKeyword = activeSearch ? debouncedSearch.slice(0, 40) : "";
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    setPageIndex(0);
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    setSearchInput("");
+    setPageIndex(0);
+  }, []);
+
+  const handleToggleHideLockedRooms = useCallback(() => {
+    setHideLockedRooms((prev) => !prev);
+    setPageIndex(0);
+  }, []);
+
+  const handleToggleShowJoinableOnly = useCallback(() => {
+    setShowJoinableOnly((prev) => !prev);
+    setPageIndex(0);
+  }, []);
+
+  const handleRefreshLobby = useCallback(() => {
+    refreshRooms();
+    refreshLobbyCounts();
+  }, [refreshRooms, refreshLobbyCounts]);
+
+  const handlePrevPage = useCallback(() => {
+    setPageIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setPageIndex((prev) => Math.min(prev + 1, totalPages - 1));
+  }, [totalPages]);
+
+  const handleRunLoadingTest = useCallback(async () => {
+    await transition.navigateWithTransition(window.location.pathname, {
+      direction: "fade",
+      duration: 0.8,
+      showLoading: true,
+      loadingSteps: [
+        {
+          id: "firebase",
+          message: "🔥 Firebase接続中...",
+          duration: 890,
+        },
+        {
+          id: "room",
+          message: "⚔️ ルーム情報取得中...",
+          duration: 1130,
+        },
+        {
+          id: "player",
+          message: "👥 プレイヤー登録中...",
+          duration: 680,
+        },
+        {
+          id: "ready",
+          message: "🎮 ゲーム準備完了！",
+          duration: 310,
+        },
+      ],
+    });
+  }, [transition]);
 
   const goToRoom = useCallback(
     async (room: LobbyRoom) => {
@@ -821,10 +884,7 @@ export default function MainMenu() {
                   size="sm"
                   visual="outline"
                   palette="gray"
-                  onClick={() => {
-                    refreshRooms();
-                    refreshLobbyCounts();
-                  }}
+                  onClick={handleRefreshLobby}
                   loading={roomsLoading}
                   disabled={!firebaseEnabled}
                 >
@@ -836,14 +896,8 @@ export default function MainMenu() {
             <Box mt={6} mb={6}>
               <SearchBar
                 value={searchInput}
-                onChange={(value) => {
-                  setSearchInput(value);
-                  setPageIndex(0);
-                }}
-                onClear={() => {
-                  setSearchInput("");
-                  setPageIndex(0);
-                }}
+                onChange={handleSearchChange}
+                onClear={handleSearchClear}
                 placeholder="部屋を さがす..."
               />
               <HStack
@@ -857,10 +911,7 @@ export default function MainMenu() {
                   visual={hideLockedRooms ? "solid" : "outline"}
                   palette={hideLockedRooms ? "success" : "gray"}
                   aria-pressed={hideLockedRooms}
-                  onClick={() => {
-                    setHideLockedRooms((prev) => !prev);
-                    setPageIndex(0);
-                  }}
+                  onClick={handleToggleHideLockedRooms}
                   css={{
                     minWidth: "180px",
                     textAlign: "center",
@@ -896,10 +947,7 @@ export default function MainMenu() {
                   visual={showJoinableOnly ? "solid" : "outline"}
                   palette={showJoinableOnly ? "success" : "gray"}
                   aria-pressed={showJoinableOnly}
-                  onClick={() => {
-                    setShowJoinableOnly((prev) => !prev);
-                    setPageIndex(0);
-                  }}
+                  onClick={handleToggleShowJoinableOnly}
                   css={{
                     minWidth: "180px",
                     textAlign: "center",
@@ -1003,10 +1051,8 @@ export default function MainMenu() {
                   <Pagination
                     currentPage={pageIndex}
                     totalPages={totalPages}
-                    onPrev={() => setPageIndex((prev) => Math.max(prev - 1, 0))}
-                    onNext={() =>
-                      setPageIndex((prev) => Math.min(prev + 1, totalPages - 1))
-                    }
+                    onPrev={handlePrevPage}
+                    onNext={handleNextPage}
                     disablePrev={!hasPrevPage}
                     disableNext={!hasNextPage}
                   />
@@ -1035,10 +1081,7 @@ export default function MainMenu() {
                 </Text>
                 {activeSearch ? (
                   <AppButton
-                    onClick={() => {
-                      setSearchInput("");
-                      setPageIndex(0);
-                    }}
+                    onClick={handleSearchClear}
                     visual="solid"
                     palette="gray"
                   >
@@ -1269,38 +1312,7 @@ export default function MainMenu() {
                   size="sm"
                   visual="outline"
                   palette="gray"
-                  onClick={async () => {
-                    await transition.navigateWithTransition(
-                      window.location.pathname,
-                      {
-                        direction: "fade",
-                        duration: 0.8,
-                        showLoading: true,
-                        loadingSteps: [
-                          {
-                            id: "firebase",
-                            message: "🔥 Firebase接続中...",
-                            duration: 890,
-                          },
-                          {
-                            id: "room",
-                            message: "⚔️ ルーム情報取得中...",
-                            duration: 1130,
-                          },
-                          {
-                            id: "player",
-                            message: "👥 プレイヤー登録中...",
-                            duration: 680,
-                          },
-                          {
-                            id: "ready",
-                            message: "🎮 ゲーム準備完了！",
-                            duration: 310,
-                          },
-                        ],
-                      }
-                    );
-                  }}
+                  onClick={handleRunLoadingTest}
                   css={{
                     width: "100%",
                     fontSize: "xs",
