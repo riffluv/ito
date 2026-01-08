@@ -14,6 +14,9 @@ import React from "react";
 import { BottomActionDock } from "./mini-hand-dock/BottomActionDock";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
 import { deriveActionTooltips } from "./mini-hand-dock/deriveActionTooltips";
+import { deriveHostClaimMessage } from "./mini-hand-dock/deriveHostClaimMessage";
+import { deriveQuickStartProgress } from "./mini-hand-dock/deriveQuickStartProgress";
+import { deriveSeinoVisibility } from "./mini-hand-dock/deriveSeinoVisibility";
 import { HostDockControls } from "./mini-hand-dock/HostDockControls";
 import { NextGameButton } from "./mini-hand-dock/NextGameButton";
 import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
@@ -106,18 +109,10 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const hostClaimActive =
     !isHost && !!hostClaimStatus && hostClaimStatus !== "idle";
-  const hostClaimMessage = React.useMemo(() => {
-    switch (hostClaimStatus) {
-      case "requesting":
-        return "ホスト権限を申請中...";
-      case "confirming":
-        return "ホスト権限の確定を待機しています...";
-      case "pending":
-        return "ホスト権限を準備中...";
-      default:
-        return "ホスト権限を準備中...";
-    }
-  }, [hostClaimStatus]);
+  const hostClaimMessage = React.useMemo(
+    () => deriveHostClaimMessage(hostClaimStatus),
+    [hostClaimStatus]
+  );
 
   // Reveal直前の一瞬だけローカルで手札UIを隠すゲート
   const {
@@ -274,12 +269,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     resetUiPending ||
     roundPreparing
   );
-  const seinoVisible =
-    shouldShowSeinoButton &&
-    !seinoTransitionBlocked &&
-    !preparing &&
-    !hideHandUI &&
-    !isRevealAnimating;
+  const seinoVisible = deriveSeinoVisibility({
+    shouldShowSeinoButton,
+    seinoTransitionBlocked,
+    preparing,
+    hideHandUI,
+    isRevealAnimating,
+  });
   const {
     clearButtonDisabled,
     clearTooltip,
@@ -302,19 +298,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const _playLedgerOpen = useSoundEffect("ledger_open"); // reserved (ledger button hidden)
   const playCardDeal = useSoundEffect("card_deal");
   const playTopicShuffle = useSoundEffect("topic_shuffle");
-  const showQuickStartProgress =
-    showSpinner ||
-    quickStartPending ||
-    autoStartLocked ||
-    roundPreparing ||
-    isRestarting;
-  const effectiveSpinnerText = showSpinner
-    ? spinnerText
-    : roundPreparing
-      ? "次のラウンドを準備しています…"
-      : quickStartPending || isRestarting
-        ? "状態を同期しています…"
-        : spinnerText;
+  const { showQuickStartProgress, effectiveSpinnerText } = deriveQuickStartProgress({
+    showSpinner,
+    spinnerText,
+    quickStartPending,
+    autoStartLocked,
+    roundPreparing,
+    isRestarting,
+  });
   useSyncSpinnerWatchdog({
     roomId,
     roomStatus,
