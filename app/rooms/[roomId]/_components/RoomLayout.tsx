@@ -14,8 +14,8 @@ import { RoomHandDockNode } from "./RoomHandDockNode";
 import { RoomHandAreaNode } from "./RoomHandAreaNode";
 import { useRoomSpectatorGateEffects } from "./useRoomSpectatorGateEffects";
 import { useRoomSpectatorModeEffects } from "./useRoomSpectatorModeEffects";
+import { RoomViewNode } from "./RoomViewNode";
 
-import { RoomView } from "@/components/rooms/RoomView";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import { AppButton } from "@/components/ui/AppButton";
 import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
@@ -64,7 +64,6 @@ import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue"
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
-import type { RoomDoc } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -781,29 +780,16 @@ export function RoomLayout(props: RoomLayoutProps) {
         presenceDegraded={presenceDegraded}
         syncHealth={sync?.health ?? null}
       />
-      <RoomView
+      <RoomViewNode
         roomId={roomId}
         room={room}
-        nodes={{
-          header: headerNode,
-          sidebar: sidebarNode,
-          main: mainNode,
-          handArea: handAreaNode,
-        }}
-        overlays={{
-          joinStatusBanner,
-          safeUpdateBannerNode,
-          versionMismatchOverlay,
-        }}
+        nodes={{ header: headerNode, sidebar: sidebarNode, main: mainNode, handArea: handAreaNode }}
+        overlays={{ joinStatusBanner, safeUpdateBannerNode, versionMismatchOverlay }}
         dealRecoveryOpen={dealRecoveryOpen}
         onDealRecoveryDismiss={handleDealRecoveryDismiss}
         needName={needName}
         onSubmitName={handleSubmitName}
-        simplePhase={{
-          status: room.status || "waiting",
-          canStartSorting,
-          topic: room.topic || null,
-        }}
+        canStartSorting={canStartSorting}
         chat={{
           players: playersWithOptimistic,
           hostId: room.hostId ?? null,
@@ -814,7 +800,6 @@ export function RoomLayout(props: RoomLayoutProps) {
         }}
         passwordDialog={{
           isOpen: passwordDialogOpen,
-          roomName: stripMinimalTag(room.name),
           isLoading: passwordDialogLoading,
           error: passwordDialogError,
           onSubmit: handleRoomPasswordSubmit,
@@ -823,9 +808,7 @@ export function RoomLayout(props: RoomLayoutProps) {
         settings={{
           isOpen: isSettingsOpen,
           onClose: () => setIsSettingsOpen(false),
-          options: room.options ?? ({} as RoomDoc["options"]),
           isHost,
-          roomStatus: room.status || "waiting",
         }}
         ledger={{
           isOpen: isLedgerOpen && !!effectiveLedgerData,
