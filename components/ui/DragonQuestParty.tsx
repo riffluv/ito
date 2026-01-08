@@ -1,10 +1,9 @@
 "use client";
 
 import { notify, notifyAsync } from "@/components/ui/notify";
-import Tooltip from "@/components/ui/Tooltip";
 import { transferHost } from "@/lib/firebase/rooms";
 import { toastIds } from "@/lib/ui/toastIds";
-import { Box, Text } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,58 +17,20 @@ const panelFloat = keyframes`
   100% { transform: translateY(calc(1.2px * var(--dpi-scale))); }
 `;
 
-const headerPulse = keyframes`
-  0% { box-shadow: 0 calc(2px * var(--dpi-scale)) calc(8px * var(--dpi-scale)) rgba(0,0,0,0.6), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.08); }
-  40% { box-shadow: 0 calc(3px * var(--dpi-scale)) calc(9px * var(--dpi-scale)) rgba(0,0,0,0.7), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.12); }
-  100% { box-shadow: 0 calc(2px * var(--dpi-scale)) calc(8px * var(--dpi-scale)) rgba(0,0,0,0.6), inset 0 calc(1px * var(--dpi-scale)) 0 rgba(255,255,255,0.08); }
-`;
-
-const headerGlint = keyframes`
-  0% { transform: translateX(-140%) rotate(9deg); opacity: 0; }
-  12% { transform: translateX(20%) rotate(9deg); opacity: 0.35; }
-  18% { transform: translateX(80%) rotate(9deg); opacity: 0.12; }
-  28% { transform: translateX(140%) rotate(9deg); opacity: 0; }
-  100% { transform: translateX(140%) rotate(9deg); opacity: 0; }
-`;
-
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
 import { scaleForDpi } from "@/components/ui/scaleForDpi";
-
-interface DragonQuestPartyProps {
-  players: PartyMember[];
-  roomStatus: string;
-  onlineCount?: number; // 実際のオンライン参加者数
-  onlineUids?: string[]; // オンライン参加者の id 列
-  hostId?: string; // ホストのUID
-  roomId?: string; // 手動委譲用
-  isHostUser?: boolean; // 自分がホストか
-  eligibleIds?: string[]; // ラウンド対象（オンライン）
-  roundIds?: string[]; // 今ラウンドの全対象（オフライン含む）
-  submittedPlayerIds?: string[]; // 「提出済み」扱いにするプレイヤーID
-  fallbackNames?: Record<string, string>;
-  displayRoomName?: string; // ルーム名表示用
-  suspendTransientUpdates?: boolean;
-}
+import { DragonQuestPartyHeader } from "./dragon-quest-party/DragonQuestPartyHeader";
+import {
+  areDragonQuestPartyPropsEqual,
+  shallowEqualPartyMember,
+  type DragonQuestPartyProps,
+} from "./dragon-quest-party/dragonQuestPartyComparators";
 
 const PANEL_TOP = { base: scaleForDpi("108px"), md: scaleForDpi("120px") };
 const PANEL_LEFT = { base: scaleForDpi("20px"), md: scaleForDpi("24px") };
 const PANEL_WIDTH = { base: scaleForDpi("232px"), md: scaleForDpi("268px") };
 const LIST_MAX_HEIGHT = `calc(100vh - ${scaleForDpi("224px")})`;
 const LIST_GAP = 2;
-
-const shallowEqualPartyMember = (a: PartyMember, b: PartyMember) => {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) return false;
-  for (const key of aKeys) {
-    if (a[key] !== b[key]) {
-      return false;
-    }
-  }
-  return true;
-};
 
 function DragonQuestParty({
   players,
@@ -463,111 +424,13 @@ function DragonQuestParty({
             }),
       }}
     >
-      {/* Octopath Traveler-style party header */}
-      <Box
-        display="flex"
-        alignItems="center"
-        gap={scaleForDpi("8px")}
-        minW={0}
-        px={scaleForDpi("14px")}
-        py={scaleForDpi("8px")}
-        bg="rgba(12,14,20,0.45)"
-        border="1px solid"
-        borderColor="rgba(255,255,255,0.12)"
-        borderRadius="0"
-        boxShadow={`0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0,0,0,0.15)`}
-        css={{
-          pointerEvents: "auto",
-          backdropFilter: "blur(16px) saturate(1.25)",
-          position: "relative",
-          overflow: "visible",
-          clipPath: `polygon(${scaleForDpi("12px")} 0%, calc(100% - ${scaleForDpi("12px")}) 0%, 100% ${scaleForDpi("12px")}, 100% 100%, 0% 100%, 0% ${scaleForDpi("12px")})`,
-          ...(prefersReducedMotion
-            ? {
-                transition:
-                  "box-shadow 1.2s ease-in-out, filter 1.2s ease-in-out",
-              }
-            : {
-                animation: `${headerPulse} 9.8s ease-in-out infinite`,
-              }),
-          '&::after': {
-            content: "''",
-            position: "absolute",
-            inset: "-40%",
-            background:
-              "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18), transparent 60%)",
-            transform: headerGlowShift,
-            ...(prefersReducedMotion
-              ? {
-                  transition:
-                    "opacity 1.2s ease-in-out, transform 1.2s ease-in-out",
-                }
-              : {
-                  animation: `${headerGlint} 6.2s cubic-bezier(0.16, 0.84, 0.33, 1) infinite`,
-                }),
-            pointerEvents: "none",
-            mixBlendMode: "screen",
-            opacity: headerGlowOpacity,
-          },
-        }}
-      >
-        {/* フラッグエンブレム */}
-        <Box
-          position="relative"
-          w={scaleForDpi("24px")}
-          h={scaleForDpi("24px")}
-          flexShrink={0}
-          css={{
-            filter: `drop-shadow(0 ${scaleForDpi("1px")} ${scaleForDpi("3px")} rgba(0,0,0,0.8))`,
-          }}
-        >
-          <img
-            src="/images/flag.webp"
-            alt="party emblem"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        </Box>
-
-        {/* パーティ名 */}
-        <Tooltip
-          content={displayRoomName || ""}
-          openDelay={300}
-          disabled={!displayRoomName}
-        >
-          <Text
-            fontSize={scaleForDpi("14px")}
-            fontWeight={600}
-            color="rgba(255,255,255,0.95)"
-            letterSpacing="0.3px"
-            maxW={scaleForDpi("160px")}
-            truncate
-            textShadow={`0 ${scaleForDpi("1px")} ${scaleForDpi("2px")} rgba(0,0,0,0.6)`}
-            fontFamily="system-ui, -apple-system, sans-serif"
-          >
-            {displayRoomName && displayRoomName.trim().length > 0
-              ? displayRoomName
-              : "なかま"}
-          </Text>
-        </Tooltip>
-
-        {/* 人数表示 */}
-        <Text
-          fontSize={scaleForDpi("12px")}
-          color="rgba(255,255,255,0.65)"
-          fontWeight={500}
-          flexShrink={0}
-          fontFamily="monospace"
-          letterSpacing="0.5px"
-          lineHeight="1"
-          alignSelf="center"
-        >
-          ({actualCount})
-        </Text>
-      </Box>
+      <DragonQuestPartyHeader
+        displayRoomName={displayRoomName}
+        actualCount={actualCount}
+        prefersReducedMotion={prefersReducedMotion}
+        headerGlowShift={headerGlowShift}
+        headerGlowOpacity={headerGlowOpacity}
+      />
 
       <Box
         display="flex"
@@ -596,107 +459,38 @@ function DragonQuestParty({
         }}
         ref={listContainerRef}
       >
-          {orderedPlayers.map((player) => {
-            const fresh = (displayedPlayerMap.get(player.id) ?? player) as PartyMember;
-            const isSubmitted = submittedSet.has(player.id);
-            const isHostCard = displayedHostId === player.id;
-            const canTransfer = Boolean(
-              roomId &&
-                effectiveIsHostUser &&
-                player.id !== displayedHostId &&
-                !transferInFlight
-            );
-            const onTransfer = canTransfer
-              ? () => handleHostTransfer(player.id, fresh.name)
-              : undefined;
+        {orderedPlayers.map((player) => {
+          const fresh = (displayedPlayerMap.get(player.id) ?? player) as PartyMember;
+          const isSubmitted = submittedSet.has(player.id);
+          const isHostCard = displayedHostId === player.id;
+          const canTransfer = Boolean(
+            roomId &&
+              effectiveIsHostUser &&
+              player.id !== displayedHostId &&
+              !transferInFlight
+          );
+          const onTransfer = canTransfer
+            ? () => handleHostTransfer(player.id, fresh.name)
+            : undefined;
 
-            return (
-              <PartyMemberCard
-                key={player.id}
-                player={fresh}
-                roomStatus={roomStatus}
-                isHost={isHostCard}
-                isSubmitted={isSubmitted}
-                shouldRevealNumbers={shouldRevealNumbers}
-                canTransfer={canTransfer}
-                onTransfer={onTransfer}
-                isTransferPending={transferTargetId === player.id}
-              />
-            );
-          })}
+          return (
+            <PartyMemberCard
+              key={player.id}
+              player={fresh}
+              roomStatus={roomStatus}
+              isHost={isHostCard}
+              isSubmitted={isSubmitted}
+              shouldRevealNumbers={shouldRevealNumbers}
+              canTransfer={canTransfer}
+              onTransfer={onTransfer}
+              isTransferPending={transferTargetId === player.id}
+            />
+          );
+        })}
       </Box>
     </Box>
   );
 }
 
-const areStringArraysEqual = (
-  prev: string[] | undefined,
-  next: string[] | undefined
-) => {
-  if (prev === next) return true;
-  if (!prev || !next) return (!prev || prev.length === 0) && (!next || next.length === 0);
-  if (prev.length !== next.length) return false;
-  for (let i = 0; i < prev.length; i += 1) {
-    if (prev[i] !== next[i]) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const arePartyMembersEqual = (prev: PartyMember[], next: PartyMember[]) => {
-  if (prev === next) return true;
-  if (prev.length !== next.length) return false;
-  for (let i = 0; i < prev.length; i += 1) {
-    if (!shallowEqualPartyMember(prev[i], next[i])) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const areFallbackNamesEqual = (
-  prev: Record<string, string> | undefined,
-  next: Record<string, string> | undefined
-) => {
-  if (prev === next) return true;
-  if (!prev && !next) return true;
-  if (!prev || !next) return false;
-  const prevKeys = Object.keys(prev);
-  const nextKeys = Object.keys(next);
-  if (prevKeys.length !== nextKeys.length) return false;
-  for (const key of prevKeys) {
-    if (prev[key] !== next[key]) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const arePropsEqual = (
-  prev: DragonQuestPartyProps,
-  next: DragonQuestPartyProps
-) => {
-  if (!arePartyMembersEqual(prev.players, next.players)) return false;
-  if (prev.roomStatus !== next.roomStatus) return false;
-  if ((prev.onlineCount ?? null) !== (next.onlineCount ?? null)) return false;
-  if (!areStringArraysEqual(prev.onlineUids, next.onlineUids)) return false;
-  if (prev.hostId !== next.hostId) return false;
-  if (prev.roomId !== next.roomId) return false;
-  if ((prev.isHostUser ?? false) !== (next.isHostUser ?? false)) return false;
-  if (!areStringArraysEqual(prev.eligibleIds, next.eligibleIds)) return false;
-  if (!areStringArraysEqual(prev.roundIds, next.roundIds)) return false;
-  if (!areStringArraysEqual(prev.submittedPlayerIds, next.submittedPlayerIds))
-    return false;
-  if (!areFallbackNamesEqual(prev.fallbackNames, next.fallbackNames)) return false;
-  if ((prev.displayRoomName ?? "") !== (next.displayRoomName ?? "")) return false;
-  if (
-    (prev.suspendTransientUpdates ?? false) !==
-    (next.suspendTransientUpdates ?? false)
-  )
-    return false;
-  return true;
-};
-
-export default memo(DragonQuestParty, arePropsEqual);
+export default memo(DragonQuestParty, areDragonQuestPartyPropsEqual);
 export { DragonQuestParty };
