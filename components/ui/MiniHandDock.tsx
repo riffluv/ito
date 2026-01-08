@@ -10,10 +10,6 @@ import { useRevealGate } from "@/lib/hooks/useRevealGate";
 import { useRoundTimeline } from "@/lib/hooks/useRoundTimeline";
 import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
 import type { PlayerDoc } from "@/lib/types";
-import { setMetric, readMetrics } from "@/lib/utils/metrics";
-import { traceAction } from "@/lib/utils/trace";
-import { notify } from "@/components/ui/notify";
-import { toastIds } from "@/lib/ui/toastIds";
 import React from "react";
 import { BottomActionDock } from "./mini-hand-dock/BottomActionDock";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
@@ -23,14 +19,12 @@ import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
 import { QuickStartProgressIndicator } from "./mini-hand-dock/QuickStartProgressIndicator";
 import { RightEdgeControls } from "./mini-hand-dock/RightEdgeControls";
 import { WaitingHostStartPanel } from "./mini-hand-dock/WaitingHostStartPanel";
+import { useDefaultTopicTypeOverride } from "./mini-hand-dock/useDefaultTopicTypeOverride";
+import { useRevealAnimatingState } from "./mini-hand-dock/useRevealAnimatingState";
+import { useSyncSpinnerWatchdog } from "./mini-hand-dock/useSyncSpinnerWatchdog";
 import { SeinoButton } from "./SeinoButton";
 
 const noopCleanup = () => {};
-type RevealAnimatingEvent = CustomEvent<{
-  roomId?: string;
-  animating?: boolean;
-}>;
-type DefaultTopicTypeChangeEvent = CustomEvent<{ defaultTopicType?: string }>;
 
 interface MiniHandDockProps {
   roomId: string;
@@ -128,49 +122,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     end: endReveal,
   } = useRevealGate(roomStatus, roomId);
 
-  // defaultTopicType の即時反映: Firestore反映遅延やローカル保存に追従
-  const [defaultTopicOverride, setDefaultTopicOverride] = React.useState<
-    string | undefined
-  >(defaultTopicType);
-  React.useEffect(
-    () => setDefaultTopicOverride(defaultTopicType),
-    [defaultTopicType]
-  );
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return noopCleanup;
-    }
-    const handleDefaultTopicChange: EventListener = (event) => {
-      const detail = (event as DefaultTopicTypeChangeEvent).detail;
-      const nextType = detail?.defaultTopicType;
-      if (typeof nextType === "string") {
-        setDefaultTopicOverride(nextType);
-      }
-    };
-    window.addEventListener(
-      "defaultTopicTypeChanged",
-      handleDefaultTopicChange
-    );
-    try {
-      const stored = window.localStorage.getItem("defaultTopicType");
-      if (stored) setDefaultTopicOverride(stored);
-    } catch {
-      // ignore storage failure
-    }
-    return () => {
-      window.removeEventListener(
-        "defaultTopicTypeChanged",
-        handleDefaultTopicChange
-      );
-    };
-  }, []);
-
-  const computedDefaultTopicType =
-    defaultTopicOverride ?? defaultTopicType ?? "通常版";
-
-  const [isRevealAnimating, setIsRevealAnimating] = React.useState(
-    roomStatus === "reveal"
-  );
+  const computedDefaultTopicType = useDefaultTopicTypeOverride(defaultTopicType);
+  const isRevealAnimating = useRevealAnimatingState(roomId, roomStatus);
   const [seinoTransitionBlocked, setSeinoTransitionBlocked] = React.useState(false);
   const seinoTransitionTimerRef = React.useRef<number | null>(null);
   const seinoLastPhaseStatusRef = React.useRef<string | null>(null);
@@ -321,29 +274,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     isRevealAnimating,
     updateOptimisticProposal: updateOptimisticProposalOverride,
   });
-  React.useEffect(() => {
-    if (typeof window === "undefined") {
-      return noopCleanup;
-    }
-    const handleRevealAnimating: EventListener = (event) => {
-      const detail = (event as RevealAnimatingEvent).detail;
-      if (!detail) return;
-      if (detail.roomId && detail.roomId !== roomId) return;
-      setIsRevealAnimating(Boolean(detail.animating));
-    };
-    window.addEventListener("ito:reveal-animating", handleRevealAnimating);
-    return () => {
-      window.removeEventListener("ito:reveal-animating", handleRevealAnimating);
-    };
-  }, [roomId]);
-
-  React.useEffect(() => {
-    if (roomStatus === "reveal") {
-      setIsRevealAnimating(true);
-    } else {
-      setIsRevealAnimating(false);
-    }
-  }, [roomStatus]);
 
   const isCustomModeSelectable =
     topicBox === "カスタム" ||
@@ -454,110 +384,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       : quickStartPending || isRestarting
         ? "状態を同期しています…"
         : spinnerText;
-
-  const syncSpinnerWatchdogRef = React.useRef<number | null>(null);
-  const syncSpinnerLoggedRef = React.useRef(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined" || typeof document === "undefined") {
-      return noopCleanup;
-    }
-    const syncPending = quickStartPending || isRestarting;
-    if (!syncPending || roomStatus === "clue") {
-      syncSpinnerLoggedRef.current = false;
-      if (syncSpinnerWatchdogRef.current !== null) {
-        window.clearTimeout(syncSpinnerWatchdogRef.current);
-        syncSpinnerWatchdogRef.current = null;
-      }
-      return noopCleanup;
-    }
-
-    if (syncSpinnerLoggedRef.current || syncSpinnerWatchdogRef.current !== null) {
-      return noopCleanup;
-    }
-
-    syncSpinnerWatchdogRef.current = window.setTimeout(() => {
-      syncSpinnerWatchdogRef.current = null;
-      if (syncSpinnerLoggedRef.current) return;
-      if (document.visibilityState !== "visible") return;
-      const now = Date.now();
-      const metrics = readMetrics();
-      const lastSnapshotTsRaw = (metrics as { roomSnapshot?: { lastSnapshotTs?: unknown } })
-        .roomSnapshot?.lastSnapshotTs;
-      const lastSnapshotTs =
-        typeof lastSnapshotTsRaw === "number" && Number.isFinite(lastSnapshotTsRaw)
-          ? lastSnapshotTsRaw
-          : null;
-      const snapshotAgeMs =
-        typeof lastSnapshotTs === "number" ? Math.max(0, now - lastSnapshotTs) : null;
-
-      setMetric("hostAction", "syncSpinner.stuckAt", now);
-      setMetric("hostAction", "syncSpinner.roomStatus", roomStatus ?? "unknown");
-      setMetric(
-        "hostAction",
-        "syncSpinner.reason",
-        quickStartPending ? "quickStartPending" : isRestarting ? "isRestarting" : "unknown"
-      );
-      if (snapshotAgeMs !== null) {
-        setMetric("hostAction", "syncSpinner.snapshotAgeMs", Math.round(snapshotAgeMs));
-      }
-
-      traceAction("ui.syncSpinner.stuck", {
-        roomId,
-        roomStatus: roomStatus ?? "unknown",
-        quickStartPending: quickStartPending ? "1" : "0",
-        isRestarting: isRestarting ? "1" : "0",
-        autoStartLocked: autoStartLocked ? "1" : "0",
-        roundPreparing: roundPreparing ? "1" : "0",
-        showSpinner: showSpinner ? "1" : "0",
-        spinnerText: effectiveSpinnerText,
-        visibility: document.visibilityState,
-        online: typeof navigator !== "undefined" ? (navigator.onLine ? "1" : "0") : "unknown",
-        snapshotAgeMs: snapshotAgeMs === null ? undefined : String(Math.round(snapshotAgeMs)),
-      });
-
-      try {
-        window.dispatchEvent(
-          new CustomEvent("ito:room-force-refresh", {
-            detail: { roomId, reason: "ui.syncSpinner.stuck" },
-          })
-        );
-      } catch {}
-      try {
-        window.dispatchEvent(
-          new CustomEvent("ito:room-restart-listener", {
-            detail: { roomId, reason: "ui.syncSpinner.stuck" },
-          })
-        );
-      } catch {}
-
-      notify({
-        id: toastIds.genericInfo(roomId, "sync-spinner-stuck"),
-        title: "状態の同期が遅れています",
-        description: "最新の状態を取得します。改善しない場合はページを再読み込みしてください。",
-        type: "warning",
-        duration: 4200,
-      });
-
-      syncSpinnerLoggedRef.current = true;
-    }, 5000);
-
-    return () => {
-      if (syncSpinnerWatchdogRef.current !== null) {
-        window.clearTimeout(syncSpinnerWatchdogRef.current);
-        syncSpinnerWatchdogRef.current = null;
-      }
-    };
-  }, [
-    autoStartLocked,
-    effectiveSpinnerText,
-    isRestarting,
-    quickStartPending,
+  useSyncSpinnerWatchdog({
     roomId,
     roomStatus,
+    quickStartPending,
+    isRestarting,
+    autoStartLocked,
     roundPreparing,
     showSpinner,
-  ]);
+    effectiveSpinnerText,
+  });
 
   React.useEffect(() => {
     if (
