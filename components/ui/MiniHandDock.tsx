@@ -1,11 +1,9 @@
 "use client";
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
 import { AppButton } from "@/components/ui/AppButton";
-import OctopathDockButton from "@/components/ui/OctopathDockButton";
 import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { ResolveMode } from "@/lib/game/resolveMode";
-import { topicControls } from "@/lib/game/service";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
 import { useClueInput } from "@/lib/hooks/useClueInput";
 import { useHostActions as useHostActionsCore } from "@/lib/hooks/useHostActions";
@@ -13,7 +11,6 @@ import type { HostClaimStatus } from "@/lib/hooks/useHostClaim";
 import { useRevealGate } from "@/lib/hooks/useRevealGate";
 import { useRoundTimeline } from "@/lib/hooks/useRoundTimeline";
 import type { ShowtimeIntentHandlers } from "@/lib/showtime/types";
-import { isTopicType, type TopicType } from "@/lib/topics";
 import type { PlayerDoc } from "@/lib/types";
 import { setMetric, readMetrics } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
@@ -27,7 +24,6 @@ import {
   IconButton,
   Input,
 } from "@chakra-ui/react";
-import Image from "next/image";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
@@ -38,28 +34,13 @@ import {
   MINI_HAND_DOCK_ICON_BUTTON_DANGER_HOVER_STYLES,
 } from "./miniHandDockStyles";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
+import { HostDockControls } from "./mini-hand-dock/HostDockControls";
 import { NextGameButton } from "./mini-hand-dock/NextGameButton";
 import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
 import { QuickStartProgressIndicator } from "./mini-hand-dock/QuickStartProgressIndicator";
 import { WaitingHostStartPanel } from "./mini-hand-dock/WaitingHostStartPanel";
 import { SeinoButton } from "./SeinoButton";
 
-type HostPanelIconProps = {
-  src: string;
-  alt: string;
-};
-
-const HostPanelIcon = ({ src, alt }: HostPanelIconProps) => (
-  <Image
-    src={src}
-    alt={alt}
-    width={64}
-    height={64}
-    sizes="20px"
-    style={{ width: "100%", height: "100%", objectFit: "contain" }}
-    priority={false}
-  />
-);
 const noopCleanup = () => {};
 type RevealAnimatingEvent = CustomEvent<{
   roomId?: string;
@@ -213,8 +194,6 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     message: string;
     tone: "info" | "success";
   } | null>(null);
-  const [topicActionLoading, setTopicActionLoading] = React.useState(false);
-  const [dealActionLoading, setDealActionLoading] = React.useState(false);
 
   // 入力フィールド参照
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -798,104 +777,20 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
           {/* ホスト専用ボタン */}
           {isHost ? (
-            <>
-              <Tooltip
-                content={
-                  effectiveDefaultTopicType === "カスタム"
-                    ? "カスタムお題を設定"
-                    : "お題をシャッフル"
-                }
-                showArrow
-                openDelay={220}
-              >
-                <OctopathDockButton
-                  compact
-                  iconBoxSize={26}
-                  icon={
-                    effectiveDefaultTopicType === "カスタム" ? (
-                      <FiEdit2 />
-                    ) : (
-                      <HostPanelIcon
-                        src="/images/ui/shuffle.webp"
-                        alt="Shuffle topic"
-                      />
-                    )
-                  }
-                  isLoading={topicActionLoading}
-                  disabled={
-                    topicActionLoading ||
-                    (isGameFinished && effectiveDefaultTopicType !== "カスタム") ||
-                    interactionDisabled
-                  }
-                  onClick={async () => {
-                    if (topicActionLoading) return;
-                    const mode: string | null = effectiveDefaultTopicType;
-
-                    if (mode === "カスタム") {
-                      setCustomText(currentTopic || "");
-                      setCustomOpen(true);
-                      return;
-                    }
-
-                    if (isGameFinished) return;
-                    setTopicActionLoading(true);
-                    try {
-                      playTopicShuffle();
-                      const topicMode: TopicType = isTopicType(mode)
-                        ? mode
-                        : "通常版";
-                      await topicControls.shuffleTopic(roomId, topicMode);
-                    } finally {
-                      setTopicActionLoading(false);
-                    }
-                  }}
-                />
-              </Tooltip>
-
-              <Tooltip content="数字を配り直す" showArrow openDelay={220}>
-                <OctopathDockButton
-                  compact
-                  iconBoxSize={26}
-                  icon={
-                    <HostPanelIcon
-                      src="/images/ui/deal.webp"
-                      alt="Deal numbers"
-                    />
-                  }
-                  isLoading={dealActionLoading}
-                  disabled={dealActionLoading || isGameFinished || interactionDisabled}
-                  onClick={async () => {
-                    if (dealActionLoading || isGameFinished) return;
-                    setDealActionLoading(true);
-                    try {
-                      playCardDeal();
-                      await topicControls.dealNumbers(roomId);
-                    } finally {
-                      setDealActionLoading(false);
-                    }
-                  }}
-                />
-              </Tooltip>
-
-              <Tooltip content="ゲームをリセット" showArrow openDelay={220}>
-                <OctopathDockButton
-                  compact
-                  iconBoxSize={26}
-                  icon={
-                    <HostPanelIcon
-                      src="/images/ui/reset.webp"
-                      alt="Reset game"
-                    />
-                  }
-                  isLoading={isResetting}
-                  disabled={isResetting || interactionDisabled}
-                  onClick={async () => {
-                    if (isResetting) return;
-                    await resetGame({ playSound: true });
-                  }}
-                />
-              </Tooltip>
-            </>
+            <HostDockControls
+              roomId={roomId}
+              effectiveDefaultTopicType={effectiveDefaultTopicType}
+              isGameFinished={isGameFinished}
+              isResetting={isResetting}
+              interactionDisabled={interactionDisabled}
+              onOpenCustomTopic={() => {
+                setCustomText(currentTopic || "");
+                setCustomOpen(true);
+              }}
+              onResetGame={() => resetGame({ playSound: true })}
+              playCardDeal={playCardDeal}
+              playTopicShuffle={playTopicShuffle}
+            />
           ) : null}
         </Flex>
       )}
