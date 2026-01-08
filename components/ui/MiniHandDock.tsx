@@ -26,26 +26,23 @@ import {
   HStack,
   IconButton,
   Input,
-  Text,
 } from "@chakra-ui/react";
 import Image from "next/image";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
-import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
 import {
   FOOTER_BUTTON_BASE_STYLES,
   MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES,
   MINI_HAND_DOCK_ICON_BUTTON_DANGER_ACTIVE_STYLES,
   MINI_HAND_DOCK_ICON_BUTTON_DANGER_HOVER_STYLES,
-  orangeGlowNext,
-  orangeGlowStart,
-  phaseMessagePulse,
-  subtleTextPulse,
 } from "./miniHandDockStyles";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
+import { NextGameButton } from "./mini-hand-dock/NextGameButton";
+import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
+import { QuickStartProgressIndicator } from "./mini-hand-dock/QuickStartProgressIndicator";
+import { WaitingHostStartPanel } from "./mini-hand-dock/WaitingHostStartPanel";
 import { SeinoButton } from "./SeinoButton";
-import { SEINO_BUTTON_STYLES } from "./seinoButtonStyles";
 
 type HostPanelIconProps = {
   src: string;
@@ -645,115 +642,26 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           据え置きゲーム風：シンプルにスピナー＋テキスト
           背景なし、テキストシャドウで可読性確保
           ======================================== */}
-      {showQuickStartProgress && (
-        <Box
-          position="fixed"
-          bottom={{
-            base: "clamp(120px, 18vh, 220px)",
-            md: "clamp(130px, 16vh, 240px)",
-          }}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={56}
-          pointerEvents="none"
-          // レイアウト: スピナーとテキストを縦に配置
-          display="flex"
-          flexDirection="column"
-          alignItems="center"
-          gap="10px"
-        >
-          {/* 🌕 満月スピナー */}
-          <HD2DLoadingSpinner size={scaleForDpi("38px")} />
-
-          {/* 📜 テキスト: 儀式感のある黄金テキスト */}
-          <Text
-            // v2準拠: 黄金寄りの色
-            fontSize="0.85rem"
-            fontWeight="600"
-            color="rgba(255, 248, 225, 0.92)"
-            letterSpacing="0.06em"
-            fontFamily="monospace"
-            // 強めのシャドウ＋わずかなグローで可読性確保
-            textShadow={`
-              0 1px 3px rgba(0, 0, 0, 0.9),
-              0 2px 6px rgba(0, 0, 0, 0.7),
-              0 0 12px rgba(255, 240, 200, 0.12)
-            `}
-            // 微妙な上下アニメーション（息づき）
-            css={{
-              animation:
-                "subtleFloat 2.8s cubic-bezier(.4,.15,.6,.85) infinite",
-              "@keyframes subtleFloat": {
-                "0%, 100%": { transform: "translateY(0)" },
-                "50%": { transform: "translateY(-1.5px)" },
-              },
-            }}
-          >
-            {effectiveSpinnerText}
-          </Text>
-        </Box>
-      )}
+      <QuickStartProgressIndicator
+        show={showQuickStartProgress}
+        text={effectiveSpinnerText}
+      />
 
       {phaseStatus === "waiting" &&
         !preparing &&
         (isHost || hostClaimActive) && (
-          <Box
-            position="fixed"
-            bottom={{
-              base: `clamp(${scaleForDpi("120px")}, 18vh, ${scaleForDpi("220px")})`,
-              md: `clamp(${scaleForDpi("130px")}, 16vh, ${scaleForDpi("240px")})`,
-            }}
-            left="50%"
-            transform="translateX(-50%)"
-            zIndex={55}
-          >
-            {isHost ? (
-              <AppButton
-                {...SEINO_BUTTON_STYLES}
-                size="lg"
-                visual="solid"
-                onClick={() => quickStart()}
-                disabled={!presenceCanStart || quickStartPending || interactionDisabled}
-                css={{
-                  animation: `${orangeGlowStart} 3.2s cubic-bezier(.42,.15,.58,.85) infinite`,
-                }}
-              >
-                ゲーム開始
-              </AppButton>
-            ) : (
-              <Text
-                fontSize="sm"
-                fontWeight="bold"
-                color="rgba(255,255,255,0.95)"
-                textAlign="left"
-                animation={`${subtleTextPulse} 1.6s ease-in-out infinite`}
-              >
-                {hostClaimMessage}
-              </Text>
-            )}
-            {isHost && !presenceReady && !presenceDegraded && !presenceForceEligible ? (
-              <Text
-                mt={2}
-                fontSize="xs"
-                fontWeight="bold"
-                color="rgba(255,255,255,0.75)"
-                textAlign="center"
-              >
-                参加者の接続を待っています…（あと{Math.ceil(presenceWaitRemainingMs / 1000)}秒）
-              </Text>
-            ) : null}
-            {isHost && !presenceReady && (presenceDegraded || presenceForceEligible) ? (
-              <Text
-                mt={2}
-                fontSize="xs"
-                fontWeight="bold"
-                color="rgba(255,255,255,0.75)"
-                textAlign="center"
-              >
-                接続未確認ですが開始できます
-              </Text>
-            ) : null}
-          </Box>
+          <WaitingHostStartPanel
+            isHost={!!isHost}
+            hostClaimMessage={hostClaimMessage}
+            presenceCanStart={presenceCanStart}
+            quickStartPending={quickStartPending}
+            interactionDisabled={interactionDisabled}
+            onStart={quickStart}
+            presenceReady={presenceReady}
+            presenceDegraded={presenceDegraded}
+            presenceForceEligible={presenceForceEligible}
+            presenceWaitRemainingMs={presenceWaitRemainingMs}
+          />
         )}
 
       {/* 次のゲームボタン (フッターパネルとカードの間) */}
@@ -763,32 +671,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         !autoStartLocked &&
         !isRestarting &&
         !(phaseStatus === "reveal" && isRevealAnimating) && (
-          <Box
-            position="fixed"
-            bottom={{
-              base: `clamp(${scaleForDpi("120px")}, 18vh, ${scaleForDpi("220px")})`,
-              md: `clamp(${scaleForDpi("130px")}, 16vh, ${scaleForDpi("240px")})`,
-            }}
-            left="50%"
-            transform="translateX(-50%)"
-            zIndex={55}
-          >
-            <AppButton
-              {...SEINO_BUTTON_STYLES}
-              size="lg"
-              visual="solid"
-              muteClickSound
-              onClick={handleNextGame}
-              disabled={
-                isRestarting || quickStartPending || autoStartLocked || interactionDisabled
-              }
-              css={{
-                animation: `${orangeGlowNext} 3.8s cubic-bezier(.38,.18,.62,.82) infinite`,
-              }}
-            >
-              次のゲーム
-            </AppButton>
-          </Box>
+          <NextGameButton
+            onClick={handleNextGame}
+            disabled={
+              isRestarting ||
+              quickStartPending ||
+              autoStartLocked ||
+              interactionDisabled
+            }
+          />
         )}
 
       {/* 中央下部: シームレス浮遊ボタン群（revealゲート中はDOMごと非表示） */}
@@ -1010,30 +901,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
       )}
 
       {/* 状況アナウンス */}
-      {phaseMessage && (
-        <Box
-          position="fixed"
-          bottom={phaseMessageBottom}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={55}
-          pointerEvents="none"
-        >
-          <Text
-            display="inline-block"
-            fontSize="0.85rem"
-            fontWeight="bold"
-            color="rgba(255,255,255,0.95)"
-            letterSpacing="0.04em"
-            textAlign="center"
-            textShadow="0 1px 3px rgba(0,0,0,0.55)"
-            whiteSpace="nowrap"
-            animation={`${phaseMessagePulse} 1.7s ease-in-out infinite`}
-          >
-            {phaseMessage}
-          </Text>
-        </Box>
-      )}
+      <PhaseMessageBanner message={phaseMessage} bottom={phaseMessageBottom} />
 
       {/* 右端: 共通ボタン (設定・退出のみ) */}
       <Box

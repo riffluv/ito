@@ -174,3 +174,8 @@ export const MINI_HAND_DOCK_ICON_BUTTON_DANGER_ACTIVE_STYLES = {
   boxShadow:
     `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.82)`,
 } as const;
+
+export const MINI_HAND_DOCK_FLOATING_CENTER_BOTTOM = {
+  base: `clamp(${scaleForDpi("120px")}, 18vh, ${scaleForDpi("220px")})`,
+  md: `clamp(${scaleForDpi("130px")}, 16vh, ${scaleForDpi("240px")})`,
+} as const;
