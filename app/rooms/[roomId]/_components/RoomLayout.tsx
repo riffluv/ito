@@ -12,8 +12,6 @@ import { RoomSidebarNode } from "./RoomSidebarNode";
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 import { RoomHandDockNode } from "./RoomHandDockNode";
 import { RoomHandAreaNode } from "./RoomHandAreaNode";
-import { useRoomSpectatorGateEffects } from "./useRoomSpectatorGateEffects";
-import { useRoomSpectatorModeEffects } from "./useRoomSpectatorModeEffects";
 import { RoomViewNode } from "./RoomViewNode";
 
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
@@ -24,7 +22,6 @@ import { PRESENCE_STALE_MS } from "@/lib/constants/presence";
 import { stripMinimalTag } from "@/lib/game/displayMode";
 import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
 import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
-import { useForcedExit } from "@/lib/hooks/useForcedExit";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
 import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
@@ -34,17 +31,14 @@ import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
 import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
 import { usePopPulse } from "@/lib/hooks/usePopPulse";
 import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
-import { useRedirectGuard } from "@/lib/hooks/useRedirectGuard";
 import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
 import { useRoomDealPlayers } from "@/lib/hooks/useRoomDealPlayers";
 import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
 import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
 import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
-import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
 import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
 import { useRoomOptimisticOrderProposal } from "@/lib/hooks/useRoomOptimisticOrderProposal";
-import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
 import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
 import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
 import { useRoomPhaseMetrics } from "@/lib/hooks/useRoomPhaseMetrics";
@@ -53,19 +47,15 @@ import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
 import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
-import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
-import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
-import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import { useRouter } from "next/navigation";
 import {
-  useCallback,
-  useEffect,
   useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import { useRoomLayoutUpdateUi } from "./useRoomLayoutUpdateUi";
 import { useRoomLayoutSpectatorHostUi } from "./useRoomLayoutSpectatorHostUi";
+import { useRoomLayoutSpectatorLifecycle } from "./useRoomLayoutSpectatorLifecycle";
 
 const ROUND_PREPARING_HOLD_MS = 1200;
 const HOST_UNAVAILABLE_GRACE_MS = Math.max(
@@ -179,13 +169,6 @@ export function RoomLayout(props: RoomLayoutProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { showtimeIntentHandlers } = useRoomShowtimeFlow({ roomId, room });
 
-  const emitSpectatorEvent = useCallback(
-    (event: RoomMachineClientEvent) => {
-      sendRoomEvent(event);
-    },
-    [sendRoomEvent]
-  );
-
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
   const spectatorHostPanelEnabled = SPECTATOR_HOST_PANEL_ENABLED;
@@ -244,7 +227,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     graceMs: 15000, // 15s grace to avoid transient demotion
   });
   const dealPlayers = useRoomDealPlayers(room?.deal?.players);
-  const versionMismatchBlocksAccess = false;
   useRoomPhaseMetrics({ roomStatus, isHost });
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
@@ -320,12 +302,7 @@ export function RoomLayout(props: RoomLayoutProps) {
     graceMs: HOST_UNAVAILABLE_GRACE_MS,
   });
 
-
   const pop = usePopPulse(me?.number, 180);
-  const redirectGuard = useRedirectGuard(1200);
-  const [forcedExitReason, setForcedExitReason] = useState<
-    "game-in-progress" | "version-mismatch" | null
-  >(null);
   const {
     isSpectatorMode,
     seatRequestTimedOut,
@@ -333,15 +310,18 @@ export function RoomLayout(props: RoomLayoutProps) {
     handleRetryJoin,
     seatAcceptanceActive,
     seatRequestPending,
-    seatRequestAccepted,
-    clearRejoinIntent,
-    suppressAutoJoinIntent,
-    cancelSeatRequestSafely,
-  } = useRoomSpectatorFlow({
+    leaveRoom,
+    handleForcedExitLeaveNow,
+    forcedExitReason,
+  } = useRoomLayoutSpectatorLifecycle({
     roomId,
     uid,
     isHost,
     isMember,
+    joinStatus,
+    sendRoomEvent,
+    leavingRef,
+    reattachPresence,
     spectatorFsm: {
       status: fsmSpectatorStatus,
       node: fsmSpectatorNode,
@@ -352,156 +332,33 @@ export function RoomLayout(props: RoomLayoutProps) {
       requestFailure: fsmSpectatorRequestFailure,
       error: fsmSpectatorError,
     },
-    versionMismatchBlocksAccess,
-    emitSpectatorEvent,
-    leavingRef,
     spectatorSession,
     spectatorRecallEnabled,
     roomStatus,
     recallOpen,
-    setForcedExitReason,
-    reattachPresence,
-  });
-
-  const boardMeId = isSpectatorMode ? "" : meId;
-  const spectatorReason = spectatorController.state.reason;
-  const seatRequestState = spectatorController.state.seatRequest;
-  const hasRejoinIntent = spectatorController.utils.hasRejoinIntent;
-
-  const { leaveRoom, handleForcedExitLeaveNow } = useRoomLeaveFlow({
-    roomId,
-    uid,
-    displayName,
     router,
     transition,
     user,
     detachNow,
-    leavingRef,
-    versionMismatchBlocksAccess,
-    forcedExitReason,
-    setForcedExitReason,
-    roomStatus,
-    recallOpen,
-    sendRoomEvent: emitSpectatorEvent,
-  });
-
-  const { needName, handleSubmitName } = useDisplayNameGate({ displayName, setDisplayName });
-
-
-
-
-
-  const { hasOptimisticSeat } = useRoomSpectatorGateEffects({
-    roomId,
-    uid,
-    roomStatus,
-    joinStatus,
-    isHost,
-    isMember,
+    displayName,
+    lastKnownHostId,
     joinEstablished,
     optimisticMe,
-    seatRequestPending,
-    seatAcceptanceActive,
-    loading,
-    forcedExitReason,
-    recallOpen,
-    versionMismatchBlocksAccess,
-    dealPlayers: room?.deal?.players ?? null,
-    orderList: room?.order?.list ?? null,
-    proposal: room?.order?.proposal ?? null,
-    fsmSpectatorNode,
-    isSpectatorMode,
-    emitSpectatorEvent,
-  });
-  const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
-  useRoomSpectatorModeEffects({
-    roomId,
-    uid,
-    isSpectatorMode,
-    isMember,
-    roomStatus: room?.status ?? null,
-    versionMismatchBlocksAccess,
-    spectatorNode: fsmSpectatorNode,
-    seatRequestStatus: seatRequestState.status,
-    optimisticMe,
     setOptimisticMe,
-    emitSpectatorEvent,
-  });
-  useRoomOptimisticSeatHold({
-    uid,
-    isSpectatorMode,
     meFromPlayers,
     me,
-    joinEstablished,
-    seatRequestPending,
-    seatAcceptanceActive,
-    seatRequestAccepted,
-    displayName,
-    optimisticMe,
-    setOptimisticMe,
-  });
-
-  // 観戦理由の判定（文言出し分け用）
-  const waitingToRejoin = roomStatus === "waiting";
-
-  useSpectatorStateLogging({
-    roomId,
-    uid,
-    roomStatus: room?.status ?? null,
-    spectatorNode: fsmSpectatorNode,
-    isMember,
-    canAccess,
-    forcedExitReason,
-    spectatorReason,
-    joinStatus,
-    playersSignature,
-    waitingToRejoin,
-  });
-
-  const skipForcedExit = !uid || !isMember;
-
-  useForcedExit({
-    uid,
-    roomStatus: room?.status,
-    canAccess,
-    spectatorNode: fsmSpectatorNode,
     loading,
     authLoading,
-    hasRejoinIntent,
-    clearRejoinIntent,
-    suppressAutoJoinIntent,
-    cancelSeatRequestSafely,
-    redirectGuard,
-    lastKnownHostId,
-    leavingRef,
-    detachNow,
-    setForcedExitReason,
-    roomId,
-    displayName,
-    sendRoomEvent: emitSpectatorEvent,
-    recallOpen,
-    skip: skipForcedExit,
+    playersSignature,
+    dealPlayers: roomDealPlayers ?? null,
+    orderList: orderList ?? null,
+    proposal: orderProposal ?? null,
+    fsmSpectatorNode,
   });
 
-  useEffect(() => {
-    if (!forcedExitReason) return;
-    if (!canAccess && room?.status !== "waiting") return;
+  const boardMeId = isSpectatorMode ? "" : meId;
 
-    if (room?.status === "waiting") {
-      leavingRef.current = false;
-    }
-    setForcedExitReason(null);
-  }, [
-    forcedExitReason,
-    canAccess,
-    room?.status,
-    uid,
-    displayName,
-    leavingRef,
-    setForcedExitReason,
-  ]);
-
-
+  const { needName, handleSubmitName } = useDisplayNameGate({ displayName, setDisplayName });
 
   const hostClaimStatus = useHostClaim({
     roomId,
