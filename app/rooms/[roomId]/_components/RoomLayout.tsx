@@ -7,74 +7,67 @@
 
 // 中央領域はモニター・ボード・手札に絞り、それ以外の UI は周辺に配置。
 // PlayBoard/TopicDisplay/PhaseTips/SortBoard removed from center to keep only monitor + board + hand
-import CentralCardBoard from "@/components/CentralCardBoard";
+import { RoomMainNode } from "./RoomMainNode";
+import { RoomSidebarNode } from "./RoomSidebarNode";
+import type { RoomStateSnapshot } from "./RoomStateProvider";
 
-import { AppButton } from "@/components/ui/AppButton";
-import DragonQuestParty from "@/components/ui/DragonQuestParty";
-import MiniHandDock from "@/components/ui/MiniHandDock";
-import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
 import { SpectatorHUD } from "@/components/rooms/SpectatorHUD";
 import { RoomView } from "@/components/rooms/RoomView";
+import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
+import { AppButton } from "@/components/ui/AppButton";
+import MiniHandDock from "@/components/ui/MiniHandDock";
+import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
 import { useTransition } from "@/components/ui/TransitionProvider";
-import UniversalMonitor from "@/components/UniversalMonitor";
 import { useAuth } from "@/context/AuthContext";
-import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
-import {
-  PRESENCE_STALE_MS,
-} from "@/lib/constants/presence";
-import { getDisplayMode, stripMinimalTag } from "@/lib/game/displayMode";
-import {
-  collectServerAssignedSeatIds,
-} from "@/lib/game/selectors";
-import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
-import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
-import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
-import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
-import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
-import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
-import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
-import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
-import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLeave";
-import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
-import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
-import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
-import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
-import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
-import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
-import { useJoinEstablished } from "@/lib/hooks/useJoinEstablished";
-import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
-import { usePopPulse } from "@/lib/hooks/usePopPulse";
-import { useRedirectGuard } from "@/lib/hooks/useRedirectGuard";
-import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
-import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
-import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
-import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
+import { PRESENCE_STALE_MS } from "@/lib/constants/presence";
+import { stripMinimalTag } from "@/lib/game/displayMode";
+import { collectServerAssignedSeatIds } from "@/lib/game/selectors";
 import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
-import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
-import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
-import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
-import { useRoomOptimisticOrderProposal } from "@/lib/hooks/useRoomOptimisticOrderProposal";
-import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
-import { useHostClaim } from "@/lib/hooks/useHostClaim";
-import { useHostPruning } from "@/lib/hooks/useHostPruning";
+import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
-import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
-import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
-import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
-import { useRoomUpdateOverlays } from "@/lib/hooks/useRoomUpdateOverlays";
-import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
+import { useHostClaim } from "@/lib/hooks/useHostClaim";
+import { useHostClaimCandidateId } from "@/lib/hooks/useHostClaimCandidateId";
+import { useHostClaimDerivations } from "@/lib/hooks/useHostClaimDerivations";
+import { useHostPruning } from "@/lib/hooks/useHostPruning";
+import { useJoinEstablished } from "@/lib/hooks/useJoinEstablished";
+import { useLastKnownHostId } from "@/lib/hooks/useLastKnownHostId";
+import { usePlayerJoinOrderTracker } from "@/lib/hooks/usePlayerJoinOrderTracker";
+import { usePopPulse } from "@/lib/hooks/usePopPulse";
+import { usePresenceSessionGuard } from "@/lib/hooks/usePresenceSessionGuard";
+import { useRedirectGuard } from "@/lib/hooks/useRedirectGuard";
+import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
 import { useRoomDealPlayers } from "@/lib/hooks/useRoomDealPlayers";
+import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
+import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
+import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
+import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
+import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
+import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
+import { useRoomMeWithOptimisticPlayers } from "@/lib/hooks/useRoomMeWithOptimisticPlayers";
+import { useRoomOptimisticOrderProposal } from "@/lib/hooks/useRoomOptimisticOrderProposal";
+import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold";
+import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
+import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
 import { useRoomPhaseMetrics } from "@/lib/hooks/useRoomPhaseMetrics";
 import { useRoomRequiredSwVersionHint } from "@/lib/hooks/useRoomRequiredSwVersionHint";
+import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
+import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
+import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
+import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
+import { useRoomUpdateOverlays } from "@/lib/hooks/useRoomUpdateOverlays";
+import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
+import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
+import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLeave";
+import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
+import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
+import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
+import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
+import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
+import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
+import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
+import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
-import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
-import {
-  useSpectatorHostQueue,
-	} from "@/lib/spectator/v2/useSpectatorHostQueue";
-import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
-import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
-import { Box } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -84,7 +77,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
-import type { RoomStateSnapshot } from "./RoomStateProvider";
 
 const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
 const ROUND_PREPARING_HOLD_MS = 1200;
@@ -693,14 +685,13 @@ export function RoomLayout(props: RoomLayoutProps) {
   // Layout nodes split to avoid JSX nesting pitfalls
   const headerNode = undefined;
 
-
   const sidebarNode = (
-    <DragonQuestParty
+    <RoomSidebarNode
       players={playersWithOptimistic}
       roomStatus={room?.status || "waiting"}
       onlineCount={onlinePlayers.length}
       onlineUids={onlineUids}
-      hostId={room?.hostId}
+      hostId={room?.hostId ?? null}
       roomId={roomId}
       isHostUser={isHost}
       eligibleIds={baseIds}
@@ -713,70 +704,22 @@ export function RoomLayout(props: RoomLayoutProps) {
   );
 
   const mainNode = (
-    <Box
-      h="100%"
-      display="grid"
-      gridTemplateRows="auto 1fr"
-      gap={3}
-      minH={0}
-      css={{
-        "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-          {
-            gap: "0.5rem",
-            paddingTop: "0.25rem",
-          },
-      }}
-    >
-      <Box
-        p={0}
-        pt={{ base: "56px", md: "64px" }}
-        css={{
-
-          "@media (min-resolution: 1.5dppx), screen and (-webkit-device-pixel-ratio: 1.5)":
-            {
-              paddingTop: "40px !important",
-            },
-        }}
-      >
-        <UniversalMonitor room={room} players={playersWithOptimistic} />
-      </Box>
-      <Box
-        overflow="visible"
-        minH={0}
-        css={{
-          "@media (max-height: 700px) and (min-resolution: 1.5dppx), screen and (max-height: 700px) and (-webkit-device-pixel-ratio: 1.5)":
-            {
-              overflowY: "auto",
-            },
-        }}
-      >
-        <CentralCardBoard
-          roomId={roomId}
-          players={playersWithOptimistic}
-          orderList={room.order?.list || []}
-          meId={boardMeId}
-          eligibleIds={eligibleIds}
-          roomStatus={room.status}
-          cluesReady={allCluesReady}
-          failed={!!room.order?.failed}
-          proposal={proposalForUi}
-          resolveMode={room.options?.resolveMode}
-          displayMode={getDisplayMode(room)}
-          orderNumbers={room.order?.numbers ?? {}}
-          orderSnapshots={room.order?.snapshots ?? null}
-          slotCount={slotCount}
-          topic={room.topic ?? null}
-          revealedAt={room.result?.revealedAt ?? null}
-          uiRevealPending={room?.ui?.revealPending === true}
-          dealPlayers={dealPlayers}
-          currentStreak={room.stats?.currentStreak ?? 0}
-          onOptimisticProposalChange={updateOptimisticProposalOverride}
-          sendRoomEvent={sendRoomEvent}
-          presenceReady={presenceReady}
-          interactionEnabled={interactionEnabled}
-        />
-      </Box>
-    </Box>
+    <RoomMainNode
+      roomId={roomId}
+      room={room}
+      players={playersWithOptimistic}
+      meId={boardMeId}
+      eligibleIds={eligibleIds}
+      cluesReady={allCluesReady}
+      proposal={proposalForUi}
+      slotCount={slotCount}
+      dealPlayers={dealPlayers}
+      currentStreak={room.stats?.currentStreak ?? 0}
+      onOptimisticProposalChange={updateOptimisticProposalOverride}
+      sendRoomEvent={sendRoomEvent}
+      presenceReady={presenceReady}
+      interactionEnabled={interactionEnabled}
+    />
   );
 
   const spectatorUpdateButton = spectatorUpdateReady ? (
