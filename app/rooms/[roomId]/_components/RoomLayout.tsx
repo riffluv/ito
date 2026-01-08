@@ -11,8 +11,8 @@ import { RoomMainNode } from "./RoomMainNode";
 import { RoomSidebarNode } from "./RoomSidebarNode";
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 import { RoomHandDockNode } from "./RoomHandDockNode";
+import { RoomHandAreaNode } from "./RoomHandAreaNode";
 
-import { SpectatorHUD } from "@/components/rooms/SpectatorHUD";
 import { RoomView } from "@/components/rooms/RoomView";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import { AppButton } from "@/components/ui/AppButton";
@@ -826,7 +826,7 @@ export function RoomLayout(props: RoomLayoutProps) {
   ) : undefined;
 
   const handAreaNode = (
-    <SpectatorHUD
+    <RoomHandAreaNode
       controller={spectatorController}
       seatRequestTimedOut={seatRequestTimedOut}
       spectatorUpdateButton={spectatorUpdateButton}
