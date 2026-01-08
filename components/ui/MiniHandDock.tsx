@@ -1,7 +1,5 @@
 "use client";
 import { useHostAutoStartLock } from "@/components/hooks/useHostAutoStartLock";
-import { AppButton } from "@/components/ui/AppButton";
-import Tooltip from "@/components/ui/Tooltip";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { ResolveMode } from "@/lib/game/resolveMode";
 import { useCardSubmission } from "@/lib/hooks/useCardSubmission";
@@ -16,18 +14,8 @@ import { setMetric, readMetrics } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
-import { scaleForDpi } from "@/components/ui/scaleForDpi";
-import {
-  Box,
-  Flex,
-  HStack,
-  Input,
-} from "@chakra-ui/react";
 import React from "react";
-import { DiamondNumberCard } from "./DiamondNumberCard";
-import {
-  FOOTER_BUTTON_BASE_STYLES,
-} from "./miniHandDockStyles";
+import { BottomActionDock } from "./mini-hand-dock/BottomActionDock";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
 import { HostDockControls } from "./mini-hand-dock/HostDockControls";
 import { NextGameButton } from "./mini-hand-dock/NextGameButton";
@@ -659,124 +647,32 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               interactionDisabled
             }
           />
-        )}
+      )}
 
       {/* 中央下部: シームレス浮遊ボタン群（revealゲート中はDOMごと非表示） */}
-      {!hideHandUI && (
-        <Flex
-          position="fixed"
-          bottom={{ base: scaleForDpi("20px"), md: scaleForDpi("24px") }}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={50}
-          data-guide-target="mini-hand-dock"
-          gap={{ base: scaleForDpi("10px"), md: scaleForDpi("14px") }}
-          align="center"
-          justify="center"
-          flexWrap="nowrap"
-          maxW="95vw"
-          pointerEvents={interactionDisabled ? "none" : "auto"}
-        >
-          {/* 数字カード（大きく・モダン） */}
-          <Box
-            flexShrink={0}
-            transform={{ base: "scale(1.1)", md: "scale(1.2)" }}
-            transformOrigin="left center"
-            mr={{ base: scaleForDpi("14px"), md: scaleForDpi("20px") }}
-          >
-            {/* revealゲート中は上位の条件でDOM未描画 */}
-            <DiamondNumberCard number={me?.number || null} isAnimating={pop} />
-          </Box>
-
-          {/* 入力エリア（常時表示・シームレス） */}
-          <HStack
-            gap={{ base: scaleForDpi("8px"), md: scaleForDpi("10px") }}
-            flexWrap="nowrap"
-          >
-            <Input
-              ref={inputRef}
-              aria-label="連想ワード"
-              placeholder="連想ワード..."
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
-              data-guide-target="association-input"
-              maxLength={50}
-              size="md"
-              bg="rgba(18,22,32,0.85)"
-              color="rgba(255,255,255,0.98)"
-              fontFamily="'Courier New', monospace"
-              fontSize={{ base: scaleForDpi("14px"), md: scaleForDpi("16px") }}
-              fontWeight="700"
-              letterSpacing="0.02em"
-              border="none"
-              borderRadius={scaleForDpi("3px")}
-              boxShadow={`inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.5), 0 0 0 ${scaleForDpi("1px")} rgba(255,255,255,0.25)`}
-              h={scaleForDpi("40px")}
-              minH={scaleForDpi("40px")}
-              w={{ base: scaleForDpi("200px"), md: scaleForDpi("280px") }}
-              transition="box-shadow 150ms ease"
-              disabled={!clueEditable || preparing}
-              _placeholder={{
-                color: "rgba(255,255,255,0.35)",
-              }}
-              _focus={{
-                boxShadow:
-                  `inset ${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,0.5), 0 0 0 ${scaleForDpi("1px")} rgba(255,255,255,0.4)`,
-                bg: "rgba(22,26,36,0.9)",
-                outline: "none",
-              }}
-              _disabled={{
-                opacity: 0.5,
-                cursor: "not-allowed",
-              }}
-            />
-            <Tooltip content={decideTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="solid"
-                palette="brand"
-                onClick={handleDecide}
-                disabled={preparing || !canDecide || interactionDisabled}
-                w="auto"
-                minW={scaleForDpi("60px")}
-              >
-                決定
-              </AppButton>
-            </Tooltip>
-            <Tooltip content={clearTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="outline"
-                palette="gray"
-                onClick={handleClear}
-                disabled={clearButtonDisabled || interactionDisabled}
-                w="auto"
-                minW={scaleForDpi("60px")}
-              >
-                クリア
-              </AppButton>
-            </Tooltip>
-            <Tooltip content={submitTooltip} showArrow openDelay={180}>
-              <AppButton
-                {...FOOTER_BUTTON_BASE_STYLES}
-                size="sm"
-                visual="solid"
-                palette="brand"
-                onClick={handleSubmit}
-                disabled={!effectiveCanClickProposalButton || interactionDisabled}
-                w="auto"
-                minW={scaleForDpi("70px")}
-              >
-                {actionLabel}
-              </AppButton>
-            </Tooltip>
-          </HStack>
-
-          {/* ホスト専用ボタン */}
-          {isHost ? (
+      <BottomActionDock
+        visible={!hideHandUI}
+        interactionDisabled={interactionDisabled}
+        pop={pop}
+        number={me?.number || null}
+        inputRef={inputRef}
+        text={text}
+        onTextChange={setText}
+        onInputKeyDown={handleInputKeyDown}
+        clueEditable={clueEditable}
+        preparing={preparing}
+        decideTooltip={decideTooltip}
+        clearTooltip={clearTooltip}
+        submitTooltip={submitTooltip}
+        onDecide={handleDecide}
+        onClear={handleClear}
+        onSubmit={handleSubmit}
+        canDecide={canDecide}
+        clearButtonDisabled={clearButtonDisabled}
+        canSubmit={effectiveCanClickProposalButton}
+        actionLabel={actionLabel}
+        hostControls={
+          isHost ? (
             <HostDockControls
               roomId={roomId}
               effectiveDefaultTopicType={effectiveDefaultTopicType}
@@ -788,9 +684,9 @@ export default function MiniHandDock(props: MiniHandDockProps) {
               playCardDeal={playCardDeal}
               playTopicShuffle={playTopicShuffle}
             />
-          ) : null}
-        </Flex>
-      )}
+          ) : null
+        }
+      />
 
       {/* 状況アナウンス */}
       <PhaseMessageBanner message={phaseMessage} bottom={phaseMessageBottom} />
