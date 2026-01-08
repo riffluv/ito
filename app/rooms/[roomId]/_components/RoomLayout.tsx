@@ -12,6 +12,8 @@ import { RoomSidebarNode } from "./RoomSidebarNode";
 import type { RoomStateSnapshot } from "./RoomStateProvider";
 import { RoomHandDockNode } from "./RoomHandDockNode";
 import { RoomHandAreaNode } from "./RoomHandAreaNode";
+import { useRoomSpectatorGateEffects } from "./useRoomSpectatorGateEffects";
+import { useRoomSpectatorModeEffects } from "./useRoomSpectatorModeEffects";
 
 import { RoomView } from "@/components/rooms/RoomView";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
@@ -21,7 +23,6 @@ import { useTransition } from "@/components/ui/TransitionProvider";
 import { useAuth } from "@/context/AuthContext";
 import { PRESENCE_STALE_MS } from "@/lib/constants/presence";
 import { stripMinimalTag } from "@/lib/game/displayMode";
-import { collectServerAssignedSeatIds } from "@/lib/game/selectors";
 import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
 import { useDisplayNameGate } from "@/lib/hooks/useDisplayNameGate";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
@@ -57,22 +58,17 @@ import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
 import { useRoomUpdateOverlays } from "@/lib/hooks/useRoomUpdateOverlays";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
-import { useSpectatorAutoEnterLeave } from "@/lib/hooks/useSpectatorAutoEnterLeave";
-import { useSpectatorGate } from "@/lib/hooks/useSpectatorGate";
 import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
-import { useSpectatorJoinStatus } from "@/lib/hooks/useSpectatorJoinStatus";
 import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
 import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import type { RoomDoc } from "@/lib/types";
-import { traceAction } from "@/lib/utils/trace";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -426,147 +422,42 @@ export function RoomLayout(props: RoomLayoutProps) {
 
 
 
-  const spectatorJoinStatus = useSpectatorJoinStatus({ joinStatus, roomStatus });
-  const hasOptimisticSeat =
-    !!optimisticMe &&
-    (joinEstablished || seatAcceptanceActive) &&
-    !(forcedExitReason || versionMismatchBlocksAccess);
-
-  const serverAssignedSeatIds = useMemo(() => {
-    return collectServerAssignedSeatIds({
-      dealPlayers: room?.deal?.players ?? null,
-      orderList: room?.order?.list ?? null,
-      proposal: room?.order?.proposal ?? null,
-    });
-  }, [room?.deal?.players, room?.order?.list, room?.order?.proposal]);
-
-  const hasServerAssignedSeat = !!(uid && serverAssignedSeatIds.has(uid));
-  const {
-    spectatorEnterReason,
-    spectatorCandidate,
-    mustSpectateMidGame,
-  } = useSpectatorGate({
-    roomStatus: room?.status ?? null,
+  const { hasOptimisticSeat } = useRoomSpectatorGateEffects({
+    roomId,
+    uid,
+    roomStatus,
+    joinStatus,
     isHost,
     isMember,
-    hasOptimisticSeat,
-    seatAcceptanceActive,
+    joinEstablished,
+    optimisticMe,
     seatRequestPending,
-    joinStatus: spectatorJoinStatus,
+    seatAcceptanceActive,
     loading,
     forcedExitReason,
     recallOpen,
     versionMismatchBlocksAccess,
-    hasServerAssignedSeat,
-    spectatorNode: fsmSpectatorNode,
-  });
-
-  useEffect(() => {
-    traceAction("spectator.candidate", {
-      roomId,
-      uid,
-      spectatorCandidate,
-      joinStatus: spectatorJoinStatus,
-      seatRequestPending,
-      seatAcceptanceActive,
-      hasOptimisticSeat,
-      spectatorNode: fsmSpectatorNode,
-    });
-  }, [
-    roomId,
-    uid,
-    spectatorCandidate,
-    spectatorJoinStatus,
-    seatRequestPending,
-    seatAcceptanceActive,
-    hasOptimisticSeat,
+    dealPlayers: room?.deal?.players ?? null,
+    orderList: room?.order?.list ?? null,
+    proposal: room?.order?.proposal ?? null,
     fsmSpectatorNode,
-  ]);
-
-  useEffect(() => {
-    if (!mustSpectateMidGame) return;
-    if (fsmSpectatorNode !== "idle") return;
-    emitSpectatorEvent({ type: "SPECTATOR_ENTER", reason: "mid-game" });
-  }, [mustSpectateMidGame, fsmSpectatorNode, emitSpectatorEvent]);
-
-  useEffect(() => {
-    traceAction("spectator.gate", {
-      roomId,
-      status: room?.status ?? null,
-      spectatorCandidate,
-      mustSpectateMidGame,
-      recallOpen,
-      joinStatus: spectatorJoinStatus,
-    });
-  }, [
-    roomId,
-    room?.status,
-    spectatorCandidate,
-    mustSpectateMidGame,
-    recallOpen,
-    spectatorJoinStatus,
-  ]);
-
-  useSpectatorAutoEnterLeave({
-    uid,
     isSpectatorMode,
-    isMember,
-    isHost,
-    hasOptimisticSeat,
-    seatRequestPending,
-    seatAcceptanceActive,
-    forcedExitReason,
-    spectatorCandidate,
-    spectatorEnterReason,
-    mustSpectateMidGame,
-    fsmSpectatorNode,
     emitSpectatorEvent,
   });
   const canAccess = (isMember || isHost || hasOptimisticSeat) && !versionMismatchBlocksAccess;
-  useEffect(() => {
-    traceAction("spectator.mode", {
-      roomId,
-      uid,
-      isSpectatorMode,
-      isMember,
-      roomStatus: room?.status ?? null,
-      spectatorNode: fsmSpectatorNode,
-    });
-
-    // Spectator V3: 観戦遷移時のトレースと状態初期化
-    if (isSpectatorMode && uid) {
-      traceAction("spectator.enter", {
-        roomId,
-        uid,
-        reason: versionMismatchBlocksAccess
-          ? "version-mismatch"
-          : room?.status === "waiting"
-          ? "waiting"
-          : "mid-game",
-      });
-
-      // 観戦遷移時の状態初期化を厳密化
-      if (optimisticMe) {
-        setOptimisticMe(null);
-      }
-      // 他の残留状態もクリア
-      if (seatRequestState.status !== "idle") {
-        emitSpectatorEvent({ type: "SPECTATOR_RESET" });
-      }
-    }
-  }, [
+  useRoomSpectatorModeEffects({
     roomId,
     uid,
     isSpectatorMode,
     isMember,
-    room?.status,
+    roomStatus: room?.status ?? null,
     versionMismatchBlocksAccess,
-    emitSpectatorEvent,
-    seatRequestState.status,
-    fsmSpectatorNode,
+    spectatorNode: fsmSpectatorNode,
+    seatRequestStatus: seatRequestState.status,
     optimisticMe,
     setOptimisticMe,
-  ]);
+    emitSpectatorEvent,
+  });
   useRoomOptimisticSeatHold({
     uid,
     isSpectatorMode,
