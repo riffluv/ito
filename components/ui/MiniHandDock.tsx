@@ -13,6 +13,7 @@ import type { PlayerDoc } from "@/lib/types";
 import React from "react";
 import { BottomActionDock } from "./mini-hand-dock/BottomActionDock";
 import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
+import { deriveActionTooltips } from "./mini-hand-dock/deriveActionTooltips";
 import { HostDockControls } from "./mini-hand-dock/HostDockControls";
 import { NextGameButton } from "./mini-hand-dock/NextGameButton";
 import { PhaseMessageBanner } from "./mini-hand-dock/PhaseMessageBanner";
@@ -21,10 +22,13 @@ import { RightEdgeControls } from "./mini-hand-dock/RightEdgeControls";
 import { WaitingHostStartPanel } from "./mini-hand-dock/WaitingHostStartPanel";
 import { useDefaultTopicTypeOverride } from "./mini-hand-dock/useDefaultTopicTypeOverride";
 import { useRevealAnimatingState } from "./mini-hand-dock/useRevealAnimatingState";
+import {
+  useMiniHandDockTransientEffects,
+  type MiniHandDockInlineFeedback,
+} from "./mini-hand-dock/useMiniHandDockTransientEffects";
+import { useSeinoTransitionBlocker } from "./mini-hand-dock/useSeinoTransitionBlocker";
 import { useSyncSpinnerWatchdog } from "./mini-hand-dock/useSyncSpinnerWatchdog";
 import { SeinoButton } from "./SeinoButton";
-
-const noopCleanup = () => {};
 
 interface MiniHandDockProps {
   roomId: string;
@@ -124,13 +128,8 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   const computedDefaultTopicType = useDefaultTopicTypeOverride(defaultTopicType);
   const isRevealAnimating = useRevealAnimatingState(roomId, roomStatus);
-  const [seinoTransitionBlocked, setSeinoTransitionBlocked] = React.useState(false);
-  const seinoTransitionTimerRef = React.useRef<number | null>(null);
-  const seinoLastPhaseStatusRef = React.useRef<string | null>(null);
-  const [inlineFeedback, setInlineFeedback] = React.useState<{
-    message: string;
-    tone: "info" | "success";
-  } | null>(null);
+  const [inlineFeedback, setInlineFeedback] =
+    React.useState<MiniHandDockInlineFeedback | null>(null);
 
   // 入力フィールド参照
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -203,33 +202,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   // 以降のフェーズ分岐は optimisticResetting を反映した値を使う
   const phaseStatus = effectiveRoomStatus;
 
-  // Prevent SeinoButton "ghost slide" on room phase transitions (next-round/start/reset):
-  // Tier1/Tier2 can apply room status quickly while proposal updates lag behind for a moment.
-  React.useEffect(() => {
-    if (typeof window === "undefined") return noopCleanup;
-    const current = typeof phaseStatus === "string" ? phaseStatus : null;
-    const prev = seinoLastPhaseStatusRef.current;
-    seinoLastPhaseStatusRef.current = current;
-    if (!current || !prev) return noopCleanup;
-    if (current === prev) return noopCleanup;
-
-    setSeinoTransitionBlocked(true);
-    if (seinoTransitionTimerRef.current !== null) {
-      window.clearTimeout(seinoTransitionTimerRef.current);
-      seinoTransitionTimerRef.current = null;
-    }
-    seinoTransitionTimerRef.current = window.setTimeout(() => {
-      seinoTransitionTimerRef.current = null;
-      setSeinoTransitionBlocked(false);
-    }, 900);
-
-    return () => {
-      if (seinoTransitionTimerRef.current !== null) {
-        window.clearTimeout(seinoTransitionTimerRef.current);
-        seinoTransitionTimerRef.current = null;
-      }
-    };
-  }, [phaseStatus]);
+  const seinoTransitionBlocked = useSeinoTransitionBlocker(phaseStatus);
 
   const {
     text,
@@ -281,42 +254,16 @@ export default function MiniHandDock(props: MiniHandDockProps) {
   const shouldShowSeinoButton =
     !!isHost && isSortMode && phaseStatus === "clue" && allSubmitted;
 
-  React.useEffect(() => {
-    if (!ready) return;
-    const el = inputRef.current;
-    if (!el) return;
-    if (typeof window === "undefined") return;
-    if (document.activeElement === el) {
-      el.blur();
-    }
-  }, [ready]);
+  useMiniHandDockTransientEffects({
+    ready,
+    inputRef,
+    inlineFeedback,
+    setInlineFeedback,
+    clueEditable,
+    shouldShowSubmitHint,
+    resetSubmitHint,
+  });
 
-  React.useEffect(() => {
-    if (!inlineFeedback || inlineFeedback.tone === "info") {
-      return noopCleanup;
-    }
-    const timer = window.setTimeout(() => setInlineFeedback(null), 2000);
-    return () => window.clearTimeout(timer);
-  }, [inlineFeedback]);
-
-  React.useEffect(() => {
-    if (!clueEditable) {
-      setInlineFeedback(null);
-    }
-  }, [clueEditable]);
-
-  React.useEffect(() => {
-    if (!shouldShowSubmitHint) {
-      return noopCleanup;
-    }
-    const timer = window.setTimeout(() => {
-      resetSubmitHint();
-    }, 2500);
-    return () => window.clearTimeout(timer);
-  }, [resetSubmitHint, shouldShowSubmitHint]);
-
-  const baseActionTooltip =
-    isSortMode && placed ? "カードを待機エリアに戻す" : "カードを場に出す";
   const preparing = !!(
     showSpinner ||
     evalSortedPending ||
@@ -333,40 +280,24 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     !preparing &&
     !hideHandUI &&
     !isRevealAnimating;
-  const clearButtonDisabled = preparing || !clueEditable || !hasText || placed;
-  const clearTooltip = preparing
-    ? "準備中は操作できません"
-    : !clueEditable
-      ? "判定中は操作できません"
-      : placed
-        ? "カード提出中は操作できません"
-        : !displayHasText
-          ? "連想ワードが入力されていません"
-          : "連想ワードをクリア";
-  const decideTooltip = preparing
-    ? "準備中は操作できません"
-    : !clueEditable
-      ? "判定中は操作できません"
-      : !displayHasText
-        ? "連想ワードを入力してください"
-        : "連想ワードを決定";
-  const submitDisabledReason = preparing
-    ? "準備中は操作できません"
-    : !clueEditable
-      ? "このタイミングではカードを出せません"
-      : !me?.id
-        ? "参加処理が終わるまで待ってください"
-        : typeof me?.number !== "number"
-          ? "番号が配られるまで待ってください"
-          : !displayHasText
-            ? "連想ワードを入力するとカードを出せます"
-            : !ready
-              ? "「決定」を押すとカードを出せます"
-              : "カードを場に出せません";
-  const effectiveCanClickProposalButton = !preparing && canClickProposalButton;
-  const submitTooltip = effectiveCanClickProposalButton
-    ? baseActionTooltip
-    : submitDisabledReason;
+  const {
+    clearButtonDisabled,
+    clearTooltip,
+    decideTooltip,
+    submitTooltip,
+    effectiveCanClickProposalButton,
+  } = deriveActionTooltips({
+    preparing,
+    clueEditable,
+    placed,
+    hasText,
+    displayHasText,
+    ready,
+    isSortMode,
+    canClickProposalButton,
+    playerId: me?.id ?? null,
+    playerNumber: typeof me?.number === "number" ? me.number : null,
+  });
 
   const _playLedgerOpen = useSoundEffect("ledger_open"); // reserved (ledger button hidden)
   const playCardDeal = useSoundEffect("card_deal");
