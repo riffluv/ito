@@ -39,7 +39,6 @@ import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
 import { useRoomDealPlayers } from "@/lib/hooks/useRoomDealPlayers";
 import { useRoomDisplayNameHelpers } from "@/lib/hooks/useRoomDisplayNameHelpers";
 import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
-import { useRoomHostActionsUi } from "@/lib/hooks/useRoomHostActionsUi";
 import { useRoomHostAvailability } from "@/lib/hooks/useRoomHostAvailability";
 import { useRoomLeaveFlow } from "@/lib/hooks/useRoomLeaveFlow";
 import { useRoomLedgerState } from "@/lib/hooks/useRoomLedgerState";
@@ -55,8 +54,6 @@ import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
 import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
 import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
-import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
-import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import { useRoomSpectatorFlow } from "@/lib/spectator/v2/useRoomSpectatorFlow";
 import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import { useRouter } from "next/navigation";
@@ -68,6 +65,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useRoomLayoutUpdateUi } from "./useRoomLayoutUpdateUi";
+import { useRoomLayoutSpectatorHostUi } from "./useRoomLayoutSpectatorHostUi";
 
 const ROUND_PREPARING_HOLD_MS = 1200;
 const HOST_UNAVAILABLE_GRACE_MS = Math.max(
@@ -190,36 +188,29 @@ export function RoomLayout(props: RoomLayoutProps) {
 
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
-  const spectatorRecallEnabled = recallOpen && roomStatus === "waiting";
   const spectatorHostPanelEnabled = SPECTATOR_HOST_PANEL_ENABLED;
-  const canRecallSpectators =
-    spectatorHostPanelEnabled && isHost && roomStatus === "waiting";
   const {
     dealRecoveryOpen,
     handleDealRecoveryDismiss,
     recallPending,
     handleSpectatorRecall,
-  } = useRoomHostActionsUi({
+    spectatorRecallEnabled,
+    canRecallSpectators,
+    spectatorHostRequests,
+    spectatorHostLoading,
+    spectatorHostError,
+    spectatorSession,
+    approveSpectatorRejoin,
+    rejectSpectatorRejoin,
+  } = useRoomLayoutSpectatorHostUi({
     roomId,
     room,
     isHost,
+    uid,
+    roomStatus,
+    recallOpen,
     spectatorHostPanelEnabled,
-    canRecallSpectators,
-    spectatorRecallEnabled,
   });
-  const spectatorHostQueue = useSpectatorHostQueue(roomId, {
-    enabled: spectatorHostPanelEnabled && isHost,
-  });
-  const {
-    requests: spectatorHostRequests,
-    loading: spectatorHostLoading,
-    error: spectatorHostError,
-  } = spectatorHostQueue;
-  const spectatorSession = useSpectatorSession({
-    roomId,
-    viewerUid: uid,
-  });
-  const { approveRejoin: approveSpectatorRejoin, rejectRejoin: rejectSpectatorRejoin } = spectatorSession.actions;
 
 
   useRoomRevealPendingCleanup({
