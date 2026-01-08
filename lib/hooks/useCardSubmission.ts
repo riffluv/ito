@@ -41,7 +41,11 @@ type UseCardSubmissionOptions = {
   inputRef: RefObject<HTMLElement>;
   onFeedback?: (payload: { message: string; tone: "info" | "success" } | null) => void;
   isRevealAnimating?: boolean;
-  updateOptimisticProposal?: (playerId: string, state: "placed" | "removed" | null) => void;
+  updateOptimisticProposal?: (
+    playerId: string,
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
+  ) => void;
 };
 
 export function useCardSubmission({

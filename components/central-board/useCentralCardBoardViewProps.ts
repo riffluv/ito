@@ -40,7 +40,8 @@ export type CentralCardBoardViewPropsInput = {
   currentStreak: number;
   onOptimisticProposalChange?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
   sendRoomEvent?: (event: RoomMachineClientEvent) => void;
   presenceReady: boolean;

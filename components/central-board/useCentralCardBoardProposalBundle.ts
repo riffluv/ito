@@ -47,7 +47,8 @@ export function useCentralCardBoardProposalBundle(params: {
   prefersReducedMotion: boolean;
   onOptimisticProposalChange?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
   playCardPlace: () => void;
   playDropInvalid: () => void;

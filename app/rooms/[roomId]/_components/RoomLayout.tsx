@@ -53,9 +53,8 @@ import { useCluePhaseHygiene } from "@/lib/hooks/useCluePhaseHygiene";
 import { useRoomEligibleIds } from "@/lib/hooks/useRoomEligibleIds";
 import { useRoomBoardDerivations } from "@/lib/hooks/useRoomBoardDerivations";
 import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
-import type {
-  RoomMachineClientEvent,
-} from "@/lib/state/roomMachine";
+import { useRoomOptimisticOrderProposal } from "@/lib/hooks/useRoomOptimisticOrderProposal";
+import type { RoomMachineClientEvent } from "@/lib/state/roomMachine";
 import { useHostClaim } from "@/lib/hooks/useHostClaim";
 import { useHostPruning } from "@/lib/hooks/useHostPruning";
 import { useForcedExit } from "@/lib/hooks/useForcedExit";
@@ -72,18 +71,15 @@ import { traceAction } from "@/lib/utils/trace";
 import { useSpectatorSession } from "@/lib/spectator/v2/useSpectatorSession";
 import {
   useSpectatorHostQueue,
-} from "@/lib/spectator/v2/useSpectatorHostQueue";
+	} from "@/lib/spectator/v2/useSpectatorHostQueue";
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
 import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
-import {
-} from "@/lib/serviceWorker/updateChannel";
 import { Box } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -173,41 +169,12 @@ export function RoomLayout(props: RoomLayoutProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { showtimeIntentHandlers } = useRoomShowtimeFlow({ roomId, room });
 
-
   const emitSpectatorEvent = useCallback(
     (event: RoomMachineClientEvent) => {
       sendRoomEvent(event);
     },
     [sendRoomEvent]
   );
-  const [transitionMessage, setTransitionMessage] = useState<string | null>(null);
-  const transitionTimerRef = useRef<number | null>(null);
-  const overlayStatusRef = useRef<string | null>(null);
-  const showTransitionMessage = useCallback(
-    (message: string, durationMs = 3000) => {
-      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
-        window.clearTimeout(transitionTimerRef.current);
-        transitionTimerRef.current = null;
-      }
-      setTransitionMessage(message);
-      if (typeof window === "undefined" || durationMs <= 0) {
-        return;
-      }
-      transitionTimerRef.current = window.setTimeout(() => {
-        transitionTimerRef.current = null;
-        setTransitionMessage((current) => (current === message ? null : current));
-      }, durationMs);
-    },
-    []
-  );
-  useEffect(() => {
-    return () => {
-      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
-        window.clearTimeout(transitionTimerRef.current);
-        transitionTimerRef.current = null;
-      }
-    };
-  }, []);
 
   const roomStatus = room?.status ?? null;
   const recallOpen = room?.ui?.recallOpen === true;
@@ -668,7 +635,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     leavingRef,
   });
 
-
   useRoomPlayerHygiene({
     roomId,
     room,
@@ -677,33 +643,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     players,
     displayName,
   });
-  useEffect(() => {
-    const status = room?.status ?? null;
-    if (!isMember) {
-      overlayStatusRef.current = status;
-      if (transitionTimerRef.current !== null && typeof window !== "undefined") {
-        window.clearTimeout(transitionTimerRef.current);
-        transitionTimerRef.current = null;
-      }
-      if (transitionMessage !== null) {
-        setTransitionMessage(null);
-      }
-      return;
-    }
-    const prev = overlayStatusRef.current;
-    if (status && prev !== status) {
-      if (prev === "waiting" && status === "clue") {
-        showTransitionMessage("配られた数字にぴったりなワードを考えよう！", 3000);
-      } else if (status === "waiting" && prev && prev !== "waiting") {
-        if (prev === "finished") {
-          showTransitionMessage("次のゲームに移行中…", 3000);
-        } else {
-          showTransitionMessage("リセット中…", 3000);
-        }
-      }
-    }
-    overlayStatusRef.current = status;
-  }, [room?.status, isMember, showTransitionMessage, transitionMessage]);
 
   useHostPruning({
     isHost,
@@ -714,11 +653,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     onlineUids,
     presenceReady,
   });
-
-
-
-
-
 
   const { baseIds, eligibleIds } = useRoomEligibleIds({
     room,
@@ -734,102 +668,11 @@ export function RoomLayout(props: RoomLayoutProps) {
     isHost,
   });
 
-  const [optimisticProposalOverrides, setOptimisticProposalOverrides] = useState<
-    Record<string, "placed" | "removed">
-  >({});
-  const sanitizedServerProposal = useMemo<(string | null)[]>(() => {
-    if (!Array.isArray(orderProposal)) {
-      return [];
-    }
-    return (orderProposal as (string | null | undefined)[]).map((value) => {
-      if (typeof value !== "string") return null;
-      const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : null;
+  const { proposalForUi, updateOptimisticProposalOverride } =
+    useRoomOptimisticOrderProposal({
+      orderProposal,
+      roomStatus: room?.status ?? null,
     });
-  }, [orderProposal]);
-  const updateOptimisticProposalOverride = useCallback(
-    (playerId: string, state: "placed" | "removed" | null) => {
-      if (!playerId) return;
-      setOptimisticProposalOverrides((prev) => {
-        const current = prev[playerId] ?? null;
-        if (current === state || (state === null && !(playerId in prev))) {
-          return prev;
-        }
-        if (state === null) {
-          const next = { ...prev };
-          delete next[playerId];
-          return next;
-        }
-        return { ...prev, [playerId]: state };
-      });
-    },
-    []
-  );
-  const sanitizedServerProposalSet = useMemo(() => {
-    const set = new Set<string>();
-    sanitizedServerProposal.forEach((value) => {
-      if (typeof value === "string" && value.length > 0) {
-        set.add(value);
-      }
-    });
-    return set;
-  }, [sanitizedServerProposal]);
-
-  useEffect(() => {
-    if (!Object.keys(optimisticProposalOverrides).length) return;
-    const hasServerUpdate = sanitizedServerProposalSet;
-    let changed = false;
-    const next: Record<string, "placed" | "removed"> = {};
-    Object.entries(optimisticProposalOverrides).forEach(([playerId, state]) => {
-      const presentOnServer = hasServerUpdate.has(playerId);
-      if ((state === "placed" && presentOnServer) || (state === "removed" && !presentOnServer)) {
-        changed = true;
-        return;
-      }
-      next[playerId] = state;
-    });
-    if (changed) {
-      setOptimisticProposalOverrides(next);
-    }
-  }, [sanitizedServerProposalSet, optimisticProposalOverrides]);
-  useEffect(() => {
-    if (room?.status === "clue") return;
-    setOptimisticProposalOverrides((prev) => (Object.keys(prev).length ? {} : prev));
-  }, [room?.status]);
-  const proposalForUi = useMemo<(string | null)[]>(() => {
-    const overrides = optimisticProposalOverrides;
-    if (!Object.keys(overrides).length) {
-      return sanitizedServerProposal;
-    }
-    const next = sanitizedServerProposal.slice();
-    const presentSet = new Set(
-      next.filter((value): value is string => typeof value === "string" && value.length > 0)
-    );
-
-    Object.entries(overrides).forEach(([playerId, state]) => {
-      if (state !== "removed") return;
-      for (let i = 0; i < next.length; i += 1) {
-        if (next[i] === playerId) {
-          next[i] = null;
-        }
-      }
-      presentSet.delete(playerId);
-    });
-
-    Object.entries(overrides).forEach(([playerId, state]) => {
-      if (state !== "placed") return;
-      if (presentSet.has(playerId)) return;
-      const emptyIndex = next.findIndex((slot) => slot === null);
-      if (emptyIndex >= 0) {
-        next[emptyIndex] = playerId;
-      } else {
-        next.push(playerId);
-      }
-      presentSet.add(playerId);
-    });
-
-    return next;
-  }, [sanitizedServerProposal, optimisticProposalOverrides]);
 
   const { slotCount, submittedPlayerIds, canStartSorting, meHasPlacedCard, baseOverlayMessage } =
     useRoomBoardDerivations({

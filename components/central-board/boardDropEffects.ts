@@ -18,7 +18,8 @@ export function handleSlotDropEffects(params: {
   operation: "add" | "move";
   onOptimisticProposalChange?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
   updatePendingState: PendingStateUpdater;
   scheduleDropRollback: (playerId: string, snapshot: (string | null)[]) => void;
@@ -63,7 +64,7 @@ export function handleSlotDropEffects(params: {
       optimisticMode: DROP_OPTIMISTIC_ENABLED,
       index: slotIndex,
     });
-    onOptimisticProposalChange?.(activePlayerId, "placed");
+    onOptimisticProposalChange?.(activePlayerId, "placed", slotIndex);
     updatePendingState((prev) => {
       previousPending = prev.slice();
       const next = [...prev];
@@ -240,7 +241,8 @@ export function handleReturnDropEffects(params: {
   reason?: string;
   onOptimisticProposalChange?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
   returnCardToWaiting: (playerId: string) => Promise<boolean>;
   playDropInvalid: () => void;

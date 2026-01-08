@@ -61,7 +61,11 @@ export function useBoardDragHandlers(params: {
   playDropInvalid: () => void;
   playCardPlace: () => void;
   returnCardToWaiting: (playerId: string) => Promise<boolean>;
-  onOptimisticProposalChange?: (playerId: string, state: "placed" | "removed" | null) => void;
+  onOptimisticProposalChange?: (
+    playerId: string,
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
+  ) => void;
   updatePendingState: PendingStateUpdater;
   scheduleDropRollback: (playerId: string, snapshot: (string | null)[]) => void;
   clearDropRollbackTimer: (playerId?: string) => void;

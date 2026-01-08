@@ -11,7 +11,8 @@ export function useOptimisticDropRollback(params: {
   updatePendingState: PendingStateUpdater;
   onOptimisticProposalChange?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
 }): {
   scheduleDropRollback: (playerId: string, snapshot: (string | null)[]) => void;

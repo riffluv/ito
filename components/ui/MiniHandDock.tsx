@@ -235,7 +235,8 @@ interface MiniHandDockProps {
   showtimeIntentHandlers?: ShowtimeIntentHandlers;
   updateOptimisticProposalOverride?: (
     playerId: string,
-    state: "placed" | "removed" | null
+    state: "placed" | "removed" | null,
+    targetIndex?: number | null
   ) => void;
 }
 
