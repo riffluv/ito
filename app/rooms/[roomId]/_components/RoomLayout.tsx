@@ -17,7 +17,6 @@ import { useRoomSpectatorModeEffects } from "./useRoomSpectatorModeEffects";
 import { RoomViewNode } from "./RoomViewNode";
 
 import SentryRoomContext from "@/components/telemetry/SentryRoomContext";
-import { AppButton } from "@/components/ui/AppButton";
 import { MultiSessionNotice } from "@/components/ui/MultiSessionNotice";
 import { useTransition } from "@/components/ui/TransitionProvider";
 import { useAuth } from "@/context/AuthContext";
@@ -50,14 +49,10 @@ import { useRoomOptimisticSeatHold } from "@/lib/hooks/useRoomOptimisticSeatHold
 import { useRoomPasswordGate } from "@/lib/hooks/useRoomPasswordGate";
 import { useRoomPlayerHygiene } from "@/lib/hooks/useRoomPlayerHygiene";
 import { useRoomPhaseMetrics } from "@/lib/hooks/useRoomPhaseMetrics";
-import { useRoomRequiredSwVersionHint } from "@/lib/hooks/useRoomRequiredSwVersionHint";
 import { useRoomRevealPendingCleanup } from "@/lib/hooks/useRoomRevealPendingCleanup";
-import { useRoomSafeUpdateAutomation } from "@/lib/hooks/useRoomSafeUpdateAutomation";
 import { useRoomSelfOnlineMetric } from "@/lib/hooks/useRoomSelfOnlineMetric";
 import { useRoomShowtimeFlow } from "@/lib/hooks/useRoomShowtimeFlow";
-import { useRoomUpdateOverlays } from "@/lib/hooks/useRoomUpdateOverlays";
 import { useRoundPreparingHold } from "@/lib/hooks/useRoundPreparingHold";
-import { useServiceWorkerUpdate } from "@/lib/hooks/useServiceWorkerUpdate";
 import { useSpectatorHostModerationHandlers } from "@/lib/hooks/useSpectatorHostModerationHandlers";
 import { useSpectatorStateLogging } from "@/lib/hooks/useSpectatorStateLogging";
 import { useSpectatorHostQueue } from "@/lib/spectator/v2/useSpectatorHostQueue";
@@ -72,8 +67,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { useRoomLayoutUpdateUi } from "./useRoomLayoutUpdateUi";
 
-const SAFE_UPDATE_FORCE_APPLY_DELAY_MS = 2 * 60 * 1000;
 const ROUND_PREPARING_HOLD_MS = 1200;
 const HOST_UNAVAILABLE_GRACE_MS = Math.max(
   10_000,
@@ -234,17 +229,14 @@ export function RoomLayout(props: RoomLayoutProps) {
     roomStatus,
   });
   const { playerJoinOrderRef, joinVersion } = usePlayerJoinOrderTracker(players);
-  const {
-    isUpdateReady: spectatorUpdateReady,
-    isApplying: spectatorUpdateApplying,
-    hasError: spectatorUpdateFailed,
-    phase: safeUpdatePhase,
-    lastError: safeUpdateLastError,
-    autoApplySuppressed: safeUpdateAutoApplySuppressed,
-    autoApplyAt: safeUpdateAutoApplyAt,
-    retryUpdate: retrySpectatorUpdate,
-    applyUpdate: applySpectatorUpdate,
-  } = useServiceWorkerUpdate();
+  const { spectatorUpdateButton, safeUpdateBannerNode, joinStatusBanner, versionMismatchOverlay } =
+    useRoomLayoutUpdateUi({
+      safeUpdateFeatureEnabled,
+      idleApplyMs,
+      roomStatus,
+      joinStatus,
+      roomRequiredSwVersion: room?.requiredSwVersion,
+    });
   const { meId, meFromPlayers, optimisticMe, setOptimisticMe, me, playersWithOptimistic } =
     useRoomMeWithOptimisticPlayers({ uid, players });
   const { resolveSpectatorDisplayName, playersSignature, fallbackNames } = useRoomDisplayNameHelpers({
@@ -261,21 +253,8 @@ export function RoomLayout(props: RoomLayoutProps) {
     graceMs: 15000, // 15s grace to avoid transient demotion
   });
   const dealPlayers = useRoomDealPlayers(room?.deal?.players);
-  const requiredSwVersion = useRoomRequiredSwVersionHint(room?.requiredSwVersion);
-  const versionMismatch = false;
-  const { hasWaitingUpdate, safeUpdateActive, safeUpdateAutoApplyCountdown } = useRoomSafeUpdateAutomation({
-    safeUpdateFeatureEnabled,
-    idleApplyMs,
-    forceApplyDelayMs: SAFE_UPDATE_FORCE_APPLY_DELAY_MS,
-    roomStatus: room?.status ?? null,
-    versionMismatch,
-    spectatorUpdateApplying,
-    spectatorUpdateFailed,
-    safeUpdateAutoApplyAt,
-  });
   const versionMismatchBlocksAccess = false;
   useRoomPhaseMetrics({ roomStatus, isHost });
-  const shouldBlockUpdateOverlay = false;
   const orderList = room?.order?.list;
   const roomDealPlayers = room?.deal?.players;
   const orderProposal = room?.order?.proposal;
@@ -642,21 +621,6 @@ export function RoomLayout(props: RoomLayoutProps) {
     />
   );
 
-  const spectatorUpdateButton = spectatorUpdateReady ? (
-    <AppButton
-      palette="brand"
-      size="md"
-      onClick={spectatorUpdateFailed ? retrySpectatorUpdate : applySpectatorUpdate}
-      disabled={spectatorUpdateApplying}
-    >
-      {spectatorUpdateApplying
-        ? "適用中..."
-        : spectatorUpdateFailed
-          ? "再試行"
-          : "最新アップデートを適用"}
-    </AppButton>
-  ) : null;
-
   const { handleSpectatorApprove, handleSpectatorReject } = useSpectatorHostModerationHandlers({
     roomId,
     approveSpectatorRejoin,
@@ -745,21 +709,6 @@ export function RoomLayout(props: RoomLayoutProps) {
       }}
     />
   );
-  const { safeUpdateBannerNode, joinStatusBanner, versionMismatchOverlay } = useRoomUpdateOverlays({
-    safeUpdateFeatureEnabled,
-    hasWaitingUpdate,
-    safeUpdateActive,
-    spectatorUpdateApplying,
-    spectatorUpdateFailed,
-    shouldBlockUpdateOverlay,
-    safeUpdatePhase,
-    safeUpdateLastError,
-    safeUpdateAutoApplySuppressed,
-    safeUpdateAutoApplyCountdown,
-    retrySpectatorUpdate,
-    joinStatus,
-    requiredSwVersion,
-  });
 
   
   if (!room) {
