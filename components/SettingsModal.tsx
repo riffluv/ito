@@ -7,7 +7,7 @@ import { useSupportToolsEnabled } from "@/lib/hooks/useSupportToolsEnabled";
 import { updateRoomOptions } from "@/lib/services/roomService";
 import type { RoomDoc } from "@/lib/types";
 import { UI_TOKENS } from "@/theme/layout";
-import { Box, Dialog, HStack, Text } from "@chakra-ui/react";
+import { Box, Dialog, Text } from "@chakra-ui/react";
 import { useEffect, useState as useLocalState, useState, useRef, useCallback } from "react";
 import {
   bootstrapBackgroundTheme,
@@ -25,13 +25,14 @@ import {
   SettingsModalSoundTab,
 } from "@/components/settings/SettingsModalTabs";
 import {
-  SETTINGS_TABS,
   getBackgroundFromVariant,
   type BackgroundOption,
   type GraphicsTab,
   type SceneryVariant,
   type SettingsTab,
 } from "@/components/settings/settingsModalModel";
+import { SettingsModalFooter } from "@/components/settings/SettingsModalFooter";
+import { SettingsModalTabBar } from "@/components/settings/SettingsModalTabBar";
 
 export type SettingsModalProps = {
   isOpen: boolean;
@@ -410,38 +411,7 @@ export function SettingsModal({
           </Box>
 
           <Dialog.Body px={6} pb={4} position="relative" zIndex={20}>
-            <HStack gap={3} justify="center" mt={3} mb={3}>
-              {SETTINGS_TABS.map((t) => {
-                const isActive = activeTab === t.key;
-                return (
-                  <Box
-                    key={t.key}
-                    as="button"
-                    onClick={() => setActiveTab(t.key)}
-                    px={4}
-                    py={2}
-                    borderRadius="0"
-                    border="2px solid"
-                    borderColor={
-                      isActive
-                        ? UI_TOKENS.COLORS.whiteAlpha90
-                        : UI_TOKENS.COLORS.whiteAlpha30
-                    }
-                    bg={
-                      isActive
-                        ? UI_TOKENS.COLORS.whiteAlpha10
-                        : UI_TOKENS.COLORS.panelBg
-                    }
-                    color="white"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                    transition={`background-color 117ms cubic-bezier(.2,1,.3,1), color 117ms cubic-bezier(.2,1,.3,1), border-color 117ms cubic-bezier(.2,1,.3,1)`}
-                  >
-                    {t.label}
-                  </Box>
-                );
-              })}
-            </HStack>
+            <SettingsModalTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
             {activeTab === "game" && (
               <SettingsModalGameTab
@@ -485,109 +455,14 @@ export function SettingsModal({
             )}
           </Dialog.Body>
 
-          {/* Footer - 統一パターン */}
-          <Box
-            p={6}
-            pt={4}
-            position="relative"
-            zIndex={20}
-            css={{
-              background: "transparent",
-              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            }}
-          >
-            <HStack justify="space-between" gap={3}>
-              <button
-                onClick={closeWithSound}
-                style={{
-                  minWidth: "120px",
-                  height: "40px",
-                  borderRadius: "0",
-                  fontWeight: 880,
-                  fontSize: "1rem",
-                  fontFamily: "monospace",
-                  border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                  background: "transparent",
-                  color: "white",
-                  cursor: "pointer",
-                  textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                  transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "white";
-                  e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = "white";
-                }}
-              >
-                戻る
-              </button>
-
-              {activeTab === "game" ? (
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !isHost || roomStatus !== "waiting"}
-                  style={{
-                    minWidth: "140px",
-                    height: "40px",
-                    borderRadius: "0",
-                    fontWeight: 880,
-                    fontSize: "1rem",
-                    fontFamily: "monospace",
-                    border: `2px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                    background:
-                      saving || !isHost || roomStatus !== "waiting"
-                        ? "#666"
-                        : UI_TOKENS.COLORS.panelBg,
-                    color: "white",
-                    cursor:
-                      saving || !isHost || roomStatus !== "waiting"
-                        ? "not-allowed"
-                        : "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                    transition: `background-color 103ms cubic-bezier(.2,1,.3,1), color 103ms cubic-bezier(.2,1,.3,1), border-color 103ms cubic-bezier(.2,1,.3,1)`,
-                    opacity:
-                      saving || !isHost || roomStatus !== "waiting" ? 0.62 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!saving && isHost && roomStatus === "waiting") {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = UI_TOKENS.COLORS.panelBg;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!saving && isHost && roomStatus === "waiting") {
-                      e.currentTarget.style.background = UI_TOKENS.COLORS.panelBg;
-                      e.currentTarget.style.color = "white";
-                    }
-                  }}
-                >
-                  {saving ? "記録中..." : "記録"}
-                </button>
-              ) : (
-                <Box
-                  px={4}
-                  py={2.5}
-                  borderWidth="2px"
-                  borderStyle="solid"
-                  borderColor={UI_TOKENS.COLORS.whiteAlpha60}
-                  bg={UI_TOKENS.COLORS.whiteAlpha10}
-                  color={UI_TOKENS.COLORS.whiteAlpha80}
-                  fontFamily="monospace"
-                  fontSize="0.9rem"
-                  minW="180px"
-                  textAlign="center"
-                  lineHeight="short"
-                >
-                  選択した内容は
-                  <br />
-                  即座に記録されます
-                </Box>
-              )}
-            </HStack>
-          </Box>
+          <SettingsModalFooter
+            activeTab={activeTab}
+            saving={saving}
+            isHost={isHost}
+            roomStatus={roomStatus}
+            onClose={closeWithSound}
+            onSave={handleSave}
+          />
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
