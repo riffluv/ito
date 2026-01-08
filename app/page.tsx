@@ -9,57 +9,22 @@ import { notify } from "@/components/ui/notify";
 import { MainMenuHero } from "@/components/main-menu/MainMenuHero";
 import { LobbyRoomListPanel } from "@/components/main-menu/LobbyRoomListPanel";
 import { MainMenuSidebar } from "@/components/main-menu/MainMenuSidebar";
-import { buildPixiWorkerUrl } from "@/components/main-menu/buildPixiWorkerUrl";
 import { useLobbyRoomListState } from "@/components/main-menu/useLobbyRoomListState";
 import { useMainMenuRoomFlow } from "@/components/main-menu/useMainMenuRoomFlow";
+import { useMainMenuWarmup } from "@/components/main-menu/useMainMenuWarmup";
 import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
 import { stripMinimalTag } from "@/lib/game/displayMode";
-import { scheduleIdleTask } from "@/lib/utils/idleScheduler";
-import { logDebug, logInfo } from "@/lib/utils/log";
+import { logInfo } from "@/lib/utils/log";
 import { Box, Container, Grid } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 export default function MainMenu() {
   const router = useRouter();
   const { user, displayName, setDisplayName } = useAuth();
   const transition = useTransition();
-
-  useEffect(() => {
-    return scheduleIdleTask(() => {
-      try {
-        router.prefetch("/rules");
-      } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
-          logDebug("main-menu", "prefetch-rules-skipped", error);
-        }
-      }
-    }, { timeoutMs: 2000, delayMs: 0 });
-  }, [router]);
-
-  // Pixi背景用の軽量プリウォーム（描画はしない）
-  useEffect(() => {
-    const workerUrl = buildPixiWorkerUrl();
-    return scheduleIdleTask(() => {
-      // 1) Pixi本体を事前読み込み
-      import("@/lib/pixi/loadPixi")
-        .then((mod) => mod.loadPixi().catch(() => void 0))
-        .catch(() => void 0);
-      // 2) 背景ワーカーJSをブラウザキャッシュへ
-      if (workerUrl) {
-        try {
-          const link = document.createElement("link");
-          link.rel = "prefetch";
-          link.as = "worker";
-          link.href = workerUrl;
-          document.head.appendChild(link);
-        } catch {
-          // ignore
-        }
-      }
-    }, { timeoutMs: 2000, delayMs: 300 });
-  }, []);
+  useMainMenuWarmup({ router });
 
   const {
     roomsLoading,
@@ -121,36 +86,6 @@ export default function MainMenu() {
     router,
     roomMap,
   });
-
-  const handleRunLoadingTest = useCallback(async () => {
-    await transition.navigateWithTransition(window.location.pathname, {
-      direction: "fade",
-      duration: 0.8,
-      showLoading: true,
-      loadingSteps: [
-        {
-          id: "firebase",
-          message: "🔥 Firebase接続中...",
-          duration: 890,
-        },
-        {
-          id: "room",
-          message: "⚔️ ルーム情報取得中...",
-          duration: 1130,
-        },
-        {
-          id: "player",
-          message: "👥 プレイヤー登録中...",
-          duration: 680,
-        },
-        {
-          id: "ready",
-          message: "🎮 ゲーム準備完了！",
-          duration: 310,
-        },
-      ],
-    });
-  }, [transition]);
 
   return (
     <Box position="relative" minH="100dvh" color="white">
@@ -220,7 +155,7 @@ export default function MainMenu() {
               onNextPage={handleNextPage}
               onCreateRoom={openCreateFlow}
             />
-            <MainMenuSidebar onRunLoadingTest={handleRunLoadingTest} />
+            <MainMenuSidebar />
           </Grid>
         </Container>
 

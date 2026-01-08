@@ -3,13 +3,40 @@
 import { SupporterCTA } from "@/components/site/SupporterCTA";
 import { AppButton } from "@/components/ui/AppButton";
 import { Box, GridItem, HStack, Image, Text, VStack } from "@chakra-ui/react";
+import { useTransition } from "@/components/ui/TransitionProvider";
+import { useCallback } from "react";
 
-type MainMenuSidebarProps = {
-  onRunLoadingTest: () => void | Promise<void>;
-};
-
-export function MainMenuSidebar(props: MainMenuSidebarProps) {
-  const { onRunLoadingTest } = props;
+export function MainMenuSidebar() {
+  const transition = useTransition();
+  const handleRunLoadingTest = useCallback(async () => {
+    await transition.navigateWithTransition(window.location.pathname, {
+      direction: "fade",
+      duration: 0.8,
+      showLoading: true,
+      loadingSteps: [
+        {
+          id: "firebase",
+          message: "🔥 Firebase接続中...",
+          duration: 890,
+        },
+        {
+          id: "room",
+          message: "⚔️ ルーム情報取得中...",
+          duration: 1130,
+        },
+        {
+          id: "player",
+          message: "👥 プレイヤー登録中...",
+          duration: 680,
+        },
+        {
+          id: "ready",
+          message: "🎮 ゲーム準備完了！",
+          duration: 310,
+        },
+      ],
+    });
+  }, [transition]);
 
   return (
     <GridItem display={{ base: "none", md: "block" }}>
@@ -224,7 +251,7 @@ export function MainMenuSidebar(props: MainMenuSidebarProps) {
             size="sm"
             visual="outline"
             palette="gray"
-            onClick={onRunLoadingTest}
+            onClick={handleRunLoadingTest}
             css={{
               width: "100%",
               fontSize: "xs",
@@ -239,4 +266,3 @@ export function MainMenuSidebar(props: MainMenuSidebarProps) {
     </GridItem>
   );
 }
-
