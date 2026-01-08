@@ -140,3 +140,37 @@ export const FOOTER_BUTTON_BASE_STYLES = {
   },
 } as const;
 
+export const MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES = {
+  bg: "rgba(28,32,42,0.95)",
+  color: "rgba(255,255,255,0.92)",
+  borderWidth: "0",
+  borderRadius: "0",
+  fontFamily: "'Courier New', monospace",
+  boxShadow: `${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`,
+  _hover: {
+    bg: "rgba(38,42,52,0.98)",
+    color: "rgba(255,255,255,1)",
+    transform: `translate(0, ${scaleForDpi("-1px")})`,
+    boxShadow:
+      `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
+  },
+  _active: {
+    transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
+    boxShadow:
+      `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
+  },
+} as const;
+
+export const MINI_HAND_DOCK_ICON_BUTTON_DANGER_HOVER_STYLES = {
+  bg: "rgba(52,28,28,0.98)",
+  color: "rgba(255,220,220,1)",
+  transform: `translate(0, ${scaleForDpi("-1px")})`,
+  boxShadow:
+    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.95)`,
+} as const;
+
+export const MINI_HAND_DOCK_ICON_BUTTON_DANGER_ACTIVE_STYLES = {
+  transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
+  boxShadow:
+    `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.82)`,
+} as const;

@@ -20,30 +20,30 @@ import { traceAction } from "@/lib/utils/trace";
 import { notify } from "@/components/ui/notify";
 import { toastIds } from "@/lib/ui/toastIds";
 import { scaleForDpi } from "@/components/ui/scaleForDpi";
-import { UI_TOKENS } from "@/theme/layout";
 import {
   Box,
-  Dialog,
   Flex,
   HStack,
   IconButton,
   Input,
   Text,
-  VStack,
 } from "@chakra-ui/react";
 import Image from "next/image";
 import React from "react";
 import { FiEdit2, FiLogOut, FiSettings } from "react-icons/fi";
 import { DiamondNumberCard } from "./DiamondNumberCard";
 import { HD2DLoadingSpinner } from "./HD2DLoadingSpinner";
-import { KEYBOARD_KEYS } from "./hints/constants";
 import {
   FOOTER_BUTTON_BASE_STYLES,
+  MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES,
+  MINI_HAND_DOCK_ICON_BUTTON_DANGER_ACTIVE_STYLES,
+  MINI_HAND_DOCK_ICON_BUTTON_DANGER_HOVER_STYLES,
   orangeGlowNext,
   orangeGlowStart,
   phaseMessagePulse,
   subtleTextPulse,
 } from "./miniHandDockStyles";
+import { CustomTopicDialog } from "./mini-hand-dock/CustomTopicDialog";
 import { SeinoButton } from "./SeinoButton";
 import { SEINO_BUTTON_STYLES } from "./seinoButtonStyles";
 
@@ -1049,6 +1049,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             (phaseStatus === "waiting" || phaseStatus === "clue") && (
               <Tooltip content="カスタムお題を設定" showArrow openDelay={300}>
                 <IconButton
+                  {...MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES}
                   aria-label="カスタムお題"
                   onClick={() => {
                     setCustomText(currentTopic || "");
@@ -1058,25 +1059,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
                   size="sm"
                   w={scaleForDpi("40px")}
                   h={scaleForDpi("40px")}
-                  bg="rgba(28,32,42,0.95)"
-                  color="rgba(255,255,255,0.92)"
-                  borderWidth="0"
-                  borderRadius="0"
-                  fontFamily="'Courier New', monospace"
                   fontSize={scaleForDpi("16px")}
-                  boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
-                  _hover={{
-                    bg: "rgba(38,42,52,0.98)",
-                    color: "rgba(255,255,255,1)",
-                    transform: `translate(0, ${scaleForDpi("-1px")})`,
-                    boxShadow:
-                      `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
-                  }}
-                  _active={{
-                    transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
-                    boxShadow:
-                      `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
-                  }}
                   transition="176ms cubic-bezier(.2,1,.3,1)"
                 >
                   <FiEdit2 />
@@ -1087,30 +1070,13 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           {onOpenSettings && (
             <Tooltip content="設定を開く" showArrow openDelay={180}>
               <IconButton
+                {...MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES}
                 aria-label="設定"
                 onClick={onOpenSettings}
                 size="xs"
                 w={scaleForDpi("36px")}
                 h={scaleForDpi("36px")}
-                bg="rgba(28,32,42,0.95)"
-                color="rgba(255,255,255,0.92)"
-                borderWidth="0"
-                borderRadius="0"
-                fontFamily="'Courier New', monospace"
                 fontSize={scaleForDpi("15px")}
-                boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
-                _hover={{
-                  bg: "rgba(38,42,52,0.98)",
-                  color: "rgba(255,255,255,1)",
-                  transform: `translate(0, ${scaleForDpi("-1px")})`,
-                  boxShadow:
-                    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.95)`,
-                }}
-                _active={{
-                  transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
-                  boxShadow:
-                    `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.82)`,
-                }}
                 transition="175ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiSettings />
@@ -1120,30 +1086,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
           {onLeaveRoom && (
             <Tooltip content="ロビーに戻る" showArrow openDelay={180}>
               <IconButton
+                {...MINI_HAND_DOCK_ICON_BUTTON_BASE_STYLES}
                 aria-label="退出"
                 onClick={onLeaveRoom}
                 size="xs"
                 w={scaleForDpi("36px")}
                 h={scaleForDpi("36px")}
-                bg="rgba(28,32,42,0.95)"
-                color="rgba(255,255,255,0.92)"
-                borderWidth="0"
-                borderRadius="0"
-                fontFamily="'Courier New', monospace"
                 fontSize={scaleForDpi("15px")}
-                boxShadow={`${scaleForDpi("2px")} ${scaleForDpi("2px")} 0 rgba(0,0,0,.65), 0 0 0 ${scaleForDpi("2px")} rgba(255,255,255,0.88)`}
-                _hover={{
-                  bg: "rgba(52,28,28,0.98)",
-                  color: "rgba(255,220,220,1)",
-                  transform: `translate(0, ${scaleForDpi("-1px")})`,
-                  boxShadow:
-                    `${scaleForDpi("3px")} ${scaleForDpi("3px")} 0 rgba(0,0,0,.7), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.95)`,
-                }}
-                _active={{
-                  transform: `translate(${scaleForDpi("1px")}, ${scaleForDpi("1px")})`,
-                  boxShadow:
-                    `${scaleForDpi("1px")} ${scaleForDpi("1px")} 0 rgba(0,0,0,.75), 0 0 0 ${scaleForDpi("2px")} rgba(255,180,180,0.82)`,
-                }}
+                _hover={MINI_HAND_DOCK_ICON_BUTTON_DANGER_HOVER_STYLES}
+                _active={MINI_HAND_DOCK_ICON_BUTTON_DANGER_ACTIVE_STYLES}
                 transition="173ms cubic-bezier(.2,1,.3,1)"
               >
                 <FiLogOut />
@@ -1155,166 +1106,14 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {/* カスタムお題入力モーダル（簡易版） */}
       {/* このモーダルは外側クリック/ESCで閉じない（初心者が迷わないように明示ボタンのみ）*/}
-      <Dialog.Root
+      <CustomTopicDialog
         open={customOpen}
-        onOpenChange={() => {
-          /* no-op */
-        }}
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner
-          position="fixed"
-          top="50%"
-          left="50%"
-          transform="translate(-50%, -50%)"
-          zIndex={9999}
-        >
-          <Dialog.Content
-            css={{
-              background: UI_TOKENS.COLORS.panelBg,
-              border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-              borderRadius: 0,
-              boxShadow: UI_TOKENS.SHADOWS.panelDistinct,
-              maxWidth: "480px",
-              width: "90vw",
-            }}
-          >
-            <Box
-              p={5}
-              css={{
-                borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-              }}
-            >
-              <Dialog.Title>
-                <Text
-                  fontSize="lg"
-                  fontWeight="bold"
-                  color="white"
-                  fontFamily="monospace"
-                >
-                  お題を入力
-                </Text>
-              </Dialog.Title>
-            </Box>
-            <Dialog.Body p={6}>
-              <VStack align="stretch" gap={4}>
-                <Input
-                  placeholder="れい：この夏さいだいのなぞ"
-                  value={customText}
-                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                    setCustomText(event.target.value)
-                  }
-                  onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-                    if (event.key === KEYBOARD_KEYS.ENTER) {
-                      event.preventDefault();
-                      if (customText.trim()) handleSubmitCustom(customText);
-                    }
-                  }}
-                  css={{
-                    height: "48px",
-                    background: "white",
-                    border: "borders.retrogameInput",
-                    borderRadius: 0,
-                    fontSize: "1rem",
-                    padding: "0 16px",
-                    color: "black",
-                    fontWeight: "normal",
-                    fontFamily: "monospace",
-                    transition: "none",
-                    _placeholder: {
-                      color: "#666",
-                      fontFamily: "monospace",
-                    },
-                    _focus: {
-                      borderColor: "black",
-                      boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                      background: "#f8f8f8",
-                      outline: "none",
-                    },
-                    _hover: {
-                      background: "#f8f8f8",
-                    },
-                  }}
-                />
-                <HStack justify="space-between" gap={3}>
-                  <button
-                    onClick={() => setCustomOpen(false)}
-                    style={{
-                      minWidth: "120px",
-                      height: "40px",
-                      borderRadius: 0,
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                      fontFamily: "monospace",
-                      border: "borders.retrogameThin",
-                      background: "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                      textShadow: "1px 1px 0px #000",
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color =
-                        "var(--colors-richBlack-800)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "white";
-                    }}
-                  >
-                    やめる
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (interactionDisabled) return;
-                      if (customText.trim()) handleSubmitCustom(customText);
-                    }}
-                    disabled={!customText.trim() || interactionDisabled}
-                    style={{
-                      minWidth: "140px",
-                      height: "40px",
-                      borderRadius: 0,
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                      fontFamily: "monospace",
-                      border: "borders.retrogameThin",
-                      background:
-                        !customText.trim() || interactionDisabled
-                          ? "#666"
-                          : "var(--colors-richBlack-600)",
-                      color: "white",
-                      cursor:
-                        !customText.trim() || interactionDisabled
-                          ? "not-allowed"
-                          : "pointer",
-                      textShadow: "1px 1px 0px #000",
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                      opacity: !customText.trim() || interactionDisabled ? 0.6 : 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (customText.trim() && !interactionDisabled) {
-                        e.currentTarget.style.background = "white";
-                        e.currentTarget.style.color =
-                          "var(--colors-richBlack-800)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (customText.trim() && !interactionDisabled) {
-                        e.currentTarget.style.background =
-                          "var(--colors-richBlack-600)";
-                        e.currentTarget.style.color = "white";
-                      }
-                    }}
-                  >
-                    きめる
-                  </button>
-                </HStack>
-              </VStack>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+        value={customText}
+        interactionDisabled={interactionDisabled}
+        onChange={setCustomText}
+        onClose={() => setCustomOpen(false)}
+        onSubmit={handleSubmitCustom}
+      />
     </>
   );
 }
