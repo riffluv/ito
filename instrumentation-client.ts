@@ -5,6 +5,8 @@ const collectIntegrations = <T>(integrations: Array<T | undefined>): T[] =>
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
 
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
 if (dsn) {
   try {
     const release =

@@ -220,6 +220,14 @@ export async function apiCreateRoom(payload: {
   });
 }
 
+export async function apiCheckRoomCreateVersion(): Promise<{
+  appVersion?: string;
+  roomVersion?: string;
+  clientVersion?: string;
+}> {
+  return postJson("/api/rooms/version-check", { clientVersion: APP_VERSION });
+}
+
 export async function apiJoinRoom(params: { roomId: string; displayName: string | null }): Promise<{ joined: boolean; avatar: string | null }> {
   const token = await getIdTokenOrThrow("join-room");
   return postJson(`/api/rooms/${params.roomId}/join`, {

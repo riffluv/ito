@@ -1,36 +1,32 @@
 "use client";
+
+import { CreateRoomFormBody } from "@/components/create-room-modal/CreateRoomFormBody";
+import { CreateRoomModalFooter } from "@/components/create-room-modal/CreateRoomModalFooter";
+import { CreateRoomModalHeader } from "@/components/create-room-modal/CreateRoomModalHeader";
+import { CreateRoomSuccessBody } from "@/components/create-room-modal/CreateRoomSuccessBody";
+import { useCreateRoomModalPixiBackdrop } from "@/components/create-room-modal/useCreateRoomModalPixiBackdrop";
+import IconButtonDQ from "@/components/ui/IconButtonDQ";
+import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
 import { notify } from "@/components/ui/notify";
-import { useAuth } from "@/context/AuthContext";
 import { useTransition } from "@/components/ui/TransitionProvider";
+import { useAuth } from "@/context/AuthContext";
 import { firebaseEnabled } from "@/lib/firebase/client";
-import type { RoomOptions } from "@/lib/types";
-import { APP_VERSION } from "@/lib/constants/appVersion";
 import { applyDisplayModeToName } from "@/lib/game/displayMode";
 import { createPasswordEntry } from "@/lib/security/password";
-import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
-import { Box, Dialog, Field, HStack, Input, Switch, Text, VStack } from "@chakra-ui/react";
-import IconButtonDQ from "@/components/ui/IconButtonDQ";
-import { GamePasswordInput } from "@/components/ui/GamePasswordInput";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { UI_TOKENS } from "@/theme/layout";
+import {
+  apiCheckRoomCreateVersion,
+  apiCreateRoom,
+  type ApiError,
+} from "@/lib/services/roomApiClient";
+import type { RoomOptions } from "@/lib/types";
 import { logError } from "@/lib/utils/log";
-import { traceAction } from "@/lib/utils/trace";
+import { storeRoomPasswordHash } from "@/lib/utils/roomPassword";
 import { validateDisplayName, validateRoomName } from "@/lib/validation/forms";
-import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
-import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import PIXI from "@/lib/pixi/instance";
-import { drawSettingsModalBackground } from "@/lib/pixi/settingsModalBackground";
-import { MODAL_FRAME_STYLES } from "@/components/ui/modalFrameStyles";
+import { UI_TOKENS } from "@/theme/layout";
+import { Dialog } from "@chakra-ui/react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ZodError } from "zod";
-import { apiCreateRoom } from "@/lib/services/roomApiClient";
-
-// 共通モーダルスタイル定数（部屋作成 → 完了モーダルのサイズ統一）
-// 「人の手」デザイン：角丸3px、影の多層、非対称パディング
-// 非対称パディング（上下で微差）
-const MODAL_HEADER_PADDING = "22px 24px 19px"; // 上22 左右24 下19
-const MODAL_BODY_PADDING = "24px 26px"; // 縦24 横26
-const MODAL_FOOTER_PADDING = "18px 24px 22px"; // 上18 左右24 下22
 
 export function CreateRoomModal({
   isOpen,
@@ -53,12 +49,7 @@ export function CreateRoomModal({
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  // Pixi HUD レイヤー（モーダル背景用）
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const pixiContainer = usePixiHudLayer("create-room-modal", {
-    zIndex: 105,
-  });
-  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
+  const { modalRef } = useCreateRoomModalPixiBackdrop({ isOpen });
 
   useEffect(() => {
     if (!enablePassword) {
@@ -151,37 +142,18 @@ export function CreateRoomModal({
 
     try {
       try {
-        const res = await fetch("/api/rooms/version-check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clientVersion: APP_VERSION }),
-        });
-        const body = (await res.json().catch(() => ({}))) as {
-          appVersion?: string;
-          error?: string;
-          roomVersion?: string;
-          clientVersion?: string;
-        };
-
-        if (!res.ok) {
-          if (res.status === 409) {
-            traceAction("api.conflict.409", {
-              url: "/api/rooms/version-check",
-              code: typeof body?.error === "string" ? body.error : "unknown",
-            });
-          }
-          if (body?.error === "room/create/update-required") {
-            notify({
-              title: "アップデートが必要です",
-              description: "このバージョンでは新しい部屋を作成できません。ページを更新して最新バージョンでお試しください。",
-              type: "error",
-            });
-            return;
-          }
-          throw new Error(body?.error || "version-check-failed");
-        }
-
+        await apiCheckRoomCreateVersion();
       } catch (error) {
+        const code = (error as ApiError | undefined)?.code;
+        if (code === "room/create/update-required") {
+          notify({
+            title: "アップデートが必要です",
+            description:
+              "このバージョンでは新しい部屋を作成できません。ページを更新して最新バージョンでお試しください。",
+            type: "error",
+          });
+          return;
+        }
         logError("rooms", "create-room-version-check-failed", error);
         notify({
           title: "バージョン確認に失敗しました",
@@ -230,7 +202,6 @@ export function CreateRoomModal({
       setSubmitting(false);
     }
   };
-
 
   const handleCopyInvite = useCallback(async () => {
     if (!inviteUrl) return;
@@ -299,93 +270,12 @@ export function CreateRoomModal({
 
   const canSubmit = name.trim().length > 0 && !submitting;
 
-  // カード表示モード選択ボタンの共通スタイル
-  const getDisplayModeButtonStyle = (isSelected: boolean) => ({
-    flex: 1,
-    height: "52px",
-    borderRadius: 0,
-    fontWeight: "bold" as const,
-    fontSize: "0.95rem",
-    fontFamily: "monospace",
-    border: isSelected ? "3px solid white" : "2px solid rgba(255,255,255,0.5)",
-    background: isSelected ? "white" : "transparent",
-    color: isSelected ? "black" : "white",
-    cursor: "pointer" as const,
-    textShadow: isSelected ? "none" : "1px 1px 0px #000",
-    transition: "180ms cubic-bezier(.2,1,.3,1)",
-    boxShadow: isSelected ? "2px 3px 0 rgba(0,0,0,.6)" : "none",
-    transform: isSelected ? "translate(.5px,-.5px)" : "none",
-  });
-
-  const handleDisplayModeHover = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    isSelected: boolean,
-    isEnter: boolean
-  ) => {
-    if (!isSelected) {
-      if (isEnter) {
-        e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.8)";
-      } else {
-        e.currentTarget.style.background = "transparent";
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)";
-      }
-    }
-  };
-
-  // Pixi背景の描画とDOM同期
-  useEffect(() => {
-    if (!isOpen || !pixiContainer) {
-      // モーダルが閉じられたらPixiリソースを破棄
-      if (pixiGraphicsRef.current) {
-        if (pixiGraphicsRef.current.parent) {
-          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
-        }
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-      return undefined;
-    }
-
-    // Graphicsオブジェクトを作成
-    const graphics = new PIXI.Graphics();
-    graphics.zIndex = -10; // 最背面に配置
-    pixiContainer.addChild(graphics);
-    pixiGraphicsRef.current = graphics;
-
-    // クリーンアップ
-    return () => {
-      if (pixiGraphicsRef.current) {
-        if (pixiGraphicsRef.current.parent) {
-          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
-        }
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-    };
-  }, [isOpen, pixiContainer]);
-
-  // DOM要素とPixiコンテナの位置・サイズ同期
-  usePixiLayerLayout(modalRef, pixiContainer, {
-    disabled: !isOpen || !pixiContainer,
-    onUpdate: (layout) => {
-      const graphics = pixiGraphicsRef.current;
-      if (!graphics || layout.width <= 0 || layout.height <= 0) {
-        return;
-      }
-
-      graphics.clear();
-      graphics.position.set(layout.x, layout.y);
-      drawSettingsModalBackground(PIXI, graphics, {
-        width: layout.width,
-        height: layout.height,
-        dpr: layout.dpr,
-      });
-    },
-  });
-
   return (
-    <Dialog.Root open={isOpen} closeOnInteractOutside={false} onOpenChange={(d) => !d.open && onClose()}>
+    <Dialog.Root
+      open={isOpen}
+      closeOnInteractOutside={false}
+      onOpenChange={(d) => !d.open && onClose()}
+    >
       {/* Sophisticated backdrop */}
       <Dialog.Backdrop
         css={{
@@ -395,10 +285,7 @@ export function CreateRoomModal({
       />
 
       <Dialog.Positioner>
-        <Dialog.Content
-          ref={modalRef}
-          css={MODAL_FRAME_STYLES}
-        >
+        <Dialog.Content ref={modalRef} css={MODAL_FRAME_STYLES}>
           {/* Close button - ドラクエ風 */}
           <IconButtonDQ
             aria-label="閉じる"
@@ -428,554 +315,44 @@ export function CreateRoomModal({
             ✕
           </IconButtonDQ>
 
-          {/* Header - ドラクエ風 */}
-          <Box
-            p={MODAL_HEADER_PADDING}
-            position="relative"
-            zIndex={20}
-            css={{
-              borderBottom: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            }}
-          >
-            <VStack gap={2} align="center">
-              <Dialog.Title
-                css={{
-                  fontSize: "1.5rem",
-                  fontWeight: "bold",
-                  color: "white",
-                  margin: 0,
-                  textAlign: "center",
-                  // NameDialogと同じ通常フォント（monospace削除）
-                }}
-              >
-                {isSuccess ? "へやが できました！" : "へやを つくる"}
-              </Dialog.Title>
-              <Text
-                fontSize="sm"
-                color="white"
-                fontWeight="normal"
-                textAlign="center"
-                fontFamily="monospace"
-                textShadow={UI_TOKENS.TEXT_SHADOWS.soft}
-              >
-                {isSuccess ? "なかまを さそって いざ ぼうけんへ" : "あたらしい ぼうけんの はじまり"}
-              </Text>
-            </VStack>
-          </Box>
+          <CreateRoomModalHeader isSuccess={isSuccess} />
 
           {/* Form Content - ドラクエ風 */}
           {isSuccess ? (
-            <Box p={MODAL_BODY_PADDING} position="relative" zIndex={20}>
-              <VStack gap={4} align="stretch">
-                <Text
-                  fontSize="sm"
-                  color="rgba(255,255,255,0.85)"
-                  fontFamily="monospace"
-                  textAlign="center"
-                  textShadow="0 1px 2px rgba(0,0,0,0.6)"
-                >
-                  このリンクを おくって なかまを よぼう！
-                </Text>
-
-                <Box
-                  p={3}
-                  bg="rgba(8,9,15,0.6)"
-                  border="2px solid rgba(255,255,255,0.3)"
-                  borderRadius={0}
-                >
-                  <Text
-                    fontSize="sm"
-                    color="rgba(255,255,255,0.95)"
-                    fontFamily="monospace"
-                    wordBreak="break-all"
-                    lineHeight="1.6"
-                    textAlign="center"
-                  >
-                    {inviteUrl}
-                  </Text>
-                </Box>
-
-                <button
-                  type="button"
-                  onClick={handleCopyInvite}
-                  style={{
-                    width: "100%",
-                    height: "48px",
-                    borderRadius: "3px", // 角丸追加
-                    border: `3px solid ${UI_TOKENS.COLORS.whiteAlpha90}`,
-                    background: inviteCopied ? "white" : "transparent",
-                    color: inviteCopied ? "black" : "white",
-                    fontFamily: "monospace",
-                    fontWeight: "bold",
-                    fontSize: "17px", // 奇数サイズ
-                    letterSpacing: "0.02em", // 字間追加
-                    padding: "0 17px", // 奇数パディング
-                    cursor: "pointer",
-                    textShadow: inviteCopied ? "none" : "0 2px 4px rgba(0,0,0,0.8)",
-                    transition: "all 180ms cubic-bezier(.2,1,.3,1)", // 手癖カーブ
-                    boxShadow: "2px 3px 0 rgba(0,0,0,0.72)", // 微妙にずらす
-                    transform: "translate(.5px,-.5px)", // 初期位置微調整
-                    outline: "none",
-                  }}
-                  onMouseEnter={(event) => {
-                    if (!inviteCopied) {
-                      event.currentTarget.style.background = "white";
-                      event.currentTarget.style.color = "black";
-                      event.currentTarget.style.transform = "translate(0,-1px)"; // 浮き上がり
-                      event.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
-                    }
-                  }}
-                  onMouseLeave={(event) => {
-                    if (!inviteCopied) {
-                      event.currentTarget.style.background = "transparent";
-                      event.currentTarget.style.color = "white";
-                      event.currentTarget.style.transform = "translate(.5px,-.5px)"; // 元の位置
-                      event.currentTarget.style.boxShadow = "2px 3px 0 rgba(0,0,0,0.72)";
-                    }
-                  }}
-                  onMouseDown={(event) => {
-                    event.currentTarget.style.transform = "translate(0,0)"; // 押し込み
-                    event.currentTarget.style.boxShadow = "1px 2px 0 rgba(0,0,0,0.85)";
-                  }}
-                  onMouseUp={(event) => {
-                    event.currentTarget.style.transform = inviteCopied ? "translate(0,0)" : "translate(0,-1px)";
-                    event.currentTarget.style.boxShadow = "3px 4px 0 rgba(0,0,0,0.72)";
-                  }}
-                >
-                  {inviteCopied ? "✓ コピーしました！" : "◆ リンクを コピー"}
-                </button>
-              </VStack>
-            </Box>
+            <CreateRoomSuccessBody
+              inviteUrl={inviteUrl}
+              inviteCopied={inviteCopied}
+              onCopyInvite={handleCopyInvite}
+            />
           ) : (
-            <Box p={MODAL_BODY_PADDING} position="relative" zIndex={20}>
-              <form
-                autoComplete="off"
-                onSubmit={(event) => event.preventDefault()}
-                style={{ display: "contents" }}
-              >
-                <VStack gap={4} align="stretch">
-                  {!user && (
-                  <Box
-                    p={4}
-                    bg="richBlack.700"
-                    border="2px solid white"
-                    borderRadius={0}
-                  >
-                    <VStack align="start" gap={2}>
-                      <Text
-                        fontSize="sm"
-                        color="rgba(255,255,255,0.95)"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                      >
-                        ⚠ おしらせ
-                      </Text>
-                      <Text
-                        fontSize="sm"
-                        color="white"
-                        fontFamily="monospace"
-                        lineHeight={1.6}
-                        textShadow="1px 1px 0px #000"
-                      >
-                        なまえが みとうろく です。 先に とうろく を おねがいします。
-                      </Text>
-                    </VStack>
-                  </Box>
-                )}
-
-                <Field.Root>
-                  <Field.Label
-                    css={{
-                      fontSize: "0.95rem",
-                      fontWeight: "bold",
-                      color: "rgba(255,255,255,0.95)",
-                      marginBottom: "8px",
-                      fontFamily: "monospace",
-                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
-                    }}
-                  >
-                    へやの なまえ
-                  </Field.Label>
-                  <Input
-                    placeholder="れい: 友達とあそぶ"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    maxLength={24}
-                    css={{
-                      height: "48px",
-                      background: "white",
-                      border: "borders.retrogameInput",
-                      borderRadius: 0,
-                      fontSize: "1rem",
-                      padding: "0 16px",
-                      color: "black",
-                      fontWeight: "normal",
-                      fontFamily: "monospace",
-                      transition: "none",
-                      _placeholder: {
-                        color: "#666",
-                        fontFamily: "monospace",
-                      },
-                      _focus: {
-                        borderColor: "black",
-                        boxShadow: UI_TOKENS.SHADOWS.panelSubtle,
-                        background: "#f8f8f8",
-                        outline: "none",
-                      },
-                      _hover: {
-                        background: "#f8f8f8",
-                      },
-                    }}
-                  />
-                </Field.Root>
-
-                <Field.Root>
-                  <Field.Label
-                    css={{
-                      fontSize: "0.95rem",
-                      fontWeight: "bold",
-                      color: "rgba(255,255,255,0.95)",
-                      marginBottom: "8px",
-                      fontFamily: "monospace",
-                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
-                    }}
-                  >
-                    🔒 かぎを かける
-                  </Field.Label>
-                  <HStack align="center" gap={3}>
-                    <Switch.Root
-                      checked={enablePassword}
-                      onCheckedChange={(details) => setEnablePassword(details.checked)}
-                      css={{
-                        "& [data-part='control']": {
-                          background: enablePassword ? "#22C55E" : "#6B7280",
-                          border: "3px solid rgba(255,255,255,0.9)",
-                          borderRadius: 0,
-                          boxShadow: "0 4px 0px 0px #000000",
-                          width: "48px",
-                          height: "24px",
-                          transition: "all 0.2s ease",
-                          cursor: "pointer",
-                          "&:hover": {
-                            background: enablePassword ? "#16A34A" : "#4B5563",
-                            boxShadow: "0 2px 0px 0px #000000",
-                            transform: "translateY(2px)",
-                          },
-                          "&::before": {
-                            content: '""',
-                            position: "absolute",
-                            top: "2px",
-                            left: enablePassword ? "22px" : "2px",
-                            width: "16px",
-                            height: "16px",
-                            background: "white",
-                            border: "2px solid rgba(0,0,0,0.3)",
-                            borderRadius: 0,
-                            transition: "left 0.2s ease",
-                            boxShadow: "1px 1px 0px 0px #000000",
-                          }
-                        }
-                      }}
-                    >
-                      <Switch.HiddenInput />
-                      <Switch.Control />
-                    </Switch.Root>
-                    <Text fontSize="sm" color="whiteAlpha.80" fontFamily="monospace">
-                      パスワードを設定すると入室時に入力が必要になります
-                    </Text>
-                  </HStack>
-                </Field.Root>
-
-                {enablePassword && (
-                  <VStack align="stretch" gap={4}>
-                    <VStack gap={2}>
-                      <Text
-                        fontSize="sm"
-                        color="rgba(255,255,255,0.95)"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                        textShadow="0 2px 4px rgba(0,0,0,0.8)"
-                        textAlign="center"
-                      >
-                        4けたの ひみつ ばんごう
-                      </Text>
-                      <GamePasswordInput
-                        value={password}
-                        onChange={setPassword}
-                        error={!!passwordError}
-                      />
-                    </VStack>
-
-                    {passwordError ? (
-                      <Text
-                        fontSize="xs"
-                        color="dangerSolid"
-                        fontFamily="monospace"
-                        textAlign="center"
-                        textShadow="1px 1px 0px #000"
-                      >
-                        {passwordError}
-                      </Text>
-                    ) : (
-                      <Text
-                        fontSize="xs"
-                        color="whiteAlpha.70"
-                        fontFamily="monospace"
-                        textAlign="center"
-                        textShadow="1px 1px 0px #000"
-                      >
-                      ※ 4桁の数字で設定されます
-                      </Text>
-                    )}
-                  </VStack>
-                )}
-
-                <Field.Root>
-                  <Field.Label
-                    css={{
-                      fontSize: "0.95rem",
-                      fontWeight: "bold",
-                      color: "rgba(255,255,255,0.95)",
-                      marginBottom: "9px",
-                      fontFamily: "monospace",
-                      textShadow: "0 2px 4px rgba(0,0,0,0.8)",
-                    }}
-                  >
-                    待機エリア 表示設定
-                  </Field.Label>
-                  <Text
-                    fontSize="xs"
-                    color="rgba(255,255,255,0.7)"
-                    mb={2}
-                    fontFamily="monospace"
-                    textShadow="1px 1px 0px #000"
-                  >
-                    待機中のプレイヤーカードをどう表示するか
-                  </Text>
-                  <HStack gap={2} role="radiogroup" aria-label="カード表示モード" w="100%">
-                    <button
-                      type="button"
-                      onClick={() => setDisplayMode("full")}
-                      style={getDisplayModeButtonStyle(displayMode === "full")}
-                      role="radio"
-                      aria-checked={displayMode === "full"}
-                      tabIndex={displayMode === "full" ? 0 : -1}
-                      onMouseEnter={(e) => handleDisplayModeHover(e, displayMode === "full", true)}
-                      onMouseLeave={(e) => handleDisplayModeHover(e, displayMode === "full", false)}
-                    >
-                      🤝 みんな
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDisplayMode("minimal")}
-                      style={getDisplayModeButtonStyle(displayMode === "minimal")}
-                      role="radio"
-                      aria-checked={displayMode === "minimal"}
-                      tabIndex={displayMode === "minimal" ? 0 : -1}
-                      onMouseEnter={(e) => handleDisplayModeHover(e, displayMode === "minimal", true)}
-                      onMouseLeave={(e) => handleDisplayModeHover(e, displayMode === "minimal", false)}
-                    >
-                      👤 自分
-                    </button>
-                  </HStack>
-                </Field.Root>
-              </VStack>
-            </form>
-            </Box>
+            <CreateRoomFormBody
+              hasUser={!!user}
+              name={name}
+              setName={setName}
+              enablePassword={enablePassword}
+              setEnablePassword={setEnablePassword}
+              password={password}
+              setPassword={setPassword}
+              passwordError={passwordError}
+              displayMode={displayMode}
+              setDisplayMode={setDisplayMode}
+            />
           )}
 
-          {/* Footer - ドラクエ風 */}
-          <Box
-            p={MODAL_FOOTER_PADDING}
-            pt={0}
-            position="relative"
-            zIndex={20}
-            css={{
-              borderTop: `2px solid ${UI_TOKENS.COLORS.whiteAlpha30}`,
-            }}
-          >
-            {isSuccess ? (
-              <HStack justify="space-between" gap={3} mt={4}>
-                <button
-                  onClick={handleReset}
-                  style={{
-                    minWidth: "140px",
-                    height: "40px",
-                    borderRadius: 0,
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    fontFamily: "monospace",
-                    border: "borders.retrogameThin",
-                    background: "transparent",
-                    color: "white",
-                    cursor: "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "black";
-                    e.currentTarget.style.textShadow = "none";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
-                  }}
-                >
-                  もどる
-                </button>
-                <HStack gap={3}>
-                  <button
-                    onClick={onClose}
-                    style={{
-                      minWidth: "120px",
-                      height: "40px",
-                      borderRadius: 0,
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                      fontFamily: "monospace",
-                      border: "borders.retrogameThin",
-                      background: "transparent",
-                      color: "white",
-                      cursor: "pointer",
-                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "black";
-                      e.currentTarget.style.textShadow = "none";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
-                    }}
-                  >
-                    とじる
-                  </button>
-                  <button
-                    onClick={handleEnterRoom}
-                    style={{
-                      minWidth: "160px",
-                      height: "40px",
-                      borderRadius: 0,
-                      fontWeight: "bold",
-                      fontSize: "1rem",
-                      fontFamily: "monospace",
-                      border: "borders.retrogameThin",
-                      background: "var(--colors-richBlack-600)",
-                      color: "white",
-                      cursor: "pointer",
-                      textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                      transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "black";
-                      e.currentTarget.style.textShadow = "none";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "var(--colors-richBlack-600)";
-                      e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
-                    }}
-                  >
-                    へやへ すすむ
-                  </button>
-                </HStack>
-              </HStack>
-            ) : (
-              <HStack justify="space-between" gap={3} mt={4}>
-                <button
-                  onClick={onClose}
-                  style={{
-                    minWidth: "120px",
-                    height: "40px",
-                    borderRadius: 0,
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    fontFamily: "monospace",
-                    border: "borders.retrogameThin",
-                    background: "transparent",
-                    color: "white",
-                    cursor: "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "black";
-                    e.currentTarget.style.textShadow = "none";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "white";
-                    e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
-                  }}
-                >
-                  やめる
-                </button>
-
-                <button
-                  onClick={handleCreate}
-                  disabled={!canSubmit}
-                  style={{
-                    minWidth: "140px",
-                    height: "40px",
-                    borderRadius: 0,
-                    fontWeight: "bold",
-                    fontSize: "1rem",
-                    fontFamily: "monospace",
-                    border: "borders.retrogameThin",
-                    background: !canSubmit
-                      ? "#666"
-                      : "var(--colors-richBlack-600)",
-                    color: "white",
-                    cursor: !canSubmit ? "not-allowed" : "pointer",
-                    textShadow: UI_TOKENS.TEXT_SHADOWS.soft,
-                    transition: `background-color 0.1s ${UI_TOKENS.EASING.standard}, color 0.1s ${UI_TOKENS.EASING.standard}, border-color 0.1s ${UI_TOKENS.EASING.standard}`,
-                    opacity: !canSubmit ? 0.6 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (canSubmit) {
-                      e.currentTarget.style.background = "white";
-                      e.currentTarget.style.color = "black";
-                      e.currentTarget.style.textShadow = "none";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (canSubmit) {
-                      e.currentTarget.style.background = "var(--colors-richBlack-600)";
-                      e.currentTarget.style.color = "white";
-                      e.currentTarget.style.textShadow = UI_TOKENS.TEXT_SHADOWS.soft;
-                    }
-                  }}
-                >
-                  {submitting ? "さくせい中..." : "作成"}
-                </button>
-              </HStack>
-            )}
-          </Box>
+          <CreateRoomModalFooter
+            isSuccess={isSuccess}
+            canSubmit={canSubmit}
+            submitting={submitting}
+            onReset={handleReset}
+            onClose={onClose}
+            onEnterRoom={handleEnterRoom}
+            onCreate={handleCreate}
+          />
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 type PasswordEntry = {
   hash: string;
