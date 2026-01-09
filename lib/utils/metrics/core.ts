@@ -23,7 +23,7 @@ function getMetricsHost(): MetricsWindow | null {
   return window as MetricsWindow;
 }
 
-function getRoot(): ItoMetrics | null {
+function getOrCreateRoot(): ItoMetrics | null {
   const host = getMetricsHost();
   if (!host) return null;
   const existing = host[METRICS_KEY];
@@ -55,14 +55,12 @@ export function subscribeMetrics(listener: MetricsListener): () => void {
 }
 
 export function bumpMetric(scope: string, key: string, delta = 1): void {
-  const root = getRoot();
+  const root = getOrCreateRoot();
   if (!root) return;
   const bucket = (root[scope] = root[scope] || {});
   const current = bucket[key];
   const next =
-    typeof current === "number" && Number.isFinite(current)
-      ? current + delta
-      : delta;
+    typeof current === "number" && Number.isFinite(current) ? current + delta : delta;
   bucket[key] = next;
   notifyListeners(root);
 }
@@ -72,7 +70,7 @@ export function setMetric(
   key: string,
   value: number | string | null | undefined
 ): void {
-  const root = getRoot();
+  const root = getOrCreateRoot();
   if (!root) return;
   const bucket = (root[scope] = root[scope] || {});
   const current = bucket[key];
@@ -84,21 +82,9 @@ export function setMetric(
 }
 
 export function readMetrics(): ItoMetrics {
-  const root = getRoot();
+  const root = getOrCreateRoot();
   return root ? { ...root } : {};
 }
 
 export const metricsKey = METRICS_KEY;
 
-const PRESENCE_SCOPE = "presence";
-
-export function incrementPresenceMetric(key: string, delta = 1): void {
-  bumpMetric(PRESENCE_SCOPE, key, delta);
-}
-
-export function setPresenceMetric(
-  key: string,
-  value: number | string | null | undefined
-): void {
-  setMetric(PRESENCE_SCOPE, key, value);
-}
