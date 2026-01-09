@@ -197,6 +197,35 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     onStageEvent: emitStageEvent,
   });
 
+  const startPanelSuppressTimerRef = React.useRef<number | null>(null);
+  const [startPanelSuppressed, setStartPanelSuppressed] = React.useState(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && startPanelSuppressTimerRef.current !== null) {
+        window.clearTimeout(startPanelSuppressTimerRef.current);
+        startPanelSuppressTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Prevent the waiting start panel from briefly reappearing right after pressing start
+  // when async flags (lock/pending) settle out-of-order.
+  const handleHostQuickStart = React.useCallback(async () => {
+    if (startPanelSuppressTimerRef.current !== null) {
+      window.clearTimeout(startPanelSuppressTimerRef.current);
+      startPanelSuppressTimerRef.current = null;
+    }
+    setStartPanelSuppressed(true);
+    if (typeof window !== "undefined") {
+      startPanelSuppressTimerRef.current = window.setTimeout(() => {
+        setStartPanelSuppressed(false);
+        startPanelSuppressTimerRef.current = null;
+      }, 900);
+    }
+    await quickStart();
+  }, [quickStart]);
+
   const effectiveDefaultTopicType = hostDefaultTopicType;
   const { effectiveRoomStatus } = deriveEffectiveRoomStatus({
     roomStatus,
@@ -206,6 +235,12 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
   // 以降のフェーズ分岐は、reset中は waiting 扱いにした値を使う
   const phaseStatus = effectiveRoomStatus;
+
+  React.useEffect(() => {
+    if (phaseStatus !== "waiting" && startPanelSuppressed) {
+      setStartPanelSuppressed(false);
+    }
+  }, [phaseStatus, startPanelSuppressed]);
 
   const seinoTransitionBlocked = useSeinoTransitionBlocker(phaseStatus);
 
@@ -280,6 +315,15 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     resetUiPending ||
     roundPreparing
   );
+  const preparingForWaitingHostStartPanel = !!(
+    showSpinner ||
+    evalSortedPending ||
+    autoStartLocked ||
+    quickStartPending ||
+    isRestarting ||
+    isResetting ||
+    roundPreparing
+  ) || startPanelSuppressed;
   const seinoVisible = deriveSeinoVisibility({
     shouldShowSeinoButton,
     seinoTransitionBlocked,
@@ -385,7 +429,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
 
       {shouldShowWaitingHostStartPanel({
         phaseStatus,
-        preparing,
+        preparing: preparingForWaitingHostStartPanel,
         isHost: !!isHost,
         hostClaimActive,
       }) && (
@@ -395,7 +439,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
             presenceCanStart={presenceCanStart}
             quickStartPending={quickStartPending}
             interactionDisabled={interactionDisabled}
-            onStart={quickStart}
+            onStart={handleHostQuickStart}
             presenceReady={presenceReady}
             presenceDegraded={presenceDegraded}
             presenceForceEligible={presenceForceEligible}

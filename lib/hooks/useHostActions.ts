@@ -19,11 +19,11 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { handleQuickStartFailure } from "@/lib/hooks/hostActions/handleQuickStartFailure";
 import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQuickStartWithNotWaitingRetry";
-import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
 import { scheduleQuickStartSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleQuickStartSyncWatchdogs";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
 import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
 import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSubmitCustomTopicAndMaybeStart";
+import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
 import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
@@ -260,8 +260,15 @@ export function useHostActions({
 
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
+      // If the host starts right after a reset, clear the optimistic reset UI hold.
+      // Otherwise, `resetUiPending` can keep the UI in a "waiting" state even after
+      // the room transitions to "clue", causing the start panel to briefly reappear.
+      if (resetUiPending) {
+        clearResetUiHold();
+      }
       if (quickStartPending) return false;
       if (!canProceed("quickStart")) return false;
+      if (isResetting) return false;
       if (!isHost) {
         traceAction("ui.host.quickStart.blocked", {
           roomId,
@@ -280,7 +287,12 @@ export function useHostActions({
         options?.intentMeta?.action &&
         typeof options.intentMeta.action === "string" &&
         options.intentMeta.action.startsWith("quickStart:restart");
-      if (roomStatus && roomStatus !== "waiting" && !isRestartIntent) {
+      const effectiveRoomStatusForStart = resetUiPending ? "waiting" : roomStatus;
+      if (
+        effectiveRoomStatusForStart &&
+        effectiveRoomStatusForStart !== "waiting" &&
+        !isRestartIntent
+      ) {
         notify({
           id: toastIds.genericInfo(roomId, "status-mismatch"),
           title: "ゲームを開始できません",
@@ -540,9 +552,12 @@ export function useHostActions({
       abortAction,
       markActionStart,
       isHost,
+      isResetting,
       finalizeAction,
       hostActions,
       roomStatus,
+      clearResetUiHold,
+      resetUiPending,
       roundIds,
       onStageEvent,
       canProceed,
@@ -556,104 +571,32 @@ export function useHostActions({
       const includeOnline = options?.includeOnline ?? true;
       const recallSpectators =
         options?.recallSpectators ?? true;
-      markActionStart("reset");
-      setIsResetting(true);
-      if (!canProceed("reset")) {
-        finalizeAction("reset", "error");
-        setIsResetting(false);
-        return;
-      }
-      beginResetUiHold(3400);
-      onStageEvent?.("reset:start");
-      if (shouldPlaySound) {
-        playResetGame();
-      }
-      if (showFeedback) {
-        onFeedback?.({ message: "リセット中…", tone: "info" });
-      } else {
-        onFeedback?.(null);
-      }
-      try {
-        notify({
-          id: toastIds.gameReset(roomId),
-          title: "待機状態に戻しています…",
-          type: "info",
-          duration: 2000,
-        });
-
-        await hostActions.resetRoomToWaitingWithPrune({
-          roomId,
-          roundIds,
-          onlineUids,
-          includeOnline,
-          recallSpectators,
-        });
-        if (
-          typeof performance !== "undefined" &&
-          latestRoomStatusRef.current !== "waiting"
-        ) {
-          resetOkAtRef.current = performance.now();
-          const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
-          expectedStatusVersionRef.current.reset = expectedVersion;
-          setMetric("hostAction", "reset.expectedStatusVersion", expectedVersion);
-          scheduleResetSyncWatchdogs({
-            roomId,
-            db,
-            latestRoomStatusRef,
-            resetEarlySyncTimerRef,
-            resetStuckTimerRef,
-          });
-        }
-        // Hold the UI in a waiting-like state until Firestore/FSM catches up.
-        beginResetUiHold(2400);
-        if (showFeedback) {
-          onFeedback?.({
-            message: "待機状態に戻しました！",
-            tone: "success",
-          });
-        } else {
-          onFeedback?.(null);
-        }
-        notify({
-          id: toastIds.gameReset(roomId),
-          title: "ゲームを待機状態に戻しました",
-          type: "success",
-          duration: 2000,
-        });
-        finalizeAction("reset", "success");
-      } catch (error: unknown) {
-        const code = (error as { code?: string })?.code;
-        traceError("ui.room.reset", error, { roomId });
-        const msg =
-          error instanceof Error
-            ? error.message
-            : typeof error === "string"
-              ? error
-              : "";
-        console.error("❌ resetGame: 失敗", error);
-        if (code === "rate_limited") {
-          notify({
-            id: toastIds.genericInfo(roomId, "reset-rate-limited"),
-            title: "リセット要求が立て込んでいます",
-            description: "数秒待って自動的に再試行します。",
-            type: "info",
-            duration: 2000,
-          });
-        } else {
-          notify({
-            id: toastIds.genericError(roomId, "game-reset"),
-            title: "リセットに失敗しました",
-            description: msg,
-            type: "error",
-          });
-        }
-        onFeedback?.(null);
-        finalizeAction("reset", "error");
-        clearResetUiHold();
-      } finally {
-        setIsResetting(false);
-        onStageEvent?.("reset:done");
-      }
+      await runResetRoomToWaiting({
+        roomId,
+        roundIds,
+        onlineUids,
+        includeOnline,
+        recallSpectators,
+        showFeedback,
+        shouldPlaySound,
+        canProceed,
+        markActionStart,
+        finalizeAction,
+        hostActions,
+        db,
+        latestRoomStatusRef,
+        resetEarlySyncTimerRef,
+        resetStuckTimerRef,
+        resetOkAtRef,
+        latestStatusVersionRef,
+        expectedStatusVersionRef,
+        beginResetUiHold,
+        clearResetUiHold,
+        setIsResetting,
+        playResetGame,
+        onFeedback,
+        onStageEvent,
+      });
     },
     [
       roomId,
