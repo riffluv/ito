@@ -7,6 +7,7 @@ import {
   isTransientNetworkError,
   sleep,
 } from "@/lib/host/hostActionsControllerHelpers";
+import { filterPresenceUids, mapNextRoundFailureReason } from "@/lib/host/nextRound/helpers";
 
 type PresenceInfo = {
   presenceReady?: boolean;
@@ -33,7 +34,7 @@ export type NextRoundApiResult =
   | {
       ok: false;
       requestId: string;
-      reason: "forbidden" | "invalid_status" | "no_players" | "rate-limited" | "api-error";
+      reason: ReturnType<typeof mapNextRoundFailureReason>;
       status?: number;
       url?: string;
       method?: string;
@@ -70,12 +71,7 @@ export function createNextRound(deps: NextRoundDeps) {
     });
 
     try {
-      const presenceUids =
-        Array.isArray(req.presenceInfo?.onlineUids) && req.presenceInfo.onlineUids.length > 0
-          ? req.presenceInfo.onlineUids.filter(
-              (id): id is string => typeof id === "string" && id.trim().length > 0
-            )
-          : undefined;
+      const presenceUids = filterPresenceUids(req.presenceInfo?.onlineUids);
       const run = () =>
         apiNextRoundImpl(roomId, {
           topicType,
@@ -140,62 +136,11 @@ export function createNextRound(deps: NextRoundDeps) {
         traceError("ui.host.nextRound.error", error, { roomId, code });
       }
 
-      if (code === "forbidden") {
-        return {
-          ok: false,
-          requestId,
-          reason: "forbidden",
-          status,
-          url,
-          method,
-          details,
-          errorCode: code,
-          errorMessage: message,
-        };
-      }
-      if (code === "rate_limited") {
-        return {
-          ok: false,
-          requestId,
-          reason: "rate-limited",
-          status,
-          url,
-          method,
-          details,
-          errorCode: code,
-          errorMessage: message,
-        };
-      }
-      if (code === "invalid_status") {
-        return {
-          ok: false,
-          requestId,
-          reason: "invalid_status",
-          status,
-          url,
-          method,
-          details,
-          errorCode: code,
-          errorMessage: message,
-        };
-      }
-      if (code === "no_players") {
-        return {
-          ok: false,
-          requestId,
-          reason: "no_players",
-          status,
-          url,
-          method,
-          details,
-          errorCode: code,
-          errorMessage: message,
-        };
-      }
+      const reason = mapNextRoundFailureReason(code);
       return {
         ok: false,
         requestId,
-        reason: "api-error",
+        reason,
         status,
         url,
         method,
@@ -206,4 +151,3 @@ export function createNextRound(deps: NextRoundDeps) {
     }
   };
 }
-
