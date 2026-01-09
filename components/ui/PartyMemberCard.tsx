@@ -3,9 +3,7 @@
 import Tooltip from "@/components/ui/Tooltip";
 import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { Box, Spinner, Text } from "@chakra-ui/react";
-import { gsap } from "gsap";
 import { useAnimationSettings } from "@/lib/animation/AnimationContext";
-import { keyframes } from "@emotion/react";
 import {
   memo,
   useCallback,
@@ -13,13 +11,22 @@ import {
   useMemo,
   useRef,
 } from "react";
-
-const pulseSweep = keyframes`
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-`;
-
+import { pulseSweep } from "@/components/ui/party-member-card/partyMemberCardKeyframes";
+import {
+  actionableHoverStyle,
+  CARD_AVATAR_SIZE,
+  CARD_BACKGROUND,
+  CARD_BOX_SHADOW,
+  CARD_HEIGHT,
+  CARD_RADIUS,
+  passiveHoverStyle,
+} from "@/components/ui/party-member-card/partyMemberCardStyles";
+import {
+  resetCardVisualState,
+  runClueFlash,
+  runSubmitFlash,
+} from "@/components/ui/party-member-card/partyMemberCardAnimations";
+import { getPlayerStatus } from "@/components/ui/party-member-card/partyMemberStatus";
 export type PartyMember = {
   id: string;
   name: string;
@@ -40,42 +47,6 @@ export type PartyStatusTone =
   | "reveal"
   | "finished"
   | "default";
-
-// HD-2D風：部屋名と統一感のある背景
-const CARD_BACKGROUND = "rgba(12,14,20,0.35)";
-const CARD_HOVER_BACKGROUND = "rgba(18,24,34,0.45)";
-const CARD_BOX_SHADOW = `0 ${scaleForDpi("1px")} ${scaleForDpi("4px")} rgba(0,0,0,0.12)`;
-const CARD_HOVER_BOX_SHADOW = `0 ${scaleForDpi("2px")} ${scaleForDpi("6px")} rgba(0,0,0,0.18)`;
-const CARD_FLASH_SHADOW =
-  `0 ${scaleForDpi("2px")} ${scaleForDpi("8px")} rgba(255,255,255,0.3), 0 ${scaleForDpi("4px")} ${scaleForDpi("16px")} rgba(255,255,255,0.2), inset 0 ${scaleForDpi("1px")} 0 rgba(255,255,255,0.5)`;
-const CLUE_FLASH_BRIGHTNESS = 1.28;
-const CARD_HEIGHT = scaleForDpi("52px");
-const CARD_AVATAR_SIZE = scaleForDpi("44px");
-const CARD_RADIUS = scaleForDpi("3px");
-const CARD_HOVER_LIFT = scaleForDpi("-1.5px");
-const CARD_PASSIVE_LIFT = scaleForDpi("-0.5px");
-const actionableHoverStyle = {
-  bg: CARD_HOVER_BACKGROUND,
-  transform: `translateY(${CARD_HOVER_LIFT})`,
-  boxShadow: CARD_HOVER_BOX_SHADOW,
-} as const;
-
-const passiveHoverStyle = {
-  bg: CARD_HOVER_BACKGROUND,
-  transform: `translateY(${CARD_PASSIVE_LIFT})`,
-  boxShadow: `0 ${scaleForDpi("4px")} ${scaleForDpi("10px")} rgba(0,0,0,0.32)`,
-} as const;
-
-const resetCardVisualState = (node: HTMLDivElement) => {
-  gsap.set(node, {
-    background: CARD_BACKGROUND,
-    boxShadow: CARD_BOX_SHADOW,
-    filter: "brightness(1)",
-    transform: "scale(1)",
-    clearProps: "filter,transform",
-  });
-};
-
 type PartyMemberCardProps = {
   player: PartyMember;
   roomStatus: string;
@@ -86,101 +57,6 @@ type PartyMemberCardProps = {
   onTransfer?: () => void;
   isTransferPending?: boolean;
 };
-
-const getPlayerStatus = (
-  player: PartyMember,
-  roomStatus: string,
-  submitted: boolean
-): { icon: string; status: string; tone: PartyStatusTone } => {
-  if (roomStatus === "clue") {
-    if (submitted) {
-      return { icon: "✅", status: "提出済み", tone: "submitted" };
-    }
-    if (player.clue1 && player.clue1.trim() !== "") {
-      return { icon: "📝", status: "連想OK", tone: "clue-entered" };
-    }
-    return { icon: "💡", status: "考え中", tone: "clue-pending" };
-  }
-
-  if (roomStatus === "waiting") {
-    return { icon: "🛡️", status: "待機中", tone: "waiting" };
-  }
-
-  if (roomStatus === "reveal") {
-    return { icon: "🎲", status: "判定中", tone: "reveal" };
-  }
-
-  if (roomStatus === "finished") {
-    return { icon: "🏆", status: "結果発表", tone: "finished" };
-  }
-
-  return { icon: "🎲", status: "参加中", tone: "default" };
-};
-
-const runClueFlash = (node: HTMLDivElement) => {
-  const timeline = gsap
-    .timeline({ defaults: { overwrite: "auto" } })
-    .to(node, {
-      duration: 0.18,
-      filter: `brightness(${CLUE_FLASH_BRIGHTNESS})`,
-      boxShadow: CARD_FLASH_SHADOW,
-      ease: "power2.out",
-    })
-    .to(node, {
-      duration: 0.28,
-      filter: "brightness(1)",
-      boxShadow: CARD_BOX_SHADOW,
-      ease: "power3.out",
-      onComplete: () => {
-        gsap.set(node, { clearProps: "filter" });
-      },
-    });
-
-  return timeline;
-};
-
-const runSubmitFlash = (node: HTMLDivElement) => {
-  const timeline = gsap
-    .timeline({ defaults: { overwrite: "auto" } })
-    .to(node, {
-      duration: 0.05,
-      background: "rgba(255,255,255,0.95)",
-      boxShadow: CARD_FLASH_SHADOW,
-      transform: "scale(1.03)",
-      ease: "none",
-    })
-    .to(node, {
-      duration: 0.03,
-      background: "rgba(200,220,240,0.8)",
-      transform: "scale(0.99)",
-      ease: "none",
-    })
-    .to(node, {
-      duration: 0.06,
-      background: "rgba(255,245,200,0.9)",
-      transform: "scale(1.02)",
-      ease: "none",
-    })
-    .to(node, {
-      duration: 0.04,
-      background: "rgba(180,200,220,0.7)",
-      transform: "scale(0.995)",
-      ease: "none",
-    })
-    .to(node, {
-      duration: 0.15,
-      background: CARD_BACKGROUND,
-      boxShadow: CARD_BOX_SHADOW,
-      transform: "scale(1)",
-      ease: "power2.out",
-      onComplete: () => {
-        gsap.set(node, { clearProps: "background,transform" });
-      },
-    });
-
-  return timeline;
-};
-
 const useReducedMotionPreference = (): boolean => {
   const { reducedMotion } = useAnimationSettings();
   return reducedMotion;
