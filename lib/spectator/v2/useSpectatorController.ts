@@ -20,6 +20,12 @@ import type {
   SpectatorStatus,
 } from "@/lib/state/roomMachine";
 import type { RoomStatus } from "@/lib/state/guards";
+import {
+  deriveSeatRequestButtonDisabled,
+  deriveSeatRequestError,
+  deriveSeatRequestViewState,
+  deriveSpectatorReason,
+} from "@/lib/spectator/v2/useSpectatorController/helpers";
 
 type NotifyPayload =
   | string
@@ -134,12 +140,14 @@ export function useSpectatorController({
     spectatorMachineState.requestCreatedAt
   );
 
-  const spectatorReason = useMemo<SpectatorReason | null>(() => {
-    if (!isSpectatorMode) {
-      return null;
-    }
-    return spectatorMachineState.reason;
-  }, [isSpectatorMode, spectatorMachineState.reason]);
+  const spectatorReason = useMemo(
+    () =>
+      deriveSpectatorReason({
+        isSpectatorMode,
+        spectatorMachineStateReason: spectatorMachineState.reason,
+      }),
+    [isSpectatorMode, spectatorMachineState.reason]
+  );
 
   useEffect(() => {
     if (!isSpectatorMode) {
@@ -228,53 +236,34 @@ export function useSpectatorController({
     }
   }, [leavingRef, spectatorSession.status]);
 
-  const seatRequestError = useMemo(() => {
-    if (spectatorSession.status === "rejoinRejected") {
-      const snapshot = spectatorSession.rejoinSnapshot;
-      const rejectionReason =
-        snapshot && snapshot.status === "rejected" ? snapshot.reason ?? null : null;
-      return (
-        rejectionReason ??
-        spectatorSession.error ??
-        spectatorMachineState.requestFailure ??
-        spectatorMachineState.error ??
-        null
-      );
-    }
-    return (
-      spectatorSession.error ??
-      spectatorMachineState.error ??
-      spectatorMachineState.requestFailure ??
-      null
-    );
-  }, [
-    spectatorMachineState.error,
-    spectatorMachineState.requestFailure,
-    spectatorSession.error,
-    spectatorSession.rejoinSnapshot,
-    spectatorSession.status,
-  ]);
+  const seatRequestError = useMemo(
+    () =>
+      deriveSeatRequestError({
+        spectatorSessionStatus: spectatorSession.status,
+        spectatorSessionError: spectatorSession.error,
+        spectatorSessionRejoinSnapshot: spectatorSession.rejoinSnapshot,
+        spectatorMachineError: spectatorMachineState.error,
+        spectatorMachineRequestFailure: spectatorMachineState.requestFailure,
+      }),
+    [
+      spectatorMachineState.error,
+      spectatorMachineState.requestFailure,
+      spectatorSession.error,
+      spectatorSession.rejoinSnapshot,
+      spectatorSession.status,
+    ]
+  );
 
   const seatRequestState = useMemo<SeatRequestViewState>(() => {
-    let status: SeatRequestViewState["status"] = "idle";
-    if (spectatorSession.status === "rejoinPending") {
-      status = "pending";
-    } else if (spectatorSession.status === "rejoinApproved") {
-      status = "accepted";
-    } else if (spectatorSession.status === "rejoinRejected") {
-      status = "rejected";
-    }
-
-    const snapshot = spectatorSession.rejoinSnapshot;
-    const source = snapshot?.source ?? pendingSeatRequestRef.current ?? spectatorMachineState.requestSource ?? null;
-    const requestedAt = snapshot?.createdAt ?? spectatorMachineState.requestCreatedAt ?? lastRequestAt;
-
-    return {
-      status,
-      source,
-      requestedAt,
-      error: seatRequestError,
-    };
+    return deriveSeatRequestViewState({
+      spectatorSessionStatus: spectatorSession.status,
+      spectatorSessionRejoinSnapshot: spectatorSession.rejoinSnapshot,
+      spectatorMachineRequestSource: spectatorMachineState.requestSource,
+      spectatorMachineRequestCreatedAt: spectatorMachineState.requestCreatedAt,
+      pendingSeatRequest: pendingSeatRequestRef.current,
+      lastRequestAt,
+      seatRequestError,
+    });
   }, [
     spectatorSession.status,
     spectatorSession.rejoinSnapshot,
@@ -431,11 +420,12 @@ export function useSpectatorController({
   const seatRequestRejected = seatRequestState.status === "rejected";
   const seatAcceptanceActive = seatRequestAccepted;
 
-  const seatRequestButtonDisabled =
-    versionMismatchBlocksAccess ||
-    seatRequestPending ||
-    seatAcceptanceActive ||
-    !spectatorSession.sessionId;
+  const seatRequestButtonDisabled = deriveSeatRequestButtonDisabled({
+    versionMismatchBlocksAccess,
+    seatRequestPending,
+    seatAcceptanceActive,
+    spectatorSessionId: spectatorSession.sessionId,
+  });
 
   const state: SpectatorControllerState = useMemo(
     () => ({
