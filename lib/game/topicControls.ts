@@ -5,8 +5,6 @@ import {
   dealNumbers as dealNumbersRoom,
   type DealNumbersOptions,
 } from "@/lib/game/room";
-import { sendMessage, sendSystemMessage } from "@/lib/firebase/chat";
-import { sendNotifyEvent } from "@/lib/firebase/events";
 import { withPermissionRetry } from "@/lib/firebase/permissionGuard";
 import {
   apiResetTopic,
@@ -15,23 +13,8 @@ import {
   apiShuffleTopic,
 } from "@/lib/services/roomApiClient";
 import { topicTypeLabels, type TopicType } from "@/lib/topics";
-
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error ?? "");
-
-async function broadcastNotify(
-  roomId: string,
-  type: "info" | "warning" | "success" | "error",
-  title: string,
-  description?: string,
-  contextKey?: string
-) {
-  try {
-    await sendNotifyEvent(roomId, { type, title, description, dedupeKey: contextKey });
-  } catch {
-    // ignore broadcast failure
-  }
-}
+import { postCustomTopicToChat } from "@/lib/game/topicControls/chatPost";
+import { broadcastNotify, getErrorMessage } from "@/lib/game/topicControls/helpers";
 
 // お題関連の制御機能（API 経由）
 export const topicControls = {
@@ -73,30 +56,7 @@ export const topicControls = {
         `新しいお題: ${value}`,
         `topic:custom:${value}`
       );
-
-      try {
-        const { getAuth, signInAnonymously } = await import("firebase/auth");
-        const auth = getAuth();
-        if (!auth.currentUser) {
-          await signInAnonymously(auth).catch(() => void 0);
-        }
-        const currentUser = auth.currentUser;
-        const uid = currentUser?.uid;
-        const name = currentUser?.displayName?.trim() || "プレイヤー";
-        const chatText = `📝 お題: ${value}`;
-        if (uid) {
-          await sendMessage(roomId, uid, name, chatText);
-        } else {
-          await sendSystemMessage(roomId, chatText);
-        }
-      } catch (err) {
-        notify({
-          title: "チャット投稿に失敗しました",
-          description:
-            err instanceof Error ? err.message : "お題変更のメッセージを書き込めませんでした",
-          type: "error",
-        });
-      }
+      await postCustomTopicToChat(roomId, value);
     } catch (error) {
       if (isFirebaseQuotaExceeded(error)) {
         handleFirebaseQuotaError("カスタムお題設定");
