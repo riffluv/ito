@@ -2,6 +2,8 @@
 
 今回実装したクライアント計測 (`client.fps.sample` / `client.inp.rolling`) を活用するための Sentry メトリクス可視化手順です。
 
+「次に何を計測し、どの差分をもって改善とみなすか」は `docs/PERF_MEASUREMENT_PLAN.md` を参照。
+
 ## 前提
 - Sentry Projects の Metrics / Discover が利用可能であること
 - 既にアプリに `PerformanceMetricsInitializer` を組み込んでデプロイ済みであること
