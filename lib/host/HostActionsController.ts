@@ -1,10 +1,7 @@
-import { db } from "@/lib/firebase/client";
 import {
   submitSortedOrder,
   topicControls,
 } from "@/lib/game/service";
-import { traceError } from "@/lib/utils/trace";
-import type { RoomDoc } from "@/lib/types";
 import {
   apiStartGame,
   apiNextRound,
@@ -24,12 +21,12 @@ import {
   type ResetRoomRequest,
   type ResetRoomResult,
 } from "@/lib/host/resetRoomToWaitingWithPrune";
-import { doc, getDoc, getDocFromServer } from "firebase/firestore";
-
-type HostSessionProvider = {
-  getSessionId?: () => string | null;
-  ensureSession?: () => Promise<string | null>;
-};
+import {
+  createRoomSnapshotFetcher,
+  createSessionResolver,
+  type HostSessionProvider,
+} from "@/lib/host/hostActionsControllerRuntime";
+import { sleep } from "@/lib/host/hostActionsControllerHelpers";
 
 export type RestartRoundRequest = QuickStartRequest &
   Pick<ResetRoomRequest, "roundIds" | "onlineUids">;
@@ -54,30 +51,8 @@ export function createHostActionsController(
   overrides?: HostActionsOverrides
 ) {
   const apiNextRoundImpl = overrides?.apiNextRound ?? apiNextRound;
-  const resolveSessionId = async (): Promise<string | null> => {
-    try {
-      const cached = session?.getSessionId?.() ?? null;
-      if (cached) return cached;
-      if (session?.ensureSession) {
-        return (await session.ensureSession()) ?? null;
-      }
-    } catch (error) {
-      traceError("ui.host.session.resolve", error);
-    }
-    return null;
-  };
-
-  const fetchRoomSnapshot = async (roomId: string): Promise<RoomDoc | null> => {
-    if (!db) return null;
-    try {
-      const ref = doc(db, "rooms", roomId);
-      const snap = await getDocFromServer(ref).catch(() => getDoc(ref));
-      return (snap.data() as RoomDoc | undefined) ?? null;
-    } catch (error) {
-      traceError("ui.host.room.read", error, { roomId });
-      return null;
-    }
-  };
+  const resolveSessionId = createSessionResolver(session);
+  const fetchRoomSnapshot = createRoomSnapshotFetcher();
 
   const quickStartWithTopic = createQuickStartWithTopic({
     resolveSessionId,
@@ -117,7 +92,7 @@ export function createHostActionsController(
     await submitSortedOrder(req.roomId, req.list);
     const delay = req.revealDelayMs ?? 0;
     if (delay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await sleep(delay);
     }
   };
 
