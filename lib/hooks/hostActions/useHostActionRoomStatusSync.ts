@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { setMetric } from "@/lib/utils/metrics";
+import { clearTimerRef } from "@/lib/hooks/hostActions/timers";
 
 export function useHostActionRoomStatusSync(params: {
   roomStatus?: string;
@@ -37,31 +38,17 @@ export function useHostActionRoomStatusSync(params: {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (roomStatus && roomStatus !== "waiting" && quickStartStuckTimerRef.current !== null) {
-      window.clearTimeout(quickStartStuckTimerRef.current);
-      quickStartStuckTimerRef.current = null;
+    if (roomStatus && roomStatus !== "waiting") {
+      clearTimerRef(quickStartStuckTimerRef);
+      clearTimerRef(quickStartEarlySyncTimerRef);
     }
-    if (roomStatus && roomStatus !== "waiting" && quickStartEarlySyncTimerRef.current !== null) {
-      window.clearTimeout(quickStartEarlySyncTimerRef.current);
-      quickStartEarlySyncTimerRef.current = null;
-    }
-    if (roomStatus === "clue" && nextGameStuckTimerRef.current !== null) {
-      window.clearTimeout(nextGameStuckTimerRef.current);
-      nextGameStuckTimerRef.current = null;
-    }
-    if (roomStatus === "clue" && nextGameEarlySyncTimerRef.current !== null) {
-      window.clearTimeout(nextGameEarlySyncTimerRef.current);
-      nextGameEarlySyncTimerRef.current = null;
+    if (roomStatus === "clue") {
+      clearTimerRef(nextGameStuckTimerRef);
+      clearTimerRef(nextGameEarlySyncTimerRef);
     }
     if (roomStatus === "waiting") {
-      if (resetStuckTimerRef.current !== null) {
-        window.clearTimeout(resetStuckTimerRef.current);
-        resetStuckTimerRef.current = null;
-      }
-      if (resetEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(resetEarlySyncTimerRef.current);
-        resetEarlySyncTimerRef.current = null;
-      }
+      clearTimerRef(resetStuckTimerRef);
+      clearTimerRef(resetEarlySyncTimerRef);
       expectedStatusVersionRef.current.reset = null;
       setMetric("hostAction", "reset.expectedStatusVersion", null);
       if (typeof performance !== "undefined" && resetOkAtRef.current !== null) {
@@ -115,4 +102,3 @@ export function useHostActionRoomStatusSync(params: {
     setQuickStartPending,
   ]);
 }
-

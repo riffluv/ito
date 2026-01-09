@@ -1,6 +1,7 @@
 import { doc, getDoc, getDocFromServer, type Firestore } from "firebase/firestore";
 
 import { notify } from "@/components/ui/notify";
+import { clearTimerRef } from "@/lib/hooks/hostActions/timers";
 import { toastIds } from "@/lib/ui/toastIds";
 import { traceAction, traceError } from "@/lib/utils/trace";
 
@@ -25,9 +26,7 @@ export function scheduleQuickStartSyncWatchdogs(params: {
     return;
   }
 
-  if (quickStartEarlySyncTimerRef.current !== null) {
-    window.clearTimeout(quickStartEarlySyncTimerRef.current);
-  }
+  clearTimerRef(quickStartEarlySyncTimerRef);
   quickStartEarlySyncTimerRef.current = window.setTimeout(() => {
     try {
       if (latestRoomStatusRef.current === "clue") {
@@ -44,9 +43,7 @@ export function scheduleQuickStartSyncWatchdogs(params: {
     } catch {}
   }, 520);
 
-  if (quickStartStuckTimerRef.current !== null) {
-    window.clearTimeout(quickStartStuckTimerRef.current);
-  }
+  clearTimerRef(quickStartStuckTimerRef);
   quickStartStuckTimerRef.current = window.setTimeout(() => {
     void (async () => {
       try {
@@ -114,4 +111,3 @@ export function scheduleQuickStartSyncWatchdogs(params: {
     })();
   }, 3200);
 }
-

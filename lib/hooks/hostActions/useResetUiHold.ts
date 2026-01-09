@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { clearTimerRef } from "@/lib/hooks/hostActions/timers";
+
 export function useResetUiHold(params: {
   roomStatus?: string;
 }): {
@@ -13,19 +15,14 @@ export function useResetUiHold(params: {
   const resetUiTimerRef = useRef<number | null>(null);
 
   const clearResetUiHold = useCallback(() => {
-    if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
-      window.clearTimeout(resetUiTimerRef.current);
-      resetUiTimerRef.current = null;
-    }
+    clearTimerRef(resetUiTimerRef);
     setResetUiPending(false);
   }, []);
 
   const beginResetUiHold = useCallback((durationMs = 2800) => {
     if (typeof window === "undefined") return;
     setResetUiPending(true);
-    if (resetUiTimerRef.current !== null) {
-      window.clearTimeout(resetUiTimerRef.current);
-    }
+    clearTimerRef(resetUiTimerRef);
     resetUiTimerRef.current = window.setTimeout(() => {
       setResetUiPending(false);
       resetUiTimerRef.current = null;
@@ -40,13 +37,9 @@ export function useResetUiHold(params: {
 
   useEffect(() => {
     return () => {
-      if (typeof window !== "undefined" && resetUiTimerRef.current !== null) {
-        window.clearTimeout(resetUiTimerRef.current);
-        resetUiTimerRef.current = null;
-      }
+      clearTimerRef(resetUiTimerRef);
     };
   }, []);
 
   return { resetUiPending, beginResetUiHold, clearResetUiHold };
 }
-

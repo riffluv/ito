@@ -1,6 +1,7 @@
 import { doc, getDoc, getDocFromServer, type Firestore } from "firebase/firestore";
 
 import { notify } from "@/components/ui/notify";
+import { clearTimerRef } from "@/lib/hooks/hostActions/timers";
 import { toastIds } from "@/lib/ui/toastIds";
 import { traceAction, traceError } from "@/lib/utils/trace";
 
@@ -25,9 +26,7 @@ export function scheduleNextGameSyncWatchdogs(params: {
     return;
   }
 
-  if (nextGameEarlySyncTimerRef.current !== null) {
-    window.clearTimeout(nextGameEarlySyncTimerRef.current);
-  }
+  clearTimerRef(nextGameEarlySyncTimerRef);
   nextGameEarlySyncTimerRef.current = window.setTimeout(() => {
     try {
       if (latestRoomStatusRef.current === "clue") {
@@ -44,6 +43,7 @@ export function scheduleNextGameSyncWatchdogs(params: {
     } catch {}
   }, 520);
 
+  clearTimerRef(nextGameStuckTimerRef);
   nextGameStuckTimerRef.current = window.setTimeout(() => {
     void (async () => {
       try {
@@ -98,4 +98,3 @@ export function scheduleNextGameSyncWatchdogs(params: {
     })();
   }, 3200);
 }
-

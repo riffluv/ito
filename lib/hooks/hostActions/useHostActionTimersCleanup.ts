@@ -1,6 +1,6 @@
-import { useEffect, type MutableRefObject } from "react";
+import { useEffect } from "react";
 
-type TimerRef = MutableRefObject<number | null>;
+import { clearTimerRef, type TimerRef } from "@/lib/hooks/hostActions/timers";
 
 export function useHostActionTimersCleanup(params: {
   quickStartStuckTimerRef: TimerRef;
@@ -21,30 +21,12 @@ export function useHostActionTimersCleanup(params: {
 
   useEffect(() => {
     return () => {
-      if (typeof window !== "undefined" && quickStartStuckTimerRef.current !== null) {
-        window.clearTimeout(quickStartStuckTimerRef.current);
-        quickStartStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && quickStartEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(quickStartEarlySyncTimerRef.current);
-        quickStartEarlySyncTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
-        window.clearTimeout(nextGameStuckTimerRef.current);
-        nextGameStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && nextGameEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(nextGameEarlySyncTimerRef.current);
-        nextGameEarlySyncTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && resetStuckTimerRef.current !== null) {
-        window.clearTimeout(resetStuckTimerRef.current);
-        resetStuckTimerRef.current = null;
-      }
-      if (typeof window !== "undefined" && resetEarlySyncTimerRef.current !== null) {
-        window.clearTimeout(resetEarlySyncTimerRef.current);
-        resetEarlySyncTimerRef.current = null;
-      }
+      clearTimerRef(quickStartStuckTimerRef);
+      clearTimerRef(quickStartEarlySyncTimerRef);
+      clearTimerRef(nextGameStuckTimerRef);
+      clearTimerRef(nextGameEarlySyncTimerRef);
+      clearTimerRef(resetStuckTimerRef);
+      clearTimerRef(resetEarlySyncTimerRef);
     };
   }, [
     nextGameEarlySyncTimerRef,
@@ -55,4 +37,3 @@ export function useHostActionTimersCleanup(params: {
     resetStuckTimerRef,
   ]);
 }
-

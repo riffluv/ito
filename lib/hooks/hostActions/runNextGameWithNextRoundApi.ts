@@ -9,6 +9,7 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 
 import { handleNextGameFailure } from "@/lib/hooks/hostActions/handleNextGameFailure";
 import { scheduleNextGameSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleNextGameSyncWatchdogs";
+import { clearTimerRef } from "@/lib/hooks/hostActions/timers";
 
 const NEXT_GAME_DEBOUNCE_MS = 800;
 
@@ -91,10 +92,7 @@ export async function runNextGameWithNextRoundApi(params: {
   }
   lastActionAtRef.current["nextGame"] = now;
 
-  if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
-    window.clearTimeout(nextGameStuckTimerRef.current);
-    nextGameStuckTimerRef.current = null;
-  }
+  clearTimerRef(nextGameStuckTimerRef);
 
   const startedAt = typeof performance !== "undefined" ? performance.now() : null;
   setIsRestarting(true);
@@ -207,4 +205,3 @@ export async function runNextGameWithNextRoundApi(params: {
     }
   }
 }
-
