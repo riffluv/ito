@@ -13,11 +13,6 @@ import { gsap } from "gsap";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { notify } from "@/components/ui/notify";
 import { castMvpVote } from "@/lib/game/mvp";
-import { usePixiHudLayer, usePixiHudContext } from "@/components/ui/pixi/PixiHudStage";
-import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import PIXI from "@/lib/pixi/instance";
-import { drawBattleRecordsBoard, createBattleRecordsAmbient } from "@/lib/pixi/battleRecordsBackground";
-import type { BattleRecordsAmbient } from "@/lib/pixi/battleRecordsAmbient";
 import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import {
   buildMvpTally,
@@ -30,6 +25,9 @@ import { MvpLedgerFooter } from "@/components/ui/mvp-ledger/MvpLedgerFooter";
 import { MvpLedgerHeader } from "@/components/ui/mvp-ledger/MvpLedgerHeader";
 import { MvpLedgerTableHeaderRow } from "@/components/ui/mvp-ledger/MvpLedgerTableHeaderRow";
 import { MvpLedgerTableRow } from "@/components/ui/mvp-ledger/MvpLedgerTableRow";
+import { useMvpLedgerPixiBackground } from "@/components/ui/mvp-ledger/useMvpLedgerPixiBackground";
+import { useMvpLedgerOpenAnimation } from "@/components/ui/mvp-ledger/useMvpLedgerOpenAnimation";
+import { useMvpLedgerEscClose } from "@/components/ui/mvp-ledger/useMvpLedgerEscClose";
 
 interface MvpLedgerProps {
   isOpen: boolean;
@@ -65,16 +63,7 @@ export function MvpLedger({
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const rowRefs = useRef<HTMLDivElement[]>([]);
 
-  // Pixi HUD レイヤー（モーダル背景用）
-  const pixiContainer = usePixiHudLayer("battle-records-board", {
-    zIndex: 90,
-  });
-  const pixiHudContext = usePixiHudContext();
-  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
-  const ambientRef = useRef<BattleRecordsAmbient | null>(null);
-  const gsapRenderCancelRef = useRef<(() => void) | null>(null);
-  const [panelReady, setPanelReady] = useState(false);
-  const fallbackPanel = !panelReady;
+  const { fallbackPanel } = useMvpLedgerPixiBackground({ isOpen, failed, boardRef });
 
   const sortedPlayers = useMemo(() => {
     return buildSortedPlayers(players, orderList);
@@ -183,255 +172,15 @@ export function MvpLedger({
     onClose();
   }, [isClosing, onClose, playLedgerClose]);
 
-  useEffect(() => {
-    if (!isOpen) return undefined;
-    const overlay = overlayRef.current;
-    const board = boardRef.current;
-    if (!overlay || !board) return undefined;
-
-    const rows = rowRefs.current.filter(Boolean);
-
-    if (prefersReduced) {
-      gsap.set(overlay, { opacity: 1 });
-      gsap.set(board, { opacity: 1, x: 0, y: 0, scale: 1, rotation: 0 });
-      rows.forEach((row) => gsap.set(row, { opacity: 1, y: 0 }));
-      return undefined;
-    }
-
-    const ctx = gsap.context(() => {
-      // オーバーレイ: パッと出る
-      gsap.fromTo(
-        overlay,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.18, ease: "power2.in" }
-      );
-
-      // ボード: 右からスライドイン + 回転で定位置に！
-      gsap.fromTo(
-        board,
-        {
-          opacity: 0,
-          x: 150,
-          y: -20,
-          scale: 0.88,
-          rotation: 8
-        },
-        {
-          opacity: 1,
-          x: 0,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          duration: 0.52,
-          ease: "back.out(1.8)",
-        }
-      );
-    }, board);
-    return () => ctx.revert();
-  }, [isOpen, prefersReduced]);
+  useMvpLedgerOpenAnimation({ isOpen, prefersReduced, overlayRef, boardRef, rowRefs });
 
   useEffect(() => {
     if (!isOpen) {
       rowRefs.current = [];
-      setPanelReady(false);
     }
   }, [isOpen]);
 
-  // Pixi コンテナが取れない場合やリセット時は即フォールバックを有効化
-  useEffect(() => {
-    if (!pixiContainer) {
-      setPanelReady(false);
-    }
-  }, [pixiContainer]);
-
-  // WebGL コンテキスト喪失時は一旦フォールバックさせる（再描画で復帰）
-  useEffect(() => {
-    const handlePixiContext = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.status === "lost" || detail?.status === "restarting") {
-        setPanelReady(false);
-      }
-    };
-    window.addEventListener("ito:pixi-context", handlePixiContext as EventListener);
-    return () => {
-      window.removeEventListener("ito:pixi-context", handlePixiContext as EventListener);
-    };
-  }, []);
-
-  // Escキー対応
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCloseClick();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, handleCloseClick]);
-
-  // Pixi背景の描画とDOM同期
-  useEffect(() => {
-    if (!isOpen || !pixiContainer) {
-      // モーダルが閉じられたらPixiリソースを破棄
-      if (pixiGraphicsRef.current) {
-        if (pixiGraphicsRef.current.parent) {
-          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
-        }
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-      if (ambientRef.current) {
-        if (ambientRef.current.parent) {
-          ambientRef.current.parent.removeChild(ambientRef.current);
-        }
-        ambientRef.current.destroy({ children: true });
-        ambientRef.current = null;
-      }
-      if (gsapRenderCancelRef.current) {
-        gsapRenderCancelRef.current();
-        gsapRenderCancelRef.current = null;
-      }
-      setPanelReady(false);
-      if (pixiHudContext?.renderOnce) {
-        void pixiHudContext.renderOnce("mvpLedger:cleanup");
-      }
-      return undefined;
-    }
-
-    // Graphicsオブジェクトを作成（背景パネル）
-    const graphics = new PIXI.Graphics();
-    graphics.zIndex = -10; // 最背面に配置
-    pixiContainer.addChild(graphics);
-    pixiGraphicsRef.current = graphics;
-
-    // クリーンアップ
-    return () => {
-      if (pixiGraphicsRef.current) {
-        if (pixiGraphicsRef.current.parent) {
-          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
-        }
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-      if (ambientRef.current) {
-        if (ambientRef.current.parent) {
-          ambientRef.current.parent.removeChild(ambientRef.current);
-        }
-        ambientRef.current.destroy({ children: true });
-        ambientRef.current = null;
-      }
-      if (gsapRenderCancelRef.current) {
-        gsapRenderCancelRef.current();
-        gsapRenderCancelRef.current = null;
-      }
-      setPanelReady(false);
-    };
-  }, [isOpen, pixiContainer, pixiHudContext]);
-
-  // DOM要素とPixiコンテナの位置・サイズ同期
-  usePixiLayerLayout(boardRef, pixiContainer, {
-    disabled: !isOpen || !pixiContainer,
-    onUpdate: (layout) => {
-      const graphics = pixiGraphicsRef.current;
-      if (!graphics || layout.width <= 0 || layout.height <= 0) {
-        setPanelReady(false);
-        return;
-      }
-
-      // 非同期処理を独立した関数として実行（完了を待つため）
-      const warmupAndReady = async () => {
-        try {
-          // 【重要】PixiHudStage の初期化完了を確実に待つ（スマホ環境で必須）
-          if (pixiHudContext?.waitForHudReady) {
-            const app = await pixiHudContext.waitForHudReady();
-            if (!app) {
-              console.error("[MvpLedger] PixiHudStage initialization failed");
-              setPanelReady(false);
-              return;
-            }
-            // 初回アクセス時に ticker が停止しているケースを救済
-            if (app.ticker && !app.ticker.started) {
-              app.ticker.start();
-            }
-            // 低速端末で auto-render が止まるのを防ぐため、GSAP ticker でも強制レンダリング
-            if (!gsapRenderCancelRef.current) {
-              const renderWithGsap = () => {
-                try {
-                  app.renderer.render(app.stage);
-                } catch {
-                  // ignore
-                }
-              };
-              gsap.ticker.add(renderWithGsap);
-              gsapRenderCancelRef.current = () => gsap.ticker.remove(renderWithGsap);
-            }
-          }
-
-          graphics.clear();
-          graphics.position.set(layout.x, layout.y);
-          drawBattleRecordsBoard(PIXI, graphics, {
-            width: layout.width,
-            height: layout.height,
-            dpr: layout.dpr,
-            failed,
-          });
-
-          // アンビエント効果の作成・更新
-          if (!ambientRef.current && pixiContainer) {
-            // 初回作成
-            const ambient = createBattleRecordsAmbient({
-              width: layout.width,
-              height: layout.height,
-              failed,
-            });
-            ambient.position.set(layout.x, layout.y);
-            ambient.zIndex = -8; // 背景パネルの上、DOM要素の下
-            pixiContainer.addChild(ambient);
-            ambientRef.current = ambient;
-          } else if (ambientRef.current) {
-            // リサイズ対応
-            ambientRef.current.resize(layout.width, layout.height);
-            ambientRef.current.position.set(layout.x, layout.y);
-          }
-
-          // グラボなし端末対策: Graphics描画直後に初回レンダリングを確実に実行してGPUを準備
-          if (pixiHudContext?.renderOnce) {
-            await pixiHudContext.renderOnce("mvpLedger:draw");
-
-            // もう1フレーム待って確実にGPU処理を完了させる
-            await new Promise<void>((resolve) => {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                  resolve();
-                });
-              });
-            });
-          }
-
-          // GPUウォームアップ完了後にアニメーションを開始
-          ambientRef.current?.initialize?.();
-
-          setPanelReady(true);
-        } catch (error) {
-          console.error("[MvpLedger] failed to draw Pixi battle records panel", error);
-          setPanelReady(false);
-        }
-      };
-
-      // 非同期処理を実行（エラーハンドリング付き）
-      warmupAndReady().catch((error) => {
-        console.error("[MvpLedger] warmup failed", error);
-        setPanelReady(false);
-      });
-    },
-  });
+  useMvpLedgerEscClose({ isOpen, onRequestClose: handleCloseClick });
 
   const wrapperMarginTop = useBreakpointValue({ base: "12vh", md: "10vh" });
   const columnTemplate = {
