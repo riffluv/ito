@@ -6,9 +6,12 @@ import {
   createNetworkError,
   createValidationError,
   getFirebaseErrorMessage,
+  handleFirebaseQuotaError,
   handleError,
+  isFirebaseQuotaExceeded,
   withErrorHandling,
 } from "@/lib/utils/errorHandling";
+import { notify } from "@/components/ui/notify";
 
 // notify関数をモック化
 jest.mock("@/components/ui/notify", () => ({
@@ -162,6 +165,33 @@ describe("errorHandling", () => {
         "ネットワークエラーが発生しました。接続を確認してください。"
       );
       expect(error.technicalDetails?.originalError).toBe(originalError);
+    });
+  });
+
+  describe("isFirebaseQuotaExceeded", () => {
+    it("should detect quota errors by code and message", () => {
+      expect(isFirebaseQuotaExceeded({ code: "resource-exhausted" })).toBe(true);
+      expect(isFirebaseQuotaExceeded({ message: "429 too many requests" })).toBe(true);
+      expect(isFirebaseQuotaExceeded({ message: "quota exceeded" })).toBe(true);
+      expect(isFirebaseQuotaExceeded({ code: "permission-denied" })).toBe(false);
+      expect(isFirebaseQuotaExceeded(null)).toBe(false);
+    });
+  });
+
+  describe("handleFirebaseQuotaError", () => {
+    it("should notify user and log an error", () => {
+      handleFirebaseQuotaError("テスト");
+
+      expect(notify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "🚨 Firebase読み取り制限",
+          type: "error",
+        })
+      );
+
+      expect(console.error).toHaveBeenCalledWith(
+        "[firebase-quota] Read quota exceeded: テスト"
+      );
     });
   });
 });
