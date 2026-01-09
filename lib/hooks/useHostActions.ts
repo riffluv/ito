@@ -22,9 +22,8 @@ import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQui
 import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
 import { scheduleQuickStartSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleQuickStartSyncWatchdogs";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
-import { normalizeProposalList } from "@/lib/hooks/hostActions/normalizeProposalList";
-import { describeSubmitOrderError } from "@/lib/hooks/hostActions/describeSubmitOrderError";
 import { handleCustomTopicSubmissionResult } from "@/lib/hooks/hostActions/handleCustomTopicSubmissionResult";
+import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
 import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
@@ -759,75 +758,17 @@ export function useHostActions({
     finalizeAction,
   ]);
 
-  const REVEAL_DELAY_MS = 500;
-
   const evalSorted = useCallback(async (): Promise<boolean> => {
-    // 連打やダブルクリックで二重送信しない
-    if (evalSortedPendingRef.current) return false;
-
-    const list = normalizeProposalList(proposal);
-    if (list.length === 0) return false;
-
-    evalSortedPendingRef.current = true;
-    if (mountedRef.current) {
-      setEvalSortedPending(true);
-    }
-
-    showtimeIntents?.markRevealIntent?.({
-      action: "evalSorted",
-      source: "useHostActions",
+    return await runEvalSortedSubmit({
+      roomId,
+      proposal,
+      hostActions,
+      showtimeIntents,
+      playOrderConfirm,
+      evalSortedPendingRef,
+      mountedRef,
+      setEvalSortedPending,
     });
-    playOrderConfirm();
-
-    const startedAt =
-      typeof performance !== "undefined" ? performance.now() : null;
-    try {
-      traceAction("ui.order.submit", { roomId, count: list.length });
-      await hostActions.evaluateSortedOrder({
-        roomId,
-        list,
-        revealDelayMs: REVEAL_DELAY_MS,
-      });
-      if (startedAt !== null) {
-        setMetric(
-          "order",
-          "submitSortedOrderSuccessMs",
-          Math.round(performance.now() - startedAt)
-        );
-      }
-      return true;
-    } catch (error: unknown) {
-      if (startedAt !== null) {
-        setMetric(
-          "order",
-          "submitSortedOrderFailureMs",
-          Math.round(performance.now() - startedAt)
-        );
-      }
-      traceError("ui.order.submit", error, { roomId, count: list.length });
-      const { code, status, reason, url, description } = describeSubmitOrderError(error);
-      console.warn("[order] submit failed", {
-        roomId,
-        count: list.length,
-        code,
-        status,
-        reason,
-        url,
-        error,
-      });
-      notify({
-        id: toastIds.genericError(roomId, "submit-order"),
-        title: "並びの確定に失敗しました",
-        description,
-        type: "error",
-      });
-      throw error;
-    } finally {
-      evalSortedPendingRef.current = false;
-      if (mountedRef.current) {
-        setEvalSortedPending(false);
-      }
-    }
   }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions]);
 
   const handleSubmitCustom = useCallback(
