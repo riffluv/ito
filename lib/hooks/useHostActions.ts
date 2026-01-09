@@ -9,12 +9,13 @@ import {
   type RoundStageEvent,
 } from "@/lib/hooks/useRoundTimeline";
 import { setMetric } from "@/lib/utils/metrics";
-import { traceAction, traceError } from "@/lib/utils/trace";
 import { runQuickStartFromWaiting } from "@/lib/hooks/hostActions/runQuickStartFromWaiting";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
 import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
 import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSubmitCustomTopicAndMaybeStart";
 import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
+import { runRestartGame } from "@/lib/hooks/hostActions/runRestartGame";
+import { closeCustomTopic as closeCustomTopicHelper } from "@/lib/hooks/hostActions/closeCustomTopic";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
 import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
@@ -373,27 +374,12 @@ export function useHostActions({
   const restartGame = useCallback(
     async (opts?: { playSound?: boolean }) => {
       const playSound = opts?.playSound ?? true;
-      traceAction("ui.host.restart", {
+      return await runRestartGame({
         roomId,
-        playSound: playSound ? "1" : "0",
+        playSound,
+        resetGame,
+        quickStart,
       });
-      try {
-        await resetGame({
-          showFeedback: false,
-          playSound,
-          includeOnline: false,
-          recallSpectators: false,
-        });
-        return await quickStart({
-          broadcast: false,
-          playSound,
-          markShowtimeStart: false,
-          intentMeta: { action: "quickStart:restart" },
-        });
-      } catch (error) {
-        traceError("ui.host.restart", error, { roomId });
-        throw error;
-      }
     },
     [resetGame, quickStart, roomId]
   );
@@ -507,13 +493,13 @@ export function useHostActions({
   );
 
   const closeCustomTopic = useCallback(() => {
-    setCustomOpen(false);
-    setCustomStartPending(false);
-    clearAutoStartLock();
-    onFeedback?.(null);
-    traceAction("ui.topic.customClose", {
+    closeCustomTopicHelper({
       roomId,
-      isHost: isHost ? "1" : "0",
+      isHost,
+      setCustomOpen,
+      setCustomStartPending,
+      clearAutoStartLock,
+      onFeedback,
     });
   }, [clearAutoStartLock, isHost, onFeedback, roomId]);
 
