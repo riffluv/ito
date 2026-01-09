@@ -12,8 +12,15 @@ import {
   MessageCircle,
   Users,
 } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useRef, useState } from "react";
 import { useReducedMotionPreference } from "@/hooks/useReducedMotionPreference";
+import type {
+  ContentType,
+  SheetState,
+} from "@/components/ui/mobile-bottom-sheet/types";
+import { useMobileBottomSheetKeyboardControls } from "@/components/ui/mobile-bottom-sheet/useMobileBottomSheetKeyboardControls";
+import { useMobileBottomSheetViewportSync } from "@/components/ui/mobile-bottom-sheet/useMobileBottomSheetViewportSync";
+import { useMobileBottomSheetAnimations } from "@/components/ui/mobile-bottom-sheet/useMobileBottomSheetAnimations";
 
 const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom, 0px)";
 const SAFE_AREA_TOP = "env(safe-area-inset-top, 0px)";
@@ -48,9 +55,6 @@ export interface MobileBottomSheetProps {
   rightPanel?: ReactNode;
 }
 
-type SheetState = "collapsed" | "partial" | "full";
-type ContentType = "chat" | "participants" | "sidebar";
-
 export function MobileBottomSheet({
   chatPanel,
   sidebar,
@@ -59,7 +63,6 @@ export function MobileBottomSheet({
   const [sheetState, setSheetState] = useState<SheetState>("collapsed");
   const [contentType, setContentType] = useState<ContentType>("chat");
   const [isDragging, setIsDragging] = useState(false);
-  const [, setViewportTick] = useState(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -77,45 +80,14 @@ export function MobileBottomSheet({
   const buttonHoverBg = "cardHoverBg";
 
   // アクセシビリティ - フォーカス管理
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!sheetRef.current) return;
-
-      // Escキーでシートを閉じる
-      if (event.key === "Escape" && sheetState !== "collapsed") {
-        event.preventDefault();
-        setSheetState("collapsed");
-      }
-
-      // Tab + Shift + Enterでシート展開
-      if (
-        event.key === "Enter" &&
-        event.shiftKey &&
-        sheetState === "collapsed"
-      ) {
-        event.preventDefault();
-        setSheetState("partial");
-        // 最初のボタンにフォーカス
-        setTimeout(() => firstButtonRef.current?.focus(), 100);
-      }
-
-      // 矢印キーでコンテンツ切り替え（シートが開いている時のみ）
-      if (sheetState !== "collapsed") {
-        if (event.key === "ArrowLeft") {
-          event.preventDefault();
-          if (contentType === "participants") setContentType("chat");
-          else if (contentType === "sidebar") setContentType("participants");
-        } else if (event.key === "ArrowRight") {
-          event.preventDefault();
-          if (contentType === "chat") setContentType("participants");
-          else if (contentType === "participants") setContentType("sidebar");
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [sheetState, contentType]);
+  useMobileBottomSheetKeyboardControls({
+    sheetRef,
+    firstButtonRef,
+    sheetState,
+    setSheetState,
+    contentType,
+    setContentType,
+  });
 
   // SR向けライブリージョン（DOM直挿入をやめ、視覚非表示で常駐）
   const liveMessage = (() => {
@@ -163,26 +135,7 @@ export function MobileBottomSheet({
     [getSheetHeight]
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-    const viewport = window.visualViewport;
-    if (!viewport) return undefined;
-    const handleViewportChange = () => {
-      setViewportTick((tick) => tick + 1);
-      if (sheetRef.current) {
-        const y = getSheetOffset(sheetState);
-        gsap.set(sheetRef.current, { y });
-      }
-    };
-    viewport.addEventListener("resize", handleViewportChange);
-    viewport.addEventListener("scroll", handleViewportChange);
-    return () => {
-      viewport.removeEventListener("resize", handleViewportChange);
-      viewport.removeEventListener("scroll", handleViewportChange);
-    };
-  }, [getSheetOffset, sheetState]);
+  useMobileBottomSheetViewportSync({ sheetRef, sheetState, getSheetOffset });
 
   // GSAPアニメーション - シート位置更新
   const animateSheet = useCallback(
@@ -329,84 +282,17 @@ export function MobileBottomSheet({
     0
   );
 
-  // 状態変更時のアニメーション実行
-  useEffect(() => {
-    let contentTimer: number | undefined;
-
-    if (prefersReduced) {
-      // 最小限の状態にセット
-      if (sheetRef.current)
-        gsap.set(sheetRef.current, {
-          y: getSheetOffset(sheetState),
-        });
-      if (overlayRef.current)
-        gsap.set(overlayRef.current, {
-          opacity: sheetState === "full" ? 0.5 : 0,
-          display: sheetState === "full" ? "block" : "none",
-        });
-      if (contentRef.current)
-        gsap.set(contentRef.current, { opacity: 1, y: 0 });
-    } else {
-      animateSheet(sheetState);
-      animateOverlay(sheetState === "full");
-      if (sheetState !== "collapsed") {
-        contentTimer = window.setTimeout(() => animateContent(), 100);
-      }
-    }
-
-    return () => {
-      if (contentTimer) {
-        window.clearTimeout(contentTimer);
-      }
-    };
-  }, [
+  useMobileBottomSheetAnimations({
     sheetState,
     prefersReduced,
     getSheetOffset,
     animateSheet,
     animateOverlay,
     animateContent,
-  ]);
-
-  // 初期化時のポジション設定
-  useEffect(() => {
-    const sheetEl = sheetRef.current;
-    const overlayEl = overlayRef.current;
-    const contentEl = contentRef.current;
-
-    if (sheetEl) {
-      gsap.set(sheetEl, {
-        y: getSheetOffset("collapsed"),
-      });
-    }
-    if (overlayEl) {
-      gsap.set(overlayEl, {
-        opacity: 0,
-        display: "none",
-      });
-    }
-
-    return () => {
-      try {
-        if (sheetEl) {
-          gsap.killTweensOf(sheetEl);
-          gsap.set(sheetEl, {
-            clearProps: "transform,opacity,x,y,scale",
-          });
-        }
-        if (overlayEl) {
-          gsap.killTweensOf(overlayEl);
-          gsap.set(overlayEl, { clearProps: "opacity,display" });
-        }
-        if (contentEl) {
-          gsap.killTweensOf(contentEl);
-          gsap.set(contentEl, { clearProps: "opacity,y" });
-        }
-      } catch {
-        // ignore
-      }
-    };
-  }, [getSheetOffset]);
+    sheetRef,
+    overlayRef,
+    contentRef,
+  });
 
   // アクティブボタンのスタイル
   const getButtonStyle = (type: ContentType) => ({

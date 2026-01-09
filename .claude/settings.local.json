@@ -152,14 +152,16 @@
       "Bash(ss:*)",
       "Bash(netstat:*)",
       "Bash(kill:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(xdg-open:*)",
+      "Bash(sensible-browser:*)"
     ],
     "deny": [],
     "ask": []
   },
-  "spinnerTipsEnabled": true,
   "enabledMcpjsonServers": [
     "serena",
     "context7"
-  ]
+  ],
+  "spinnerTipsEnabled": true
 }

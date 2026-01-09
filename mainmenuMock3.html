@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序の紋章III - Tavern</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=IM+Fell+DW+Pica+SC&display=swap');
+
+    :root {
+      /* 画像から抽出したような「くすんだ」色パレット */
+      --color-wood-dark: #1a0f0a;
+      --color-wood-red: #3d2314;
+      --color-wood-light: #6d4c35;
+      
+      --color-gold-base: #c5a059;
+      --color-gold-shadow: #8a6230;
+      
+      --color-paper: #d8c8b0;
+      --color-paper-shadow: #bcaaa4;
+      
+      --color-ember: #ff7020;
+      --color-light: rgba(255, 200, 150, 0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #050302;
+      font-family: 'Shippori Mincho', serif;
+      min-height: 100vh;
+      overflow: hidden; /* アプリっぽく */
+      color: #2b1d12;
+    }
+
+    /* 
+      背景：画像の世界観をCSSで構築
+      AI生成画像のような「奥にボケている酒場」を描画
+    */
+    .scene-background {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1;
+    }
+
+    /* 奥の酒場の壁・カウンター */
+    .bg-depth {
+      position: absolute;
+      inset: -20px;
+      padding: 20px;
+      /* 複雑なグラデーションで「絵画的」な塗りを再現 */
+      background: 
+        /* ビネット（四隅の闇） */
+        radial-gradient(circle at 50% 50%, transparent 40%, #000 130%),
+        /* 中央の暖色光（カウンター付近） */
+        radial-gradient(ellipse at 50% 80%, rgba(100, 50, 20, 0.8), transparent 60%),
+        /* 左右のランタン光 */
+        radial-gradient(circle at 10% 40%, rgba(255, 100, 0, 0.15), transparent 40%),
+        radial-gradient(circle at 90% 40%, rgba(255, 100, 0, 0.15), transparent 40%),
+        /* ベースの木色 */
+        linear-gradient(to bottom, #110805, #1e0f08 40%, #2d160c 80%, #0a0503 100%);
+      filter: blur(4px); /* 背景を少しボカして奥行きを出す */
+    }
+
+    /* 天井の梁（パースペクティブ） */
+    .beam {
+      position: absolute;
+      background: linear-gradient(90deg, #0a0503, #2d1810 50%, #0a0503);
+      width: 120%;
+      height: 60px;
+      top: -10px; left: -10%;
+      transform: rotate(2deg);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+    }
+
+    /* =========================================
+       UIレイアウト：画像の構図を再現
+    ========================================= */
+    .ui-layer {
+      position: relative;
+      max-width: 1300px;
+      margin: 0 auto;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      padding: 20px;
+    }
+
+    /* ----- ヘッダーエリア ----- */
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 30px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    /* タイトルロゴ（画像のような重厚な文字） */
+    .logo-container {
+      position: relative;
+    }
+    .main-title {
+      font-family: 'IM Fell DW Pica SC', serif; /* 古書風フォント */
+      font-size: 4rem;
+      color: var(--color-gold-base);
+      line-height: 1;
+      text-shadow: 
+        0 2px 0 #5e3c18,
+        0 5px 15px rgba(0,0,0,0.8);
+      /* 金属的な光沢 */
+      background: linear-gradient(to bottom, #fff5d0 10%, #c5a059 40%, #8a5e2a 80%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.1em;
+      filter: drop-shadow(0 0 15px rgba(255, 160, 0, 0.3));
+    }
+    
+    .sub-title {
+      color: #9d8570;
+      font-size: 1rem;
+      letter-spacing: 0.5em;
+      margin-top: 5px;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+      font-weight: 700;
+      opacity: 0.9;
+    }
+
+    /* 上部メニューボタン群 (画像にあるような配置) */
+    .top-menu {
+      display: flex;
+      gap: 20px;
+      margin-top: 25px;
+    }
+
+    /* AI感を消すための「不均一なボタン」 */
+    .wood-btn {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e0d0b8;
+      background: linear-gradient(180deg, #4a2e1f, #2a1810);
+      border: 2px solid #6d4c35;
+      padding: 10px 30px;
+      /* 角丸を不均一に（手作り感） */
+      border-radius: 4px 5px 3px 4px; 
+      box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.15),
+        0 4px 8px rgba(0,0,0,0.6);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s;
+    }
+    
+    .wood-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.2);
+    }
+
+    .wood-btn.primary {
+      /* もっと目立つ「作成」ボタン */
+      background: linear-gradient(180deg, #b08d55, #8a6230);
+      color: #3e2723;
+      border-color: #d4af37;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+      padding: 12px 45px;
+      font-size: 1.3rem;
+      box-shadow: 
+        inset 0 1px 0 rgba(255,255,255,0.6),
+        0 5px 15px rgba(0,0,0,0.7),
+        0 0 10px rgba(200, 150, 50, 0.4); /* グロー */
+    }
+
+    /* 統計バー（画像下部にありそうな情報の帯） */
+    .status-ribbon {
+      margin-top: 20px;
+      display: flex;
+      gap: 30px;
+      font-size: 0.9rem;
+      color: #a1887f;
+      background: linear-gradient(90deg, transparent, rgba(0,0,0,0.6) 20%, rgba(0,0,0,0.6) 80%, transparent);
+      padding: 5px 40px;
+    }
+    .stat-val { color: var(--color-gold-base); font-weight: bold; margin-left: 5px; font-family: 'IM Fell DW Pica SC'; }
+
+    /* ----- メインコンテンツ（左右2カラム） ----- */
+    .main-body {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 30px;
+      padding: 0 20px 20px 20px;
+      align-items: start;
+    }
+
+    /* 
+      左パネル：部屋リスト 
+      (画像にあるような木枠のボード)
+    */
+    .room-board-container {
+      background: rgba(20, 10, 5, 0.7); /* 半透明の黒 */
+      border: 8px solid #3d2314;
+      border-radius: 6px; /* AI感排除：わずかに丸める */
+      padding: 5px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* ボードの内側（フェルト生地のような暗い背景） */
+    .board-inner {
+      background: #1a0f0a;
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      /* 内部シャドウ */
+      box-shadow: inset 0 0 20px #000;
+    }
+
+    /* フィルターエリア（上部） */
+    .board-filters {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: #2a1810;
+      border-bottom: 2px solid #4e342e;
+      color: #bcaaa4;
+    }
+
+    /* 部屋カード（羊皮紙） */
+    .room-card {
+      background: #dcc8b0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' opacity='0.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E");
+      margin-bottom: 15px;
+      padding: 15px 20px;
+      border-radius: 2px;
+      color: #3e2723;
+      position: relative;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+      transition: 0.1s;
+      
+      /* AI感排除：カードごとに微細な回転・ズレを与える（nth-childで擬似ランダム） */
+      transform: rotate(-0.5deg);
+    }
+    .room-card:nth-child(even) { transform: rotate(0.5deg); margin-left: 2px; }
+    .room-card:hover { transform: scale(1.01); background: #e6d4bc; }
+
+    .room-title { font-weight: 800; font-size: 1.1rem; border-bottom: 1px dashed #8d6e63; padding-bottom: 5px; margin-bottom: 8px; }
+    .room-details { display: flex; justify-content: space-between; font-size: 0.9rem; color: #5d4037; }
+    
+    .join-btn {
+      float: right;
+      background: #8d6e63;
+      color: #fff;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 2px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: -5px;
+    }
+
+    /* 
+      右パネル：お知らせ掲示板
+      (画像にある特徴的な羊皮紙の巻物・掲示板)
+    */
+    .notice-board-wrapper {
+      position: relative;
+    }
+    
+    /* 木のフレーム */
+    .notice-frame {
+      background: #3e2616;
+      padding: 15px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+      position: relative;
+    }
+    /* 釘 */
+    .nail {
+      position: absolute; width: 10px; height: 10px; background: #111; border-radius: 50%;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.2);
+    }
+    .n-tl { top: 6px; left: 6px; } .n-tr { top: 6px; right: 6px; }
+
+    /* 羊皮紙本体 */
+    .parchment-paper {
+      background: #eaddcf;
+      padding: 20px;
+      min-height: 400px;
+      position: relative;
+      /* 紙の汚れ・焼け */
+      background: radial-gradient(circle, #eaddcf 20%, #d7c5b0 80%, #c4b096 100%);
+      box-shadow: inset 0 0 30px rgba(139, 69, 19, 0.2);
+    }
+    
+    .notice-header {
+      text-align: center;
+      font-family: 'IM Fell DW Pica SC';
+      font-size: 1.5rem;
+      border-bottom: 2px double #8d6e63;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      color: #3e2723;
+    }
+
+    .notice-item { margin-bottom: 20px; }
+    .ni-title { font-weight: bold; color: #6d4c35; display: flex; align-items: center; }
+    .ni-title::before { content: "•"; color: #bf360c; margin-right: 5px; font-size: 1.5em; }
+    .ni-body { font-size: 0.9rem; line-height: 1.6; color: #4e342e; }
+
+    /* 封蝋（画像にある赤いアクセント） */
+    .wax-seal {
+      position: absolute;
+      bottom: 30px; right: 20px;
+      width: 60px; height: 60px;
+      background: #c62828;
+      border-radius: 50%;
+      box-shadow: 2px 4px 5px rgba(0,0,0,0.4);
+      border: 3px solid rgba(150,0,0,0.3);
+      display: flex; justify-content: center; align-items: center;
+      color: rgba(0,0,0,0.3);
+      font-weight: 900;
+      font-size: 1.5rem;
+      transform: rotate(-10deg);
+    }
+
+    /* 揺れるランタン（前景） */
+    .hanging-lantern {
+      position: absolute;
+      top: -20px; 
+      width: 60px; height: 120px;
+      z-index: 10;
+      transform-origin: top center;
+      animation: sway 6s ease-in-out infinite;
+    }
+    .lantern-l { left: 50px; }
+    .lantern-r { right: 50px; animation-delay: 1s; }
+
+    .lantern-body {
+      width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 70%, #ffb74d, #e65100 60%, #3e2723 90%);
+      border-radius: 10px;
+      box-shadow: 0 0 40px rgba(255, 140, 0, 0.4);
+      position: relative;
+    }
+    .lantern-body::before { /* 枠 */
+      content: ""; position: absolute; inset: 0;
+      border: 4px solid #28150a; border-radius: 10px;
+    }
+
+    @keyframes sway {
+      0%, 100% { transform: rotate(1deg); }
+      50% { transform: rotate(-1deg); }
+    }
+
+    /* レスポンシブ */
+    @media (max-width: 900px) {
+      .main-body { grid-template-columns: 1fr; }
+      .notice-board-wrapper { display: none; }
+      .logo-container .main-title { font-size: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 環境背景画 -->
+  <div class="scene-background">
+    <div class="bg-depth"></div>
+    <div class="beam"></div>
+  </div>
+
+  <div class="ui-layer">
+    
+    <!-- 揺れるランタン -->
+    <div class="hanging-lantern lantern-l"><div class="lantern-body"></div></div>
+    <div class="hanging-lantern lantern-r"><div class="lantern-body"></div></div>
+
+    <header>
+      <div class="logo-container">
+        <h1 class="main-title">序の紋章 III</h1>
+        <div class="sub-title">- THE EMBLEM OF ORDER -</div>
+      </div>
+
+      <nav class="top-menu">
+        <button class="wood-btn primary">新しい部屋を作成</button>
+        <button class="wood-btn">📜 ルール</button>
+        <button class="wood-btn">⚙ 設定</button>
+      </nav>
+
+      <div class="status-ribbon">
+        <span>ONLINE: <span class="stat-val">24</span></span>
+        <span>ROOMS: <span class="stat-val">8</span></span>
+      </div>
+    </header>
+
+    <div class="main-body">
+      
+      <!-- 左：部屋リストボード -->
+      <section class="room-board-container">
+        <div class="board-filters">
+          <span>酒場の募集板</span>
+          <div style="font-size: 0.9rem;">
+            🔍 <span style="opacity:0.6;">検索...</span>
+          </div>
+        </div>
+        <div class="board-inner">
+          <!-- Room Card 1 -->
+          <div class="room-card">
+            <div class="room-title">初心者の集い</div>
+            <div class="room-details">
+              <span>🐱 Dさん (募集中)</span>
+              <button class="join-btn">参加</button>
+            </div>
+            <div style="font-size:0.8rem; margin-top:5px; color:#6d4c35;">誰でも歓迎！まったり。</div>
+          </div>
+
+          <!-- Room Card 2 -->
+          <div class="room-card">
+            <div class="room-title">ガチ勢求む！</div>
+            <div class="room-details">
+              <span>⚔️ 騎士団長</span>
+              <button class="join-btn">参加</button>
+            </div>
+            <div style="font-size:0.8rem; margin-top:5px; color:#6d4c35;">ランクA以上限定</div>
+          </div>
+
+          <!-- Room Card 3 -->
+          <div class="room-card">
+            <div class="room-title">5時まで耐久</div>
+            <div class="room-details">
+              <span>💤 眠気 (1/4)</span>
+              <button class="join-btn">参加</button>
+            </div>
+          </div>
+          
+          <!-- Room Card 4 -->
+          <div class="room-card">
+            <div class="room-title">雑談・飲み</div>
+            <div class="room-details">
+              <span>🍺 旅人</span>
+              <button class="join-btn">参加</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右：掲示板 -->
+      <aside class="notice-board-wrapper">
+        <div class="notice-frame">
+          <div class="nail n-tl"></div><div class="nail n-tr"></div>
+          <div class="parchment-paper">
+            <div class="notice-header">Master's Note</div>
+            
+            <div class="notice-item">
+              <div class="ni-title">この酒場について</div>
+              <div class="ni-body">
+                ここは協力と推理の場。<br>
+                言葉だけで数字を導け。
+              </div>
+            </div>
+            
+            <div class="notice-item">
+              <div class="ni-title" style="color:#bf360c;">⚠️ 禁止事項</div>
+              <div class="ni-body">
+                暴言・煽りは禁止。<br>
+                マナーを守れない者は退出願う。
+              </div>
+            </div>
+
+            <div class="notice-item">
+              <div class="ni-title">お知らせ</div>
+              <div class="ni-body">
+                新カードセット入荷。<br>
+                奥の部屋解放中。
+              </div>
+            </div>
+            
+            <div class="wax-seal">III</div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script>
+    console.log("Tavern UI Initialized. No AI fluff.");
+  </script>
+</body>
+</html>

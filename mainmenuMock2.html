@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>序の紋章III - メインメニュー</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700;900&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --wood-dark: #1a0f08;
+      --wood-medium: #3d2314;
+      --wood-light: #5c3a1e;
+      --wood-highlight: #8b5a2b;
+      --parchment: #e8d5b0;
+      --parchment-dark: #c4a574;
+      --parchment-shadow: #a08050;
+      --gold: #d4a84b;
+      --gold-light: #f0c860;
+      --flame-orange: #ff6b1a;
+      --flame-yellow: #ffd93d;
+      --text-dark: #2a1a0a;
+      --text-medium: #4a3520;
+      --glow-warm: rgba(255, 150, 50, 0.3);
+    }
+
+    body {
+      font-family: 'Noto Serif JP', serif;
+      background: var(--wood-dark);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--text-dark);
+    }
+
+    /* ===== 背景 ===== */
+    .tavern-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .bg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .bg-base {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 30%, rgba(60, 30, 10, 0.8) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 20% 20%, rgba(80, 40, 15, 0.6) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 25%, rgba(70, 35, 12, 0.6) 0%, transparent 60%),
+        linear-gradient(180deg, #0d0705 0%, #1a0f08 30%, #251810 60%, #1a0f08 100%);
+    }
+
+    /* 木製梁 */
+    .wooden-beams {
+      background:
+        linear-gradient(90deg, transparent 0%, transparent 8%, rgba(30, 18, 8, 0.95) 8.5%, rgba(45, 25, 12, 0.9) 10%, rgba(30, 18, 8, 0.95) 11.5%, transparent 12%, transparent 100%),
+        linear-gradient(90deg, transparent 0%, transparent 88%, rgba(30, 18, 8, 0.95) 88.5%, rgba(45, 25, 12, 0.9) 90%, rgba(30, 18, 8, 0.95) 91.5%, transparent 92%, transparent 100%);
+    }
+
+    .ceiling-beams {
+      background:
+        linear-gradient(180deg, rgba(25, 15, 8, 0.98) 0%, rgba(35, 20, 10, 0.95) 8%, transparent 15%),
+        linear-gradient(to bottom right, transparent 45%, rgba(30, 18, 8, 0.8) 48%, rgba(40, 24, 12, 0.7) 50%, rgba(30, 18, 8, 0.8) 52%, transparent 55%);
+    }
+
+    /* 壁のテクスチャ */
+    .wall-texture {
+      background-image:
+        repeating-linear-gradient(90deg, transparent 0px, transparent 80px, rgba(0,0,0,0.1) 80px, rgba(0,0,0,0.1) 82px),
+        repeating-linear-gradient(0deg, transparent 0px, transparent 40px, rgba(0,0,0,0.05) 40px, rgba(0,0,0,0.05) 41px);
+      opacity: 0.3;
+    }
+
+    /* 暖かい光のオーバーレイ */
+    .warm-glow {
+      background:
+        radial-gradient(ellipse 30% 40% at 15% 15%, rgba(255, 120, 40, 0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 30% 40% at 85% 15%, rgba(255, 120, 40, 0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 50% 60%, rgba(255, 100, 30, 0.08) 0%, transparent 60%);
+      animation: glowPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* ビネット効果 */
+    .vignette {
+      background: radial-gradient(ellipse 70% 60% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.7) 100%);
+    }
+
+    /* ===== キャンドル ===== */
+    .candles-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .candle {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .candle-left { left: 3%; top: 8%; }
+    .candle-right { right: 3%; top: 8%; }
+    .candle-left-mid { left: 8%; top: 45%; transform: scale(0.7); }
+    .candle-right-mid { right: 8%; top: 45%; transform: scale(0.7); }
+
+    .candle-holder {
+      width: 30px;
+      height: 60px;
+      background: linear-gradient(90deg, #3d2817 0%, #5a3d23 30%, #6b4a2a 50%, #5a3d23 70%, #3d2817 100%);
+      border-radius: 3px 3px 8px 8px;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .candle-holder::before {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
+      height: 8px;
+      background: linear-gradient(90deg, #4a3020 0%, #6b4a30 50%, #4a3020 100%);
+      border-radius: 3px;
+    }
+
+    .candle-stick {
+      width: 14px;
+      height: 45px;
+      background: linear-gradient(90deg, #e8dcc8 0%, #fff8e8 30%, #fffef5 50%, #fff8e8 70%, #e8dcc8 100%);
+      border-radius: 2px 2px 0 0;
+      position: relative;
+      margin-bottom: -8px;
+      box-shadow: 0 0 10px rgba(255, 200, 100, 0.3);
+    }
+
+    .candle-stick::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 8px;
+      background: #1a1a1a;
+    }
+
+    .flame-container {
+      position: relative;
+      width: 30px;
+      height: 50px;
+    }
+
+    .flame {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 35px;
+      background:
+        radial-gradient(ellipse 50% 80% at 50% 90%, #fff8dc 0%, #ffd93d 20%, #ff9500 50%, #ff6b1a 70%, transparent 100%);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      filter: blur(1px);
+      animation: flicker 0.15s infinite alternate;
+      box-shadow:
+        0 0 20px #ff9500,
+        0 0 40px rgba(255, 150, 50, 0.5),
+        0 0 60px rgba(255, 100, 30, 0.3);
+    }
+
+    .flame::before {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 20px;
+      background: radial-gradient(ellipse at 50% 100%, #fffef5 0%, #ffeaa0 40%, transparent 70%);
+      border-radius: 50%;
+      animation: innerFlicker 0.1s infinite alternate;
+    }
+
+    .flame-glow {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(255, 150, 50, 0.4) 0%, rgba(255, 100, 30, 0.2) 30%, transparent 70%);
+      animation: glowFlicker 0.2s infinite alternate;
+    }
+
+    @keyframes flicker {
+      0% {
+        transform: translateX(-50%) scaleY(1) scaleX(1) rotate(-1deg);
+        opacity: 1;
+      }
+      25% {
+        transform: translateX(-48%) scaleY(1.05) scaleX(0.95) rotate(1deg);
+        opacity: 0.95;
+      }
+      50% {
+        transform: translateX(-52%) scaleY(0.98) scaleX(1.02) rotate(-0.5deg);
+        opacity: 1;
+      }
+      75% {
+        transform: translateX(-50%) scaleY(1.02) scaleX(0.98) rotate(0.5deg);
+        opacity: 0.97;
+      }
+      100% {
+        transform: translateX(-50%) scaleY(1) scaleX(1) rotate(0deg);
+        opacity: 1;
+      }
+    }
+
+    @keyframes innerFlicker {
+      0% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0.8; transform: translateX(-48%) scale(0.95); }
+    }
+
+    @keyframes glowFlicker {
+      0% { opacity: 1; transform: translateX(-50%) scale(1); }
+      100% { opacity: 0.7; transform: translateX(-50%) scale(1.1); }
+    }
+
+    /* ===== メインコンテナ ===== */
+    .main-container {
+      position: relative;
+      z-index: 2;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .title-frame {
+      display: inline-block;
+      position: relative;
+      padding: 25px 60px 20px;
+      background:
+        linear-gradient(135deg, rgba(40, 25, 15, 0.95) 0%, rgba(60, 35, 20, 0.9) 50%, rgba(40, 25, 15, 0.95) 100%);
+      border: 3px solid var(--wood-highlight);
+      border-radius: 8px;
+      box-shadow:
+        inset 0 2px 10px rgba(255, 200, 100, 0.1),
+        0 8px 30px rgba(0, 0, 0, 0.6),
+        0 0 50px rgba(255, 150, 50, 0.1);
+    }
+
+    .title-frame::before,
+    .title-frame::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--gold);
+      opacity: 0.7;
+    }
+
+    .title-frame::before {
+      top: 5px;
+      left: 5px;
+      border-right: none;
+      border-bottom: none;
+      border-radius: 5px 0 0 0;
+    }
+
+    .title-frame::after {
+      bottom: 5px;
+      right: 5px;
+      border-left: none;
+      border-top: none;
+      border-radius: 0 0 5px 0;
+    }
+
+    .title-icon {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      background:
+        radial-gradient(circle at 30% 30%, #8b6914 0%, #5a4510 50%, #3d2a08 100%);
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--gold-light);
+      box-shadow: 0 0 15px rgba(212, 168, 75, 0.3);
+    }
+
+    .title-text {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 900;
+      color: var(--gold-light);
+      text-shadow:
+        2px 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(255, 200, 100, 0.3);
+      letter-spacing: 8px;
+      margin-left: 30px;
+    }
+
+    .subtitle {
+      font-size: clamp(12px, 2vw, 16px);
+      color: var(--parchment);
+      margin-top: 8px;
+      letter-spacing: 3px;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+      margin-left: 30px;
+    }
+
+    /* ===== メニューボタン ===== */
+    .menu-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .menu-btn {
+      background: linear-gradient(180deg, rgba(50, 30, 18, 0.95) 0%, rgba(35, 20, 12, 0.98) 100%);
+      border: 2px solid var(--wood-highlight);
+      border-radius: 6px;
+      padding: 12px 25px;
+      color: var(--parchment);
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow:
+        inset 0 1px 3px rgba(255, 200, 100, 0.1),
+        0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .menu-btn:hover {
+      background: linear-gradient(180deg, rgba(70, 45, 25, 0.95) 0%, rgba(50, 30, 18, 0.98) 100%);
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow:
+        inset 0 1px 5px rgba(255, 200, 100, 0.2),
+        0 6px 20px rgba(0, 0, 0, 0.5),
+        0 0 15px rgba(255, 150, 50, 0.1);
+    }
+
+    .menu-btn.primary {
+      background: linear-gradient(180deg, rgba(80, 50, 25, 0.95) 0%, rgba(50, 30, 15, 0.98) 100%);
+      border-color: var(--gold);
+    }
+
+    .menu-btn .icon {
+      margin-right: 8px;
+    }
+
+    /* ===== ステータスバー ===== */
+    .status-bar {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background: rgba(30, 18, 10, 0.8);
+      border: 1px solid var(--wood-light);
+      border-radius: 20px;
+      display: inline-flex;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--parchment-dark);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .status-bar-container {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    /* ===== コンテンツエリア ===== */
+    .content-area {
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: 25px;
+    }
+
+    @media (max-width: 900px) {
+      .content-area {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== 左パネル（部屋リスト） ===== */
+    .rooms-panel {
+      background: linear-gradient(180deg, rgba(35, 22, 12, 0.9) 0%, rgba(25, 15, 8, 0.95) 100%);
+      border: 2px solid var(--wood-light);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.3),
+        0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--wood-light);
+    }
+
+    .panel-title {
+      font-size: 16px;
+      color: var(--parchment);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-title .icon {
+      font-size: 20px;
+    }
+
+    .room-count {
+      background: var(--wood-medium);
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--parchment-dark);
+    }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--wood-light);
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      color: var(--parchment-dark);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .refresh-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: rotate(180deg);
+    }
+
+    .search-box {
+      margin-bottom: 15px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 15px;
+      background: rgba(20, 12, 6, 0.8);
+      border: 1px solid var(--wood-light);
+      border-radius: 6px;
+      color: var(--parchment);
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .search-input::placeholder {
+      color: var(--wood-highlight);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 10px rgba(212, 168, 75, 0.2);
+    }
+
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: rgba(30, 18, 10, 0.8);
+      border: 1px solid var(--wood-light);
+      border-radius: 15px;
+      padding: 6px 14px;
+      color: var(--parchment-dark);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(50, 30, 15, 0.9);
+    }
+
+    /* ===== 部屋カード ===== */
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .room-card {
+      background:
+        linear-gradient(135deg, var(--parchment) 0%, #d4c4a0 50%, var(--parchment) 100%);
+      border-radius: 8px;
+      padding: 15px;
+      position: relative;
+      box-shadow:
+        3px 3px 10px rgba(0, 0, 0, 0.4),
+        inset 0 0 20px rgba(160, 128, 80, 0.2);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .room-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--wood-medium) 0%, var(--wood-highlight) 50%, var(--wood-medium) 100%);
+    }
+
+    .room-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    .room-card:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        5px 5px 15px rgba(0, 0, 0, 0.5),
+        inset 0 0 25px rgba(160, 128, 80, 0.3),
+        0 0 20px rgba(255, 150, 50, 0.1);
+    }
+
+    .room-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .room-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-medium);
+      margin-bottom: 12px;
+    }
+
+    .room-info-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .room-info-row .icon {
+      width: 14px;
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    .room-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      background: rgba(100, 160, 80, 0.2);
+      color: #4a7a35;
+      border: 1px solid rgba(100, 160, 80, 0.4);
+    }
+
+    .room-status.waiting {
+      background: rgba(80, 140, 200, 0.2);
+      color: #3a6a9a;
+      border-color: rgba(80, 140, 200, 0.4);
+    }
+
+    .room-players {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .join-btn {
+      width: 100%;
+      padding: 8px;
+      background: linear-gradient(180deg, var(--wood-medium) 0%, var(--wood-dark) 100%);
+      border: 1px solid var(--wood-highlight);
+      border-radius: 5px;
+      color: var(--parchment);
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .join-btn:hover {
+      background: linear-gradient(180deg, var(--wood-light) 0%, var(--wood-medium) 100%);
+      border-color: var(--gold);
+    }
+
+    /* ===== 右パネル（開発者より） ===== */
+    .dev-panel {
+      background: linear-gradient(180deg, rgba(35, 22, 12, 0.9) 0%, rgba(25, 15, 8, 0.95) 100%);
+      border: 2px solid var(--wood-light);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow:
+        inset 0 2px 10px rgba(0, 0, 0, 0.3),
+        0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .dev-panel .panel-header {
+      border-bottom: 1px solid var(--wood-light);
+    }
+
+    .notice-scroll {
+      position: relative;
+      margin-top: 15px;
+    }
+
+    /* 羊皮紙風スクロール */
+    .parchment-notice {
+      background:
+        linear-gradient(135deg, var(--parchment) 0%, #dcc9a3 30%, var(--parchment) 70%, #d4c095 100%);
+      border-radius: 5px;
+      padding: 20px;
+      margin-bottom: 15px;
+      position: relative;
+      box-shadow:
+        2px 3px 8px rgba(0, 0, 0, 0.3),
+        inset 0 0 30px rgba(180, 150, 100, 0.3);
+    }
+
+    .parchment-notice::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.04;
+      pointer-events: none;
+      border-radius: 5px;
+    }
+
+    /* 巻物の上部装飾 */
+    .scroll-top {
+      position: absolute;
+      top: -8px;
+      left: 10px;
+      right: 10px;
+      height: 16px;
+      background: linear-gradient(180deg, var(--wood-highlight) 0%, var(--wood-medium) 50%, var(--wood-light) 100%);
+      border-radius: 8px 8px 0 0;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .scroll-top::before,
+    .scroll-top::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      width: 10px;
+      height: 10px;
+      background: radial-gradient(circle, var(--gold) 30%, var(--wood-medium) 70%);
+      border-radius: 50%;
+    }
+
+    .scroll-top::before { left: 10px; }
+    .scroll-top::after { right: 10px; }
+
+    .notice-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 5px;
+    }
+
+    .notice-title .icon {
+      color: var(--wood-highlight);
+    }
+
+    .notice-content {
+      font-size: 12px;
+      color: var(--text-medium);
+      line-height: 1.8;
+    }
+
+    .notice-content p {
+      margin-bottom: 8px;
+    }
+
+    .notice-content .highlight {
+      color: #8b4513;
+      font-weight: 600;
+    }
+
+    .notice-list {
+      margin-top: 10px;
+      padding-left: 15px;
+    }
+
+    .notice-list li {
+      margin-bottom: 5px;
+      position: relative;
+    }
+
+    .notice-list li::marker {
+      color: var(--wood-highlight);
+    }
+
+    /* 注意事項パネル */
+    .warning-notice {
+      background: rgba(180, 100, 50, 0.1);
+      border-left: 3px solid #c67030;
+    }
+
+    .warning-notice .notice-title {
+      color: #a05520;
+    }
+
+    /* ===== ローディングテスト ===== */
+    .loading-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(20, 12, 6, 0.6);
+      border-radius: 8px;
+      border: 1px solid var(--wood-light);
+    }
+
+    .loading-title {
+      font-size: 13px;
+      color: var(--parchment-dark);
+      margin-bottom: 10px;
+    }
+
+    .loading-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .loading-progress {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+      border-radius: 4px;
+      animation: loading 2s ease-in-out infinite;
+    }
+
+    @keyframes loading {
+      0% { width: 0%; }
+      50% { width: 80%; }
+      100% { width: 100%; }
+    }
+
+    /* ===== 装飾的な星 ===== */
+    .decorative-star {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 30px;
+      height: 30px;
+      z-index: 10;
+    }
+
+    .star-shape {
+      width: 100%;
+      height: 100%;
+      background: var(--gold);
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      animation: starGlow 2s ease-in-out infinite;
+      box-shadow: 0 0 20px var(--gold);
+    }
+
+    @keyframes starGlow {
+      0%, 100% {
+        opacity: 1;
+        filter: drop-shadow(0 0 10px var(--gold));
+      }
+      50% {
+        opacity: 0.7;
+        filter: drop-shadow(0 0 20px var(--gold-light));
+      }
+    }
+
+    /* ===== フッター ===== */
+    .footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: var(--wood-highlight);
+      font-size: 12px;
+    }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 15px;
+      }
+
+      .title-frame {
+        padding: 20px 30px 15px;
+      }
+
+      .title-icon {
+        display: none;
+      }
+
+      .title-text,
+      .subtitle {
+        margin-left: 0;
+      }
+
+      .menu-buttons {
+        gap: 10px;
+      }
+
+      .menu-btn {
+        padding: 10px 15px;
+        font-size: 12px;
+      }
+
+      .status-bar {
+        flex-direction: column;
+        gap: 8px;
+        padding: 15px;
+      }
+
+      .rooms-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .candle-left,
+      .candle-right {
+        display: none;
+      }
+
+      .candle-left-mid {
+        left: 2%;
+        top: 30%;
+      }
+
+      .candle-right-mid {
+        right: 2%;
+        top: 30%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .title-text {
+        letter-spacing: 4px;
+      }
+
+      .subtitle {
+        letter-spacing: 1px;
+      }
+
+      .panel-header {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .filter-buttons {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景レイヤー -->
+  <div class="tavern-background">
+    <div class="bg-layer bg-base"></div>
+    <div class="bg-layer wooden-beams"></div>
+    <div class="bg-layer ceiling-beams"></div>
+    <div class="bg-layer wall-texture"></div>
+    <div class="bg-layer warm-glow"></div>
+    <div class="bg-layer vignette"></div>
+  </div>
+
+  <!-- キャンドル -->
+  <div class="candles-container">
+    <div class="candle candle-left">
+      <div class="flame-container">
+        <div class="flame-glow"></div>
+        <div class="flame"></div>
+      </div>
+      <div class="candle-stick"></div>
+      <div class="candle-holder"></div>
+    </div>
+    <div class="candle candle-right">
+      <div class="flame-container">
+        <div class="flame-glow"></div>
+        <div class="flame"></div>
+      </div>
+      <div class="candle-stick"></div>
+      <div class="candle-holder"></div>
+    </div>
+    <div class="candle candle-left-mid">
+      <div class="flame-container">
+        <div class="flame-glow"></div>
+        <div class="flame"></div>
+      </div>
+      <div class="candle-stick"></div>
+      <div class="candle-holder"></div>
+    </div>
+    <div class="candle candle-right-mid">
+      <div class="flame-container">
+        <div class="flame-glow"></div>
+        <div class="flame"></div>
+      </div>
+      <div class="candle-stick"></div>
+      <div class="candle-holder"></div>
+    </div>
+  </div>
+
+  <!-- メインコンテナ -->
+  <div class="main-container">
+    <!-- ヘッダー -->
+    <header class="header">
+      <div class="title-frame">
+        <div class="title-icon">&#9876;</div>
+        <h1 class="title-text">序の紋章III</h1>
+        <p class="subtitle">数字カードゲーム 協力して正しい順に並べよう</p>
+      </div>
+    </header>
+
+    <!-- メニューボタン -->
+    <div class="menu-buttons">
+      <button class="menu-btn primary">
+        <span class="icon">+</span>新しい部屋を作成
+      </button>
+      <button class="menu-btn">
+        <span class="icon">&#9776;</span>ルール
+      </button>
+      <button class="menu-btn">
+        <span class="icon">&#9998;</span>プレイヤー設定
+      </button>
+    </div>
+
+    <!-- ステータスバー -->
+    <div class="status-bar-container">
+      <div class="status-bar">
+        <span>オンライン人数：<strong id="onlineCount">24</strong></span>
+        <span>進行中部屋数：<strong id="activeRooms">8</strong></span>
+        <span>直近開始数：<strong id="recentStarts">3</strong></span>
+      </div>
+    </div>
+
+    <!-- コンテンツエリア -->
+    <div class="content-area">
+      <!-- 左パネル：部屋リスト -->
+      <section class="rooms-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="icon">&#127968;</span>
+            アクティブな部屋
+            <span class="room-count" id="roomCount">4件</span>
+          </div>
+          <button class="refresh-btn" title="更新">&#8635;</button>
+        </div>
+
+        <div class="search-box">
+          <input type="text" class="search-input" placeholder="&#128269; 部屋を検索...">
+        </div>
+
+        <div class="filter-buttons">
+          <button class="filter-btn active">&#9679; ロウゾ部屋を除外</button>
+          <button class="filter-btn">&#128065; 観戦中のみ表示</button>
+        </div>
+
+        <div class="rooms-grid">
+          <!-- 部屋カード 1 -->
+          <div class="room-card">
+            <div class="room-name">お腹すくよね∞1時間だ...</div>
+            <div class="room-info">
+              <div class="room-info-row">
+                <span class="icon">&#128100;</span>
+                <span>作成者：d</span>
+              </div>
+              <div class="room-info-row">
+                <span class="icon">&#128101;</span>
+                <span class="room-players">0人</span>
+                <span class="room-status waiting">参加可能</span>
+              </div>
+            </div>
+            <button class="join-btn">
+              <span>&#9654;</span>参加する
+            </button>
+          </div>
+
+          <!-- 部屋カード 2 -->
+          <div class="room-card">
+            <div class="room-name">5時までできる人</div>
+            <div class="room-info">
+              <div class="room-info-row">
+                <span class="icon">&#128100;</span>
+                <span>作成者：d</span>
+              </div>
+              <div class="room-info-row">
+                <span class="icon">&#128101;</span>
+                <span class="room-players">0人</span>
+                <span class="room-status waiting">参加可能</span>
+              </div>
+            </div>
+            <button class="join-btn">
+              <span>&#9654;</span>参加する
+            </button>
+          </div>
+
+          <!-- 部屋カード 3 -->
+          <div class="room-card">
+            <div class="room-name">花組</div>
+            <div class="room-info">
+              <div class="room-info-row">
+                <span class="icon">&#128100;</span>
+                <span>作成者：d</span>
+              </div>
+              <div class="room-info-row">
+                <span class="icon">&#128101;</span>
+                <span class="room-players">0人</span>
+                <span class="room-status waiting">参加可能</span>
+              </div>
+            </div>
+            <button class="join-btn">
+              <span>&#9654;</span>参加する
+            </button>
+          </div>
+
+          <!-- 部屋カード 4 -->
+          <div class="room-card">
+            <div class="room-name">A組集合！</div>
+            <div class="room-info">
+              <div class="room-info-row">
+                <span class="icon">&#128100;</span>
+                <span>作成者：d</span>
+              </div>
+              <div class="room-info-row">
+                <span class="icon">&#128101;</span>
+                <span class="room-players">0人</span>
+                <span class="room-status waiting">参加可能</span>
+              </div>
+            </div>
+            <button class="join-btn">
+              <span>&#9654;</span>参加する
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 右パネル：開発者より -->
+      <aside class="dev-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="icon">&#9997;</span>
+            開発者より
+          </div>
+        </div>
+
+        <div class="notice-scroll">
+          <!-- このゲームについて -->
+          <div class="parchment-notice">
+            <div class="scroll-top"></div>
+            <div class="notice-title">
+              <span class="icon">&#128214;</span>
+              このゲームについて
+            </div>
+            <div class="notice-content">
+              <p>「<span class="highlight">協力プレイ</span>」で「<span class="highlight">優劣</span>のみを手がかり」として3種類のミッションをクリアしましょう！</p>
+            </div>
+          </div>
+
+          <!-- 注意事項 -->
+          <div class="parchment-notice warning-notice">
+            <div class="notice-title">
+              <span class="icon">&#9888;</span>
+              注意事項
+            </div>
+            <div class="notice-content">
+              <p>プレイ中は「<span class="highlight">心奪われオリジナル</span>」の為、法を逸脱する「<span class="highlight">不適切な発言</span>」は控え、礼儀正しくプレイしてください。</p>
+            </div>
+          </div>
+
+          <!-- 今後のアップデート -->
+          <div class="parchment-notice">
+            <div class="notice-title">
+              <span class="icon">&#128161;</span>
+              今後のアップデート
+            </div>
+            <div class="notice-content">
+              <ul class="notice-list">
+                <li>らんく機能</li>
+                <li>実績システム</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 開発テスト -->
+          <div class="loading-section">
+            <div class="loading-title">&#10006; 開発テスト</div>
+            <div class="loading-bar">
+              <div class="loading-progress"></div>
+            </div>
+            <p style="margin-top: 10px; font-size: 11px; color: var(--parchment-dark);">ローディングテスト</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      &copy; 2024 序の紋章III - Fantasy Tavern Edition
+    </footer>
+  </div>
+
+  <!-- 装飾的な星 -->
+  <div class="decorative-star">
+    <div class="star-shape"></div>
+  </div>
+
+  <script>
+    // キャンドルの炎アニメーションをランダム化
+    document.querySelectorAll('.flame').forEach((flame, index) => {
+      flame.style.animationDelay = `${index * 0.05}s`;
+      flame.style.animationDuration = `${0.12 + Math.random() * 0.08}s`;
+    });
+
+    document.querySelectorAll('.flame-glow').forEach((glow, index) => {
+      glow.style.animationDelay = `${index * 0.1}s`;
+      glow.style.animationDuration = `${0.15 + Math.random() * 0.1}s`;
+    });
+
+    // オンライン数のアニメーション
+    function animateNumber(elementId, target, duration) {
+      const element = document.getElementById(elementId);
+      const start = parseInt(element.textContent);
+      const startTime = performance.now();
+
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const current = Math.floor(start + (target - start) * progress);
+        element.textContent = current;
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        }
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    // ランダムなオンライン数の更新
+    setInterval(() => {
+      const newOnline = Math.floor(20 + Math.random() * 15);
+      animateNumber('onlineCount', newOnline, 500);
+    }, 5000);
+
+    // 部屋カードのホバーエフェクト
+    document.querySelectorAll('.room-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.boxShadow = `
+          5px 5px 15px rgba(0, 0, 0, 0.5),
+          inset 0 0 25px rgba(160, 128, 80, 0.3),
+          0 0 30px rgba(255, 150, 50, 0.15)
+        `;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.boxShadow = `
+          3px 3px 10px rgba(0, 0, 0, 0.4),
+          inset 0 0 20px rgba(160, 128, 80, 0.2)
+        `;
+      });
+    });
+
+    // リフレッシュボタンのアニメーション
+    document.querySelector('.refresh-btn').addEventListener('click', function() {
+      this.style.transform = 'rotate(540deg)';
+      setTimeout(() => {
+        this.style.transition = 'none';
+        this.style.transform = 'rotate(0deg)';
+        setTimeout(() => {
+          this.style.transition = 'all 0.3s ease';
+        }, 50);
+      }, 300);
+    });
+
+    // フィルターボタンの切り替え
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        this.classList.toggle('active');
+      });
+    });
+
+    // 暖かい光のパーティクル効果
+    function createDust() {
+      const dust = document.createElement('div');
+      dust.style.cssText = `
+        position: fixed;
+        width: ${2 + Math.random() * 3}px;
+        height: ${2 + Math.random() * 3}px;
+        background: radial-gradient(circle, rgba(255, 200, 100, 0.6) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 1;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: dustFloat ${5 + Math.random() * 5}s linear forwards;
+      `;
+
+      document.body.appendChild(dust);
+
+      setTimeout(() => dust.remove(), 10000);
+    }
+
+    // CSSアニメーションを追加
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes dustFloat {
+        0% {
+          opacity: 0;
+          transform: translateY(0) translateX(0);
+        }
+        20% {
+          opacity: 0.6;
+        }
+        80% {
+          opacity: 0.3;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-100px) translateX(${Math.random() > 0.5 ? '' : '-'}${20 + Math.random() * 30}px);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // ダストパーティクルを定期的に生成
+    setInterval(createDust, 800);
+
+    console.log('🏰 序の紋章III - Fantasy Tavern Menu Loaded');
+  </script>
+</body>
+</html>
