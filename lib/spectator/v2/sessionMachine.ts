@@ -7,6 +7,13 @@ import type {
   SpectatorSessionServices,
   SpectatorSessionStatus,
 } from "./types";
+import {
+  applyInviteConsumeFailure,
+  applyInviteConsumeSuccess,
+  extractInviteConsumeFailureMessage,
+  extractInviteConsumeResult,
+  isRejoinSnapshotStatus,
+} from "./sessionMachine/helpers";
 
 const defaultContext: SpectatorSessionContext = {
   roomId: null,
@@ -121,54 +128,13 @@ export function createSpectatorSessionMachine(options?: SpectatorSessionOptions)
     },
     actions: {
       assignInviteSuccess: assign(({ context, event }) => {
-        const payload =
-          event.type === "done.invoke.consumeInvite"
-            ? event.data
-            : event.type === "INVITE_CONSUME_SUCCESS"
-            ? event.result
-            : null;
-        if (!payload) {
-          return context;
-        }
-        const flags = payload.flags ? { ...context.flags, ...payload.flags } : context.flags;
-        return {
-          ...context,
-          sessionId: payload.sessionId,
-          inviteId: payload.inviteId ?? null,
-          mode: payload.mode,
-          status: "watching" as SpectatorSessionStatus,
-          error: null,
-          pendingInviteId: null,
-          flags,
-        };
+        const payload = extractInviteConsumeResult(event);
+        if (!payload) return context;
+        return applyInviteConsumeSuccess(context, payload);
       }),
       assignInviteFailure: assign(({ context, event }) => {
-        let source: unknown = null;
-        if (event.type === "error.platform.consumeInvite" || event.type === "error.actor.consumeInvite") {
-          source = event.data;
-        } else if (event.type === "INVITE_CONSUME_FAILURE") {
-          source = event.error ?? event.reason ?? null;
-        }
-        let message: string | null = null;
-        if (source instanceof Error) {
-          message = source.message;
-        } else if (typeof source === "string") {
-          message = source;
-        } else if (source && typeof source === "object" && "message" in (source as Record<string, unknown>)) {
-          const derived = (source as Record<string, unknown>).message;
-          if (typeof derived === "string") {
-            message = derived;
-          }
-        }
-        if (!message && event.type === "INVITE_CONSUME_FAILURE" && typeof event.reason === "string") {
-          message = event.reason;
-        }
-        return {
-          ...context,
-          error: message ?? "invite-rejected",
-          status: "invitationRejected" as SpectatorSessionStatus,
-          pendingInviteId: null,
-        };
+        const message = extractInviteConsumeFailureMessage(event);
+        return applyInviteConsumeFailure(context, message);
       }),
       setRejoinPendingStatus: assign(({ context }) => ({
         ...context,
@@ -259,16 +225,10 @@ export function createSpectatorSessionMachine(options?: SpectatorSessionOptions)
       },
     },
     guards: {
-      isRejoinSnapshotAccepted: ({ context, event }) => {
-        const snapshot =
-          event?.type === "REJOIN_SNAPSHOT" && event.snapshot ? event.snapshot : context.rejoinSnapshot;
-        return !!snapshot && snapshot.status === "accepted";
-      },
-      isRejoinSnapshotRejected: ({ context, event }) => {
-        const snapshot =
-          event?.type === "REJOIN_SNAPSHOT" && event.snapshot ? event.snapshot : context.rejoinSnapshot;
-        return !!snapshot && snapshot.status === "rejected";
-      },
+      isRejoinSnapshotAccepted: ({ context, event }) =>
+        isRejoinSnapshotStatus({ context, event, status: "accepted" }),
+      isRejoinSnapshotRejected: ({ context, event }) =>
+        isRejoinSnapshotStatus({ context, event, status: "rejected" }),
       isContextRejoinSnapshotAccepted: ({ context }) => context.rejoinSnapshot?.status === "accepted",
       isContextRejoinSnapshotRejected: ({ context }) => context.rejoinSnapshot?.status === "rejected",
     },
