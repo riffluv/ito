@@ -3,26 +3,17 @@ import { AppButton } from "@/components/ui/AppButton";
 import ScrollableArea from "@/components/ui/ScrollableArea";
 import { useAuth } from "@/context/AuthContext";
 import { sendMessage } from "@/lib/firebase/chat";
-import { db } from "@/lib/firebase/client";
-import type { ChatDoc, PlayerDoc } from "@/lib/types";
+import type { PlayerDoc } from "@/lib/types";
 import { notify } from "@/components/ui/notify";
 import { validateChatMessage } from "@/lib/validation/forms";
 import { Box, HStack, Input, Stack } from "@chakra-ui/react";
 import ChatMessageRow from "@/components/ui/ChatMessageRow";
 import { UNIFIED_LAYOUT, UI_TOKENS } from "@/theme/layout";
-import {
-  collection,
-  limitToLast,
-  onSnapshot,
-  orderBy,
-  query,
-} from "firebase/firestore";
-import { handleFirebaseQuotaError, isFirebaseQuotaExceeded } from "@/lib/utils/errorHandling";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePixiHudLayer } from "@/components/ui/pixi/PixiHudStage";
-import { usePixiLayerLayout } from "@/components/ui/pixi/usePixiLayerLayout";
-import PIXI from "@/lib/pixi/instance";
-import { drawChatPanelBackground } from "@/lib/pixi/chatPanelBackground";
+import { useMemo, useRef, useState } from "react";
+import { getChatErrorMessage } from "@/components/ui/chat-panel/chatError";
+import { useChatAutoScroll } from "@/components/ui/chat-panel/useChatAutoScroll";
+import { useChatMessages } from "@/components/ui/chat-panel/useChatMessages";
+import { useChatPanelPixiBackground } from "@/components/ui/chat-panel/useChatPanelPixiBackground";
 
 /**
  * ドラクエ風チャットパネル (改良版)
@@ -61,21 +52,6 @@ type PlayerChatMeta = {
   accentColor: string;
 };
 
-type ZodLikeError = { errors?: Array<{ message?: string }> };
-
-const getErrorMessage = (error: unknown): string | undefined => {
-  if (error && typeof error === "object") {
-    const maybeZod = error as ZodLikeError;
-    if (Array.isArray(maybeZod.errors) && maybeZod.errors[0]?.message) {
-      return maybeZod.errors[0]?.message;
-    }
-  }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return undefined;
-};
-
 export function ChatPanel({
   roomId,
   players = [],
@@ -83,125 +59,13 @@ export function ChatPanel({
   readOnly = false,
 }: ChatPanelProps) {
   const { user, displayName } = useAuth();
-  const [messages, setMessages] = useState<(ChatDoc & { id: string })[]>([]);
+  const messages = useChatMessages(roomId);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const lastSentAt = useRef<number>(0);
 
-  // Pixi HUD レイヤー（モーダル背景用）
-  const chatRef = useRef<HTMLDivElement>(null);
-  const pixiContainer = usePixiHudLayer("chat-panel", {
-    zIndex: 15,
-  });
-  const pixiGraphicsRef = useRef<PIXI.Graphics | null>(null);
-
-  // 自動スクロール制御
-  const autoScrollRef = useRef(true);
-  const lastMessageCountRef = useRef(0);
-  const pendingScrollFrameRef = useRef<number | null>(null);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-
-    if (pendingScrollFrameRef.current !== null && typeof window !== "undefined") {
-      window.cancelAnimationFrame(pendingScrollFrameRef.current);
-      pendingScrollFrameRef.current = null;
-    }
-
-    if (typeof window === "undefined") {
-      scrollArea.scrollTop = scrollArea.scrollHeight;
-      autoScrollRef.current = true;
-      return;
-    }
-
-    pendingScrollFrameRef.current = window.requestAnimationFrame(() => {
-      scrollArea.scrollTo({ top: scrollArea.scrollHeight, behavior });
-      pendingScrollFrameRef.current = null;
-      autoScrollRef.current = true;
-    });
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    const scrollArea = scrollAreaRef.current;
-    if (!scrollArea) return;
-    const distanceFromBottom = scrollArea.scrollHeight - scrollArea.scrollTop - scrollArea.clientHeight;
-    autoScrollRef.current = distanceFromBottom <= 120;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (pendingScrollFrameRef.current !== null && typeof window !== "undefined") {
-        window.cancelAnimationFrame(pendingScrollFrameRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const current = messages.length;
-    const previous = lastMessageCountRef.current;
-    const hasNewMessages = current > previous;
-    const isInitialLoad = previous === 0 && current > 0;
-    lastMessageCountRef.current = current;
-
-    if (current === 0) return;
-
-    if (isInitialLoad) {
-      scrollToBottom("auto");
-      return;
-    }
-
-    if (hasNewMessages && autoScrollRef.current) {
-      scrollToBottom("smooth");
-    }
-  }, [messages.length, scrollToBottom]);
-
-  // Pixi背景の描画とDOM同期
-  useEffect(() => {
-    const destroyGraphics = () => {
-      if (pixiGraphicsRef.current) {
-        if (pixiGraphicsRef.current.parent) {
-          pixiGraphicsRef.current.parent.removeChild(pixiGraphicsRef.current);
-        }
-        pixiGraphicsRef.current.destroy({ children: true });
-        pixiGraphicsRef.current = null;
-      }
-    };
-
-    if (!pixiContainer) {
-      destroyGraphics();
-      return destroyGraphics;
-    }
-
-    // Graphicsオブジェクトを作成
-    const graphics = new PIXI.Graphics();
-    graphics.zIndex = -10; // 最背面に配置
-    pixiContainer.addChild(graphics);
-    pixiGraphicsRef.current = graphics;
-
-    // クリーンアップ
-    return destroyGraphics;
-  }, [pixiContainer]);
-
-  // DOM要素とPixiコンテナの位置・サイズ同期
-  usePixiLayerLayout(chatRef, pixiContainer, {
-    disabled: !pixiContainer,
-    onUpdate: (layout) => {
-      const graphics = pixiGraphicsRef.current;
-      if (!graphics || layout.width <= 0 || layout.height <= 0) {
-        return;
-      }
-
-      graphics.clear();
-      graphics.position.set(layout.x, layout.y);
-      drawChatPanelBackground(PIXI, graphics, {
-        width: layout.width,
-        height: layout.height,
-        dpr: layout.dpr,
-      });
-    },
-  });
+  const { scrollAreaRef, handleScroll } = useChatAutoScroll(messages.length);
+  const { chatRef } = useChatPanelPixiBackground();
 
   const playerMeta = useMemo(() => {
     const meta = new Map<string, PlayerChatMeta>();
@@ -216,78 +80,6 @@ export function ChatPanel({
     return meta;
   }, [players]);
 
-  useEffect(() => {
-    const q = query(
-      collection(db!, "rooms", roomId, "chat"),
-      orderBy("createdAt", "asc"),
-      limitToLast(100)
-    );
-
-    const unsubRef = { current: null as null | (() => void) };
-    const backoffUntilRef = { current: 0 };
-    let backoffTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const stop = () => {
-      if (unsubRef.current) {
-        unsubRef.current();
-      }
-      unsubRef.current = null;
-    };
-
-    const maybeStart = () => {
-      if (unsubRef.current) return;
-      const now = Date.now();
-      if (now < backoffUntilRef.current) return;
-      unsubRef.current = onSnapshot(
-        q,
-        (snap) => {
-          const list: (ChatDoc & { id: string })[] = [];
-          snap.forEach((d) => list.push({ id: d.id, ...(d.data() as ChatDoc) }));
-          setMessages(list);
-        },
-        (err) => {
-          if (isFirebaseQuotaExceeded(err)) {
-            handleFirebaseQuotaError("チャット購読");
-            backoffUntilRef.current = Date.now() + 5 * 60 * 1000;
-            stop();
-            if (backoffTimer) {
-              clearTimeout(backoffTimer);
-              backoffTimer = null;
-            }
-            const resume = () => {
-              if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-              const remain = backoffUntilRef.current - Date.now();
-              if (remain > 0) backoffTimer = setTimeout(resume, Math.min(remain, 30_000));
-              else maybeStart();
-            };
-            resume();
-          }
-        }
-      );
-    };
-
-    if (typeof document === "undefined" || document.visibilityState === "visible") {
-      maybeStart();
-    }
-    const onVis = () => {
-      if (document.visibilityState === "visible") maybeStart();
-      else stop();
-    };
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVis);
-    }
-
-    return () => {
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVis);
-      }
-      if (backoffTimer) {
-        clearTimeout(backoffTimer);
-      }
-      stop();
-    };
-  }, [roomId]);
-
   // 通知は RoomNotifyBridge 側で購読・表示するため、
   // チャット側では購読しない（重複トースト防止）。
 
@@ -299,7 +91,7 @@ export function ChatPanel({
     try {
       sanitized = validateChatMessage(text);
     } catch (err) {
-      const description = getErrorMessage(err);
+      const description = getChatErrorMessage(err);
       notify({
         title: "メッセージを確認してください",
         description,
@@ -318,7 +110,7 @@ export function ChatPanel({
     } catch (err) {
       notify({
         title: "送信に失敗しました",
-        description: getErrorMessage(err) ?? "原因不明のエラーが発生しました",
+        description: getChatErrorMessage(err) ?? "原因不明のエラーが発生しました",
         type: "error",
       });
     }
