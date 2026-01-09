@@ -5,9 +5,7 @@ import {
   createHostActionsController,
   type HostActionsController,
 } from "@/lib/host/HostActionsController";
-import {
-  type RoundStageEvent,
-} from "@/lib/hooks/useRoundTimeline";
+import type { RoundStageEvent } from "@/lib/hooks/useRoundTimeline";
 import { setMetric } from "@/lib/utils/metrics";
 import { runQuickStartFromWaiting } from "@/lib/hooks/hostActions/runQuickStartFromWaiting";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
@@ -111,13 +109,13 @@ export function useHostActions({
   const [customText, setCustomText] = useState("");
   const [evalSortedPending, setEvalSortedPending] = useState(false);
   const actionLatencyRef = useRef<Record<string, number>>({});
-  const quickStartPendingRef = useRef(quickStartPending);
-  const isRestartingRef = useRef(isRestarting);
+  const quickStartPendingRef = useLatestRef(quickStartPending);
+  const isRestartingRef = useLatestRef(isRestarting);
   const pendingVisibilityKickAtRef = useRef<number>(0);
   const evalSortedPendingRef = useRef(false);
   const mountedRef = useRef(true);
   const lastActionAtRef = useRef<Record<string, number>>({});
-  const latestRoomStatusRef = useRef<string | undefined>(roomStatus);
+  const latestRoomStatusRef = useLatestRef(roomStatus);
   const quickStartStuckTimerRef = useRef<number | null>(null);
   const quickStartEarlySyncTimerRef = useRef<number | null>(null);
   const quickStartOkAtRef = useRef<number | null>(null);
@@ -128,7 +126,7 @@ export function useHostActions({
   const resetStuckTimerRef = useRef<number | null>(null);
   const resetEarlySyncTimerRef = useRef<number | null>(null);
   const latestStatusVersionRef = useRef<number>(
-    typeof statusVersion === "number" && Number.isFinite(statusVersion) ? statusVersion : 0
+    normalizeStatusVersion(statusVersion)
   );
   const expectedStatusVersionRef = useRef<{
     quickStart: number | null;
@@ -155,18 +153,6 @@ export function useHostActions({
       mountedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    quickStartPendingRef.current = quickStartPending;
-  }, [quickStartPending]);
-
-  useEffect(() => {
-    isRestartingRef.current = isRestarting;
-  }, [isRestarting]);
-
-  useEffect(() => {
-    latestRoomStatusRef.current = roomStatus;
-  }, [roomStatus]);
 
   useHostActionStatusVersionSync({
     statusVersion,
@@ -299,6 +285,7 @@ export function useHostActions({
       clearAutoStartLock,
       playOrderConfirm,
       roomId,
+      latestRoomStatusRef,
       ensurePresenceReady,
       currentTopic,
       playerCount,
@@ -361,6 +348,7 @@ export function useHostActions({
       playResetGame,
       roundIds,
       onlineUids,
+      latestRoomStatusRef,
       markActionStart,
       finalizeAction,
       hostActions,
@@ -435,6 +423,7 @@ export function useHostActions({
     onlineUids,
     playerCount,
     hostActions,
+    latestRoomStatusRef,
     onStageEvent,
     beginAutoStartLock,
     clearAutoStartLock,
@@ -526,4 +515,16 @@ export function useHostActions({
     presenceForceEligible,
     presenceWaitRemainingMs,
   };
+}
+
+function useLatestRef<T>(value: T) {
+  const valueRef = useRef(value);
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+  return valueRef;
+}
+
+function normalizeStatusVersion(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
