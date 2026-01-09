@@ -2,6 +2,7 @@ import {
   applyPlay,
   defaultOrderState,
   evaluateSorted,
+  shouldFinishAfterPlay,
 } from "../lib/game/rules";
 
 test("applyPlay ascending no violation", () => {
@@ -106,4 +107,52 @@ test("evaluateSorted allows equal (non-strict ascending)", () => {
   const res = evaluateSorted(ids, nums);
   expect(res.success).toBe(true);
   expect(res.failedAt).toBe(null);
+});
+
+test("shouldFinishAfterPlay finishes immediately on failure when allowContinue=false", () => {
+  expect(
+    shouldFinishAfterPlay({
+      nextListLength: 1,
+      total: 5,
+      presenceCount: 5,
+      nextFailed: true,
+      allowContinue: false,
+    })
+  ).toBe(true);
+});
+
+test("shouldFinishAfterPlay does not finish on failure when allowContinue=true", () => {
+  expect(
+    shouldFinishAfterPlay({
+      nextListLength: 1,
+      total: 5,
+      presenceCount: 5,
+      nextFailed: true,
+      allowContinue: true,
+    })
+  ).toBe(false);
+});
+
+test("shouldFinishAfterPlay finishes on total completion when total is provided", () => {
+  expect(
+    shouldFinishAfterPlay({
+      nextListLength: 3,
+      total: 3,
+      presenceCount: 10,
+      nextFailed: false,
+      allowContinue: true,
+    })
+  ).toBe(true);
+});
+
+test("shouldFinishAfterPlay finishes on presenceCount completion when total is missing", () => {
+  expect(
+    shouldFinishAfterPlay({
+      nextListLength: 2,
+      total: null,
+      presenceCount: 2,
+      nextFailed: false,
+      allowContinue: true,
+    })
+  ).toBe(true);
 });

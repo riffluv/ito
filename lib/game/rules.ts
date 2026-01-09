@@ -35,14 +35,17 @@ export function applyPlay({
   order,
   playerId,
   myNum,
+  allowContinue,
 }: {
   order: OrderState;
   playerId: string;
   myNum: number;
+  allowContinue?: boolean;
 }): {
   next: OrderState;
   violation: boolean;
 } {
+  void allowContinue;
   const alreadyFailed = !!order.failed;
   if (order.list.includes(playerId)) {
     return { next: order, violation: false };
