@@ -1,4 +1,4 @@
-type OnlineUids = (string | null | undefined)[] | null | undefined;
+export { filterPresenceUids } from "@/lib/host/hostActionsControllerHelpers";
 
 export function buildQuickStartValidStatuses(params: {
   allowFromFinished: boolean;
@@ -12,14 +12,6 @@ export function buildQuickStartValidStatuses(params: {
     validStatuses.push("clue");
   }
   return validStatuses;
-}
-
-export function filterPresenceUids(onlineUids: OnlineUids): string[] | undefined {
-  if (!Array.isArray(onlineUids) || onlineUids.length === 0) return undefined;
-  const filtered = onlineUids.filter(
-    (id): id is string => typeof id === "string" && id.trim().length > 0
-  );
-  return filtered.length > 0 ? filtered : undefined;
 }
 
 export function needsCustomTopic(params: {
@@ -42,4 +34,3 @@ export function isHostMismatch(params: {
   if (!authUid) return false;
   return roomHostId !== authUid;
 }
-

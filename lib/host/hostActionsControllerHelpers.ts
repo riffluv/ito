@@ -39,6 +39,16 @@ type PresenceInfo = {
   playerCount?: number;
 };
 
+export function filterPresenceUids(
+  onlineUids: (string | null | undefined)[] | null | undefined
+): string[] | undefined {
+  if (!Array.isArray(onlineUids) || onlineUids.length === 0) return undefined;
+  const filtered = onlineUids.filter(
+    (id): id is string => typeof id === "string" && id.trim().length > 0
+  );
+  return filtered.length > 0 ? filtered : undefined;
+}
+
 export function safeActiveCounts(info?: PresenceInfo) {
   const basePlayers =
     typeof info?.playerCount === "number" && Number.isFinite(info.playerCount)
@@ -54,4 +64,3 @@ export function safeActiveCounts(info?: PresenceInfo) {
   });
   return { activeCount, onlineCount, playerCount: basePlayers };
 }
-
