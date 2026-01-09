@@ -165,6 +165,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
     evalSortedPending,
     customOpen,
     setCustomOpen,
+    closeCustomTopic,
     customText,
     setCustomText,
     handleSubmitCustom,
@@ -485,7 +486,7 @@ export default function MiniHandDock(props: MiniHandDockProps) {
         value={customText}
         interactionDisabled={interactionDisabled}
         onChange={setCustomText}
-        onClose={() => setCustomOpen(false)}
+        onClose={closeCustomTopic}
         onSubmit={handleSubmitCustom}
       />
     </>

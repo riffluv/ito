@@ -22,8 +22,8 @@ import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQui
 import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
 import { scheduleQuickStartSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleQuickStartSyncWatchdogs";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
-import { handleCustomTopicSubmissionResult } from "@/lib/hooks/hostActions/handleCustomTopicSubmissionResult";
 import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
+import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSubmitCustomTopicAndMaybeStart";
 import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
 import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
 import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
@@ -773,61 +773,23 @@ export function useHostActions({
 
   const handleSubmitCustom = useCallback(
     async (value: string) => {
-      const trimmed = (value || "").trim();
-      if (!trimmed) return;
-      traceAction("ui.topic.customSubmit", {
+      await runSubmitCustomTopicAndMaybeStart({
         roomId,
-        isHost: isHost ? "1" : "0",
+        value,
+        isHost,
+        roomStatus,
+        customStartPending,
+        actualResolveMode,
+        hostActions,
+        presenceCanStart,
+        onlineUids,
+        playerCount,
+        ensurePresenceReady: () => void ensurePresenceReady(),
+        setCustomOpen,
+        setCustomStartPending,
+        showtimeIntents,
+        playOrderConfirm,
       });
-      const shouldAutoStart =
-        isHost &&
-        (roomStatus === "waiting" || customStartPending) &&
-        actualResolveMode === "sort-submit";
-
-      try {
-        const result = await hostActions.submitCustomTopicAndStartIfNeeded({
-          roomId,
-          roomStatus,
-          defaultTopicType: "カスタム",
-          customTopic: trimmed,
-          currentTopic: trimmed,
-          presenceInfo: {
-            presenceReady: presenceCanStart,
-            onlineUids,
-            playerCount,
-          },
-          shouldAutoStart,
-        });
-        setCustomOpen(false);
-
-        const shouldProceed = handleCustomTopicSubmissionResult({
-          roomId,
-          shouldAutoStart,
-          result,
-          ensurePresenceReady: () => void ensurePresenceReady(),
-        });
-        if (!shouldProceed) return;
-
-        showtimeIntents?.markStartIntent?.({
-          action: "quickStart:customTopic",
-          source: "useHostActions",
-        });
-        playOrderConfirm();
-        notify({
-          id: toastIds.gameStart(roomId),
-          title: "カスタムお題で開始",
-          type: "success",
-          duration: 2000,
-        });
-      } catch (error) {
-        traceError("ui.topic.customSubmit", error, {
-          roomId,
-          stage: "setTopic",
-        });
-        throw error;
-      } finally {
-        setCustomStartPending(false);
-      }
     },
     [
       roomId,
@@ -845,6 +807,17 @@ export function useHostActions({
     ]
   );
 
+  const closeCustomTopic = useCallback(() => {
+    setCustomOpen(false);
+    setCustomStartPending(false);
+    clearAutoStartLock();
+    onFeedback?.(null);
+    traceAction("ui.topic.customClose", {
+      roomId,
+      isHost: isHost ? "1" : "0",
+    });
+  }, [clearAutoStartLock, isHost, onFeedback, roomId]);
+
   return {
     quickStart,
     quickStartPending,
@@ -858,6 +831,7 @@ export function useHostActions({
     evalSortedPending,
     customOpen,
     setCustomOpen,
+    closeCustomTopic,
     customText,
     setCustomText,
     customStartPending,
