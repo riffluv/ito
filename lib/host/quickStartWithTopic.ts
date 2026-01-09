@@ -10,6 +10,12 @@ import {
   safeActiveCounts,
   sleep,
 } from "@/lib/host/hostActionsControllerHelpers";
+import {
+  buildQuickStartValidStatuses,
+  filterPresenceUids,
+  isHostMismatch,
+  needsCustomTopic,
+} from "@/lib/host/quickStartWithTopic/helpers";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc, getDocFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -155,13 +161,10 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
         // allowFromClue が true の場合は clue からの開始も許可（リトライ時のレース条件対策）
         const allowFromFinished = req.allowFromFinished ?? false;
         const allowFromClue = req.allowFromClue ?? false;
-        const validStatuses: string[] = ["waiting"];
-        if (allowFromFinished) {
-          validStatuses.push("reveal", "finished");
-        }
-        if (allowFromClue) {
-          validStatuses.push("clue");
-        }
+        const validStatuses = buildQuickStartValidStatuses({
+          allowFromFinished,
+          allowFromClue,
+        });
         if (typeof data?.status === "string" && !validStatuses.includes(data.status)) {
           traceAction("ui.host.quickStart.notWaiting.precheck", {
             roomId,
@@ -185,7 +188,7 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
     }
 
     const authUid = getAuth()?.currentUser?.uid ?? null;
-    if (hostId && authUid && hostId !== authUid) {
+    if (isHostMismatch({ roomHostId: hostId, authUid })) {
       return {
         ok: false,
         requestId: startRequestId,
@@ -198,9 +201,11 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
     }
 
     if (
-      effectiveType === "カスタム" &&
-      !(typeof customTopic === "string" && customTopic.trim().length > 0) &&
-      !(typeof topic === "string" && topic.trim().length > 0)
+      needsCustomTopic({
+        topicType: effectiveType,
+        customTopic,
+        topic,
+      })
     ) {
       return {
         ok: false,
@@ -239,12 +244,7 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
           autoDeal: true,
           topicType: effectiveType,
           customTopic: customTopic ?? topic ?? undefined,
-          presenceUids:
-            Array.isArray(presenceInfo?.onlineUids) && presenceInfo.onlineUids.length > 0
-              ? presenceInfo.onlineUids.filter(
-                  (id): id is string => typeof id === "string" && id.trim().length > 0
-                )
-              : undefined,
+          presenceUids: filterPresenceUids(presenceInfo?.onlineUids),
         });
 
       const confirmStarted = async () => {
@@ -390,4 +390,3 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
     }
   };
 }
-
