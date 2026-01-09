@@ -1,15 +1,11 @@
 "use client";
 
-import { notify, notifyAsync } from "@/components/ui/notify";
-import { transferHost } from "@/lib/firebase/rooms";
-import { toastIds } from "@/lib/ui/toastIds";
 import { Box } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { gsap } from "gsap";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import useReducedMotionPreference from "@/hooks/useReducedMotionPreference";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
-import { traceAction, traceError } from "@/lib/utils/trace";
 
 const panelFloat = keyframes`
   0% { transform: translateY(0px); }
@@ -20,6 +16,8 @@ const panelFloat = keyframes`
 import { PartyMemberCard, type PartyMember } from "./PartyMemberCard";
 import { scaleForDpi } from "@/components/ui/scaleForDpi";
 import { DragonQuestPartyHeader } from "./dragon-quest-party/DragonQuestPartyHeader";
+import { useDragonQuestPartyHostTransfer } from "./dragon-quest-party/useDragonQuestPartyHostTransfer";
+import { useDragonQuestPartyScrollOverflow } from "./dragon-quest-party/useDragonQuestPartyScrollOverflow";
 import {
   areDragonQuestPartyPropsEqual,
   shallowEqualPartyMember,
@@ -48,14 +46,9 @@ function DragonQuestParty({
   suspendTransientUpdates = false,
 }: DragonQuestPartyProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hostOverride, setHostOverride] = useState<
-    { targetId: string; previousId: string | null } | null
-  >(null);
-  const [transferTargetId, setTransferTargetId] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotionPreference();
   const [ambientPhase, setAmbientPhase] = useState<0 | 1>(0);
   const listContainerRef = useRef<HTMLDivElement | null>(null);
-  const [enableScroll, setEnableScroll] = useState(false);
   const playerCacheRef = useRef<Map<string, PartyMember>>(new Map());
   const renderStart =
     typeof performance !== "undefined" ? performance.now() : null;
@@ -154,9 +147,13 @@ function DragonQuestParty({
     setMetric("ui", "dragonQuestPartyPlayers", displayedPlayers.length);
   }, [displayedPlayers.length]);
 
-  const displayedHostId = hostOverride?.targetId ?? hostId ?? null;
-  const transferInFlight = transferTargetId !== null;
-  const effectiveIsHostUser = Boolean(isHostUser && !hostOverride);
+  const {
+    displayedHostId,
+    transferTargetId,
+    transferInFlight,
+    effectiveIsHostUser,
+    handleHostTransfer,
+  } = useDragonQuestPartyHostTransfer({ roomId, hostId, isHostUser });
 
   const orderedPlayers = useMemo(() => {
     if (!displayedHostId) {
@@ -208,39 +205,6 @@ function DragonQuestParty({
 
     previousCount.current = actualCount;
   }, [actualCount]);
-
-  useEffect(() => {
-    if (!hostOverride) {
-      return () => undefined;
-    }
-    if (hostId === hostOverride.targetId) {
-      setHostOverride(null);
-      return () => undefined;
-    }
-    if (
-      hostId !== null &&
-      hostId !== undefined &&
-      hostId !== hostOverride.previousId &&
-      hostId !== hostOverride.targetId
-    ) {
-      setHostOverride(null);
-    }
-    if (hostId === null && hostOverride.previousId === null) {
-      setHostOverride(null);
-    }
-    return () => undefined;
-  }, [hostId, hostOverride]);
-
-  useEffect(() => {
-    if (!transferTargetId) {
-      return undefined;
-    }
-    if (hostId === transferTargetId) {
-      setTransferTargetId(null);
-      return undefined;
-    }
-    return undefined;
-  }, [hostId, transferTargetId]);
   useEffect(() => {
     if (renderStart === null || typeof performance === "undefined") {
       return undefined;
@@ -250,79 +214,6 @@ function DragonQuestParty({
     bumpMetric("ui", "dragonQuestPartyRenderCount");
     return undefined;
   }, [renderStart]);
-
-  const handleHostTransfer = useCallback(
-    async (targetId: string, targetName: string) => {
-      if (!roomId || transferTargetId !== null) return;
-      traceAction("ui.host.transfer", { roomId, targetId });
-      const previousId = displayedHostId;
-      setTransferTargetId(targetId);
-      setHostOverride({ targetId, previousId });
-
-      const toastId = toastIds.hostTransfer(roomId, targetId);
-      try {
-        const result = await notifyAsync(
-          () => transferHost(roomId, targetId),
-          {
-            pending: {
-              id: toastId,
-              title: `${targetName} をホストに設定中…`,
-              type: "info",
-              duration: 1500,
-            },
-            success: {
-              id: toastId,
-              title: `${targetName} がホストになりました`,
-              type: "success",
-              duration: 2000,
-            },
-            error: {
-              id: toastId,
-              title: "委譲に失敗しました",
-              type: "error",
-              duration: 3000,
-            },
-          }
-        );
-
-        if (result === null) {
-          traceError("ui.host.transfer", "result_null", { roomId, targetId });
-          setHostOverride((current) =>
-            current && current.targetId === targetId ? null : current
-          );
-          setTransferTargetId((current) =>
-            current === targetId ? null : current
-          );
-          notify({
-            id: toastId,
-            title: "ホスト委譲を元に戻しました",
-            description: "ネットワーク状況を確認してもう一度お試しください",
-            type: "warning",
-            duration: 3200,
-          });
-        }
-      } catch (error) {
-        traceError("ui.host.transfer", error, { roomId, targetId });
-        setHostOverride((current) =>
-          current && current.targetId === targetId ? null : current
-        );
-        setTransferTargetId((current) =>
-          current === targetId ? null : current
-        );
-        notify({
-          id: toastIds.hostTransfer(roomId, targetId),
-          title: "ホスト委譲に失敗しました",
-          description:
-            error instanceof Error
-              ? error.message
-              : "ネットワーク状況を確認してもう一度お試しください",
-          type: "error",
-          duration: 3200,
-        });
-      }
-    },
-    [roomId, transferTargetId, displayedHostId]
-  );
 
   useEffect(() => {
     if (!prefersReducedMotion) {
@@ -335,41 +226,10 @@ function DragonQuestParty({
     return () => window.clearInterval(id);
   }, [prefersReducedMotion]);
 
-  const updateScrollOverflow = useCallback(() => {
-    if (orderedPlayers.length <= 6) {
-      setEnableScroll(false);
-      return;
-    }
-    const el = listContainerRef.current;
-    if (!el) return;
-    const tolerance = 12; // px
-    const isOverflowing = el.scrollHeight - el.clientHeight > tolerance;
-    setEnableScroll(isOverflowing);
-  }, [orderedPlayers]);
-
-  useEffect(() => {
-    updateScrollOverflow();
-    return undefined;
-  }, [orderedPlayers, updateScrollOverflow]);
-
-  useEffect(() => {
-    const el = listContainerRef.current;
-    if (!el) {
-      return undefined;
-    }
-    updateScrollOverflow();
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== "undefined") {
-      observer = new ResizeObserver(() => updateScrollOverflow());
-      observer.observe(el);
-    }
-    const handleResize = () => updateScrollOverflow();
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      if (observer) observer.disconnect();
-    };
-  }, [updateScrollOverflow]);
+  const { enableScroll } = useDragonQuestPartyScrollOverflow({
+    listContainerRef,
+    itemCount: orderedPlayers.length,
+  });
   const shouldRevealNumbers = roomStatus === "finished";
 
   if (actualCount === 0) {
