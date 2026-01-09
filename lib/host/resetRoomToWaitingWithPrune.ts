@@ -11,6 +11,11 @@ import {
 import { postRoundReset } from "@/lib/utils/broadcast";
 import { traceAction } from "@/lib/utils/trace";
 import { getAuth } from "firebase/auth";
+import {
+  buildResetKeepIds,
+  computePruneTargets,
+  parseResetPruneFlag,
+} from "@/lib/host/resetRoomToWaitingWithPrune/helpers";
 
 export type ResetRoomRequest = {
   roomId: string;
@@ -39,32 +44,16 @@ export function createResetRoomToWaitingWithPrune(deps: ResetRoomDeps) {
 
   return async (req: ResetRoomRequest): Promise<ResetRoomResult> => {
     const resetRequestId = generateRequestId();
-    const keepSet = new Set<string>();
-    if (Array.isArray(req.roundIds)) {
-      req.roundIds.forEach((id) => {
-        if (typeof id === "string" && id.trim()) keepSet.add(id);
-      });
-    }
-    if (req.includeOnline && Array.isArray(req.onlineUids)) {
-      req.onlineUids.forEach((id) => {
-        if (typeof id === "string" && id.trim()) keepSet.add(id);
-      });
-    }
-    const keep = Array.from(keepSet);
-
-    const shouldPrune = (() => {
-      try {
-        const raw = (process.env.NEXT_PUBLIC_RESET_PRUNE || "").toString().toLowerCase();
-        if (!raw) return true;
-        return !(raw === "0" || raw === "false");
-      } catch {
-        return true;
-      }
-    })();
+    const { keep, keepSet } = buildResetKeepIds({
+      roundIds: req.roundIds,
+      onlineUids: req.onlineUids,
+      includeOnline: req.includeOnline,
+    });
+    const shouldPrune = parseResetPruneFlag(process.env.NEXT_PUBLIC_RESET_PRUNE);
 
     let pruneTargets = 0;
     if (shouldPrune && Array.isArray(req.roundIds) && req.roundIds.length > 0) {
-      const targets = req.roundIds.filter((id) => !keepSet.has(id));
+      const targets = computePruneTargets({ roundIds: req.roundIds, keepSet });
       pruneTargets = targets.length;
       if (targets.length > 0) {
         try {
@@ -149,4 +138,3 @@ export function createResetRoomToWaitingWithPrune(deps: ResetRoomDeps) {
     return { ok: true, keptCount: keep.length, pruneTargets };
   };
 }
-
