@@ -18,11 +18,10 @@ import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import { toastIds } from "@/lib/ui/toastIds";
 import { handleQuickStartFailure } from "@/lib/hooks/hostActions/handleQuickStartFailure";
-import { handleNextGameFailure } from "@/lib/hooks/hostActions/handleNextGameFailure";
 import { runQuickStartWithNotWaitingRetry } from "@/lib/hooks/hostActions/runQuickStartWithNotWaitingRetry";
 import { scheduleResetSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleResetSyncWatchdogs";
-import { scheduleNextGameSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleNextGameSyncWatchdogs";
 import { scheduleQuickStartSyncWatchdogs } from "@/lib/hooks/hostActions/scheduleQuickStartSyncWatchdogs";
+import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
 import { normalizeProposalList } from "@/lib/hooks/hostActions/normalizeProposalList";
 import { describeSubmitOrderError } from "@/lib/hooks/hostActions/describeSubmitOrderError";
 import { handleCustomTopicSubmissionResult } from "@/lib/hooks/hostActions/handleCustomTopicSubmissionResult";
@@ -708,160 +707,56 @@ export function useHostActions({
   // 単一の API 呼び出しで reset + start + topic選択 + deal をアトミックに実行。
   // ============================================================================
   const handleNextGame = useCallback(async () => {
-    if (!isHost || autoStartLocked || quickStartPending || isRestarting) return;
-    if (roomStatus === "reveal" && isRevealAnimating) return;
-
-    const now = Date.now();
-    const last = lastActionAtRef.current["nextGame"] ?? 0;
-    const elapsed = now - last;
-    const NEXT_GAME_DEBOUNCE_MS = 800;
-    if (elapsed >= 0 && elapsed < NEXT_GAME_DEBOUNCE_MS) {
-      traceAction("ui.host.nextGame.debounced", {
-        roomId,
-        elapsed,
-      });
-      return;
-    }
-    lastActionAtRef.current["nextGame"] = now;
-
-    if (typeof window !== "undefined" && nextGameStuckTimerRef.current !== null) {
-      window.clearTimeout(nextGameStuckTimerRef.current);
-      nextGameStuckTimerRef.current = null;
-    }
-
-    const startedAt =
-      typeof performance !== "undefined" ? performance.now() : null;
-    setIsRestarting(true);
-    onStageEvent?.("round:prepare");
-
-    markActionStart("nextGame");
-    let success = false;
-    try {
-      traceAction("ui.host.nextGame", { roomId, method: "nextRound-api" });
-      beginAutoStartLock(3200, { broadcast: true, delayMs: 80 });
-      playOrderConfirm();
-
-      // 新しい nextRound API を呼び出し（アトミックに全てを実行）
-      const result = await hostActions.nextRound({
-        roomId,
-        topicType: defaultTopicType,
-        customTopic: currentTopic,
-        presenceInfo: {
-          presenceReady,
-          onlineUids,
-          playerCount,
-        },
-      });
-
-      if (!result.ok) {
-        traceAction("ui.host.nextGame.result", {
-          roomId,
-          ok: "0",
-          requestId: result.requestId,
-          reason: result.reason,
-          status: typeof result.status === "number" ? String(result.status) : undefined,
-          errorCode: result.errorCode ?? undefined,
-        });
-        setMetric(
-          "hostAction",
-          "nextGame.lastResult",
-          `fail:${result.reason}:${result.status ?? "-"}:${result.errorCode ?? "-"}:${result.requestId}`
-        );
-
-        // 失敗時のログとトースト
-        finalizeAction("nextGame", "error");
-        traceAction("ui.host.nextGame.failed", {
-          roomId,
-          reason: result.reason,
-          errorCode: result.errorCode,
-        });
-        console.warn("[nextGame] nextRound API failed:", result.reason, result.errorMessage);
-        handleNextGameFailure({ roomId, result });
-        clearAutoStartLock();
-        return;
-      }
-
-      traceAction("ui.host.nextGame.result", {
-        roomId,
-        ok: "1",
-        requestId: result.requestId,
-        round: String(result.round),
-        playerCount: String(result.playerCount),
-      });
-      setMetric("hostAction", "nextGame.lastResult", `ok:${result.requestId}`);
-
-      finalizeAction("nextGame", "success");
-      if (typeof performance !== "undefined" && latestRoomStatusRef.current !== "clue") {
-        nextGameOkAtRef.current = performance.now();
-        const expectedVersion = Math.max(0, latestStatusVersionRef.current + 1);
-        expectedStatusVersionRef.current.nextGame = expectedVersion;
-        setMetric("hostAction", "nextGame.expectedStatusVersion", expectedVersion);
-      }
-      success = true;
-      // 成功時のトースト
-      notify({
-        id: toastIds.gameStart(roomId),
-        title: "お題とカードを配布しました！",
-        type: "success",
-        duration: 2000,
-      });
-
-      onStageEvent?.("round:start");
-      onStageEvent?.("round:end");
-
-      scheduleNextGameSyncWatchdogs({
-        roomId,
-        requestId: result.requestId,
-        db,
-        latestRoomStatusRef,
-        nextGameEarlySyncTimerRef,
-        nextGameStuckTimerRef,
-      });
-    } catch (error) {
-      clearAutoStartLock();
-      finalizeAction("nextGame", "error");
-      traceError("ui.host.nextGame", error, { roomId });
-      console.error("❌ nextGameButton: 失敗", error);
-      notify({
-        id: toastIds.genericInfo(roomId, "nextgame-error"),
-        title: "エラーが発生しました",
-        description: "しばらく待ってからもう一度お試しください。",
-        type: "error",
-        duration: 3000,
-      });
-      onStageEvent?.("round:abort");
-    } finally {
-      if (!success || latestRoomStatusRef.current === "clue") {
-        setIsRestarting(false);
-      }
-      if (startedAt !== null) {
-        setMetric(
-          "hostAction",
-          "nextGame.totalMs",
-          Math.round(performance.now() - startedAt)
-        );
-      }
-    }
+    await runNextGameWithNextRoundApi({
+      roomId,
+      roomStatus,
+      isHost,
+      isRevealAnimating,
+      autoStartLocked,
+      quickStartPending,
+      isRestarting,
+      defaultTopicType,
+      currentTopic,
+      presenceReady,
+      onlineUids,
+      playerCount,
+      hostActions,
+      db,
+      latestRoomStatusRef,
+      nextGameEarlySyncTimerRef,
+      nextGameStuckTimerRef,
+      nextGameOkAtRef,
+      latestStatusVersionRef,
+      expectedStatusVersionRef,
+      lastActionAtRef,
+      setIsRestarting,
+      onStageEvent,
+      beginAutoStartLock,
+      clearAutoStartLock,
+      playOrderConfirm,
+      markActionStart,
+      finalizeAction,
+    });
   }, [
+    roomId,
+    roomStatus,
     isHost,
+    isRevealAnimating,
     autoStartLocked,
     quickStartPending,
     isRestarting,
-    roomStatus,
-    isRevealAnimating,
-    beginAutoStartLock,
-    playOrderConfirm,
-    hostActions,
-    roomId,
     defaultTopicType,
     currentTopic,
     presenceReady,
     onlineUids,
     playerCount,
-    clearAutoStartLock,
+    hostActions,
     onStageEvent,
-    finalizeAction,
+    beginAutoStartLock,
+    clearAutoStartLock,
+    playOrderConfirm,
     markActionStart,
+    finalizeAction,
   ]);
 
   const REVEAL_DELAY_MS = 500;
