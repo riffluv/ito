@@ -6,6 +6,7 @@ import type { RoomDoc } from "@/lib/types";
 import { computeMagnetTransform, type MagnetConfig, type MagnetResult, type RectLike } from "@/lib/ui/dragMagnet";
 import { logWarn } from "@/lib/utils/log";
 import { traceAction } from "@/lib/utils/trace";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 
 import { RETURN_DROP_ZONE_ID, createInitialMagnetState } from "./constants";
 import { handleMoveToCardDropEffects, handleReturnDropEffects, handleSlotDropEffects } from "./boardDropEffects";
@@ -21,6 +22,7 @@ export function useBoardDragEndHandler(params: {
   roomId: string;
   meId: string;
   boardProposal: (string | null)[];
+  dragSessionStartRef: MutableRefObject<number | null>;
   pendingRef: MutableRefObject<(string | null)[]>;
   slotCountDragging: number;
   boardContainerRef: MutableRefObject<HTMLElement | null>;
@@ -58,6 +60,7 @@ export function useBoardDragEndHandler(params: {
     roomId,
     meId,
     boardProposal,
+    dragSessionStartRef,
     pendingRef,
     slotCountDragging,
     boardContainerRef,
@@ -95,6 +98,10 @@ export function useBoardDragEndHandler(params: {
         activeId: activePlayerId,
         overId: over ? String(over.id) : null,
       });
+      bumpMetric("drag", "ends", 1);
+      setMetric("drag", "lastEndAt", Date.now());
+      setMetric("drag", "lastEndActiveId", activePlayerId);
+      setMetric("drag", "lastEndOverId", over ? String(over.id) : null);
       cancelPendingDragMove();
       const activeRect = getActiveRectWithDelta(active, event.delta);
       if (activeRect) {
@@ -106,12 +113,22 @@ export function useBoardDragEndHandler(params: {
       const overRect = over?.rect ?? null;
       let magnetResult = createInitialMagnetState();
       updateDropAnimationTarget(null);
+      let dragOutcome: string = "unknown";
+      let dragOutcomeReason: string | null = null;
 
       try {
         // `activeId` がまだ反映されていない（DragStart 直後に DragEnd が来た）ケースは、
         // 実質的に「キャンセル扱い」で後片付けだけ行う。
-        if (!activeId) return;
-        if (resolveMode !== "sort-submit" || roomStatus !== "clue") return;
+        if (!activeId) {
+          dragOutcome = "cancel";
+          dragOutcomeReason = "missing-activeId";
+          return;
+        }
+        if (resolveMode !== "sort-submit" || roomStatus !== "clue") {
+          dragOutcome = "ignore";
+          dragOutcomeReason = "non-interactive-phase";
+          return;
+        }
 
         const overId = over ? String(over.id) : null;
         const boardRect = boardContainerRef.current?.getBoundingClientRect() ?? null;
@@ -134,6 +151,11 @@ export function useBoardDragEndHandler(params: {
           lastDragPosition: lastDragPositionRef.current,
           returnDropZoneId: RETURN_DROP_ZONE_ID,
         });
+
+        dragOutcome = decision.kind;
+        if (decision.kind === "invalid") {
+          dragOutcomeReason = decision.reason;
+        }
 
         if (decision.kind === "return") {
           handleReturnDropEffects({
@@ -226,6 +248,13 @@ export function useBoardDragEndHandler(params: {
 
         return;
       } finally {
+        if (typeof performance !== "undefined" && dragSessionStartRef.current !== null) {
+          const durationMs = Math.max(0, performance.now() - dragSessionStartRef.current);
+          setMetric("drag", "lastSessionMs", Math.round(durationMs));
+        }
+        dragSessionStartRef.current = null;
+        setMetric("drag", "lastOutcome", dragOutcome);
+        setMetric("drag", "lastOutcomeReason", dragOutcomeReason);
         enqueueMagnetUpdate({ state: magnetResult, immediate: true });
         clearActive({ delayMagnetReset: true });
         endDropSession();
@@ -241,6 +270,7 @@ export function useBoardDragEndHandler(params: {
       clearDropRollbackTimer,
       clearOptimisticProposal,
       cursorSnapOffset,
+      dragSessionStartRef,
       enqueueMagnetUpdate,
       endDropSession,
       getProjectedMagnetState,

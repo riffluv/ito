@@ -22,6 +22,7 @@ export function useBoardDragSystem(params: {
   boardContainerRef: MutableRefObject<HTMLDivElement | null>;
   boardBoundsRef: MutableRefObject<DOMRect | null>;
   dragActivationStartRef: MutableRefObject<number | null>;
+  dragSessionStartRef: MutableRefObject<number | null>;
   handleBoardRef: (node: HTMLDivElement | null) => void;
   updateBoardBounds: () => void;
   lastDragPositionRef: MutableRefObject<{ x: number; y: number } | null>;
@@ -51,6 +52,7 @@ export function useBoardDragSystem(params: {
   } = useBoardBoundsTracker();
 
   const lastDragPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const dragSessionStartRef = useRef<number | null>(null);
 
   const { dragBoostEnabled, setDragBoostEnabled } = useBoardDragBoostState({
     roomStatus,
@@ -76,6 +78,7 @@ export function useBoardDragSystem(params: {
     boardContainerRef,
     boardBoundsRef,
     dragActivationStartRef,
+    dragSessionStartRef,
     handleBoardRef,
     updateBoardBounds,
     lastDragPositionRef,
@@ -85,4 +88,3 @@ export function useBoardDragSystem(params: {
     cancelPendingDragMove,
   };
 }
-

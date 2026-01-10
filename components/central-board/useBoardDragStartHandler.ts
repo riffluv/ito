@@ -3,7 +3,7 @@ import type { DragStartEvent } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
 
 import { traceAction } from "@/lib/utils/trace";
-import { setMetric } from "@/lib/utils/metrics";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import type { RectLike } from "@/lib/ui/dragMagnet";
 
 import { getActiveRectWithDelta } from "./dragRects";
@@ -17,6 +17,7 @@ export function useBoardDragStartHandler(params: {
   ) => void;
   resetMagnet: (options?: { immediate?: boolean }) => void;
   dragActivationStartRef: MutableRefObject<number | null>;
+  dragSessionStartRef: MutableRefObject<number | null>;
   setActiveId: Dispatch<SetStateAction<string | null>>;
   setDragBoostEnabled: Dispatch<SetStateAction<boolean>>;
   playDragPickup: () => void;
@@ -28,6 +29,7 @@ export function useBoardDragStartHandler(params: {
     updateDropAnimationTarget,
     resetMagnet,
     dragActivationStartRef,
+    dragSessionStartRef,
     setActiveId,
     setDragBoostEnabled,
     playDragPickup,
@@ -36,12 +38,21 @@ export function useBoardDragStartHandler(params: {
 
   return useCallback(
     (event: DragStartEvent) => {
-      traceAction("drag.start", { activeId: String(event.active.id) });
+      const activePlayerId = String(event.active.id);
+      traceAction("drag.start", { activeId: activePlayerId });
+      bumpMetric("drag", "starts", 1);
+      setMetric("drag", "lastStartAt", Date.now());
+      setMetric("drag", "lastActiveId", activePlayerId);
+      if (typeof performance !== "undefined") {
+        dragSessionStartRef.current = performance.now();
+      } else {
+        dragSessionStartRef.current = null;
+      }
       beginDropSession();
       updateBoardBounds();
       updateDropAnimationTarget(null);
       resetMagnet({ immediate: true });
-      setActiveId(String(event.active.id));
+      setActiveId(activePlayerId);
       setDragBoostEnabled((prev) => (prev ? prev : true));
       if (dragActivationStartRef.current !== null && typeof performance !== "undefined") {
         const latency = Math.max(0, performance.now() - dragActivationStartRef.current);
@@ -73,6 +84,7 @@ export function useBoardDragStartHandler(params: {
     [
       beginDropSession,
       dragActivationStartRef,
+      dragSessionStartRef,
       playDragPickup,
       resetMagnet,
       setActiveId,
@@ -83,4 +95,3 @@ export function useBoardDragStartHandler(params: {
     ]
   );
 }
-

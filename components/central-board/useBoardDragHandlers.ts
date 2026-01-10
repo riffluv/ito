@@ -26,6 +26,7 @@ export function useBoardDragHandlers(params: {
   // bounds + activation
   updateBoardBounds: () => void;
   dragActivationStartRef: MutableRefObject<number | null>;
+  dragSessionStartRef: MutableRefObject<number | null>;
 
   // active + cursor snap
   activeId: string | null;
@@ -101,6 +102,7 @@ export function useBoardDragHandlers(params: {
     updateDropAnimationTarget: params.updateDropAnimationTarget,
     resetMagnet: params.resetMagnet,
     dragActivationStartRef: params.dragActivationStartRef,
+    dragSessionStartRef: params.dragSessionStartRef,
     setActiveId: params.setActiveId,
     setDragBoostEnabled: params.setDragBoostEnabled,
     playDragPickup: params.playDragPickup,
@@ -110,6 +112,7 @@ export function useBoardDragHandlers(params: {
   const { onDragCancel } = useBoardDragCancelHandlers({
     activeId: params.activeId,
     dragActivationStartRef: params.dragActivationStartRef,
+    dragSessionStartRef: params.dragSessionStartRef,
     updateDropAnimationTarget: params.updateDropAnimationTarget,
     cancelPendingDragMove: params.cancelPendingDragMove,
     clearActive,
@@ -123,6 +126,7 @@ export function useBoardDragHandlers(params: {
     roomId: params.roomId,
     meId: params.meId,
     boardProposal: params.boardProposal,
+    dragSessionStartRef: params.dragSessionStartRef,
     pendingRef: params.pendingRef,
     slotCountDragging: params.resolvedSlotCount,
     boardContainerRef: params.boardContainerRef,

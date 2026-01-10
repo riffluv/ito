@@ -39,6 +39,7 @@
   - ホスト操作: `hostAction.*`（`*.latencyMs` / `*.statusSyncMs` / `syncSpinner.reason`）
   - presence: `presence.*`（`connection.open` / `heartbeat.ok`）
   - ドロップ: `dropRecords.*`（`client.drop.*` 系）
+  - ドラッグ: `drag.*`（`activationLatencyMs` / `lastSessionMs` / `lastOutcome` など）
   - 足跡: `traces`（直近10件）
 
 ### 3.2 送出メトリクス（継続監視）
@@ -129,4 +130,3 @@
 1. `copy(dumpItoMetricsJson("症状 + 端末 + 直前操作"))`
 2. Network: 該当 `/api/rooms/...` の status code と response body
 3. 可能なら「ホスト側/止まった側/正常側」それぞれ採取（同じ label でOK）
-
