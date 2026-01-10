@@ -19,12 +19,17 @@ import {
   useMemo,
   useRef,
   type Dispatch,
+  type MutableRefObject,
   type SetStateAction,
 } from "react";
 
-export type HostActionsRuntime = ReturnType<typeof useHostActionsRuntime>;
+type ExpectedStatusVersions = {
+  quickStart: number | null;
+  nextGame: number | null;
+  reset: number | null;
+};
 
-export function useHostActionsRuntime(params: {
+export type HostActionsRuntimeParams = {
   roomId: string;
   roomStatus?: string;
   statusVersion?: number | null;
@@ -35,7 +40,40 @@ export function useHostActionsRuntime(params: {
   presenceReady: boolean;
   presenceDegraded: boolean;
   playerCount?: number;
-}) {
+};
+
+export type HostActionsRuntime = {
+  hostActions: HostActionsController;
+  mountedRef: MutableRefObject<boolean>;
+  lastActionAtRef: MutableRefObject<Record<string, number>>;
+  latestRoomStatusRef: MutableRefObject<string | undefined>;
+  latestStatusVersionRef: MutableRefObject<number>;
+  expectedStatusVersionRef: MutableRefObject<ExpectedStatusVersions>;
+  quickStartStuckTimerRef: MutableRefObject<number | null>;
+  quickStartEarlySyncTimerRef: MutableRefObject<number | null>;
+  quickStartOkAtRef: MutableRefObject<number | null>;
+  nextGameStuckTimerRef: MutableRefObject<number | null>;
+  nextGameEarlySyncTimerRef: MutableRefObject<number | null>;
+  nextGameOkAtRef: MutableRefObject<number | null>;
+  resetOkAtRef: MutableRefObject<number | null>;
+  resetStuckTimerRef: MutableRefObject<number | null>;
+  resetEarlySyncTimerRef: MutableRefObject<number | null>;
+  canProceed: ReturnType<typeof useActionCooldown>;
+  markActionStart: (action: string) => void;
+  finalizeAction: (action: string, status: "success" | "error") => void;
+  abortAction: (action: string) => void;
+  playOrderConfirm: () => void;
+  playResetGame: () => void;
+  presenceForceEligible: ReturnType<typeof usePresenceStartGate>["presenceForceEligible"];
+  presenceCanStart: ReturnType<typeof usePresenceStartGate>["presenceCanStart"];
+  presenceWaitRemainingMs: ReturnType<typeof usePresenceStartGate>["presenceWaitRemainingMs"];
+  ensurePresenceReady: ReturnType<typeof usePresenceStartGate>["ensurePresenceReady"];
+  resetUiPending: ReturnType<typeof useResetUiHold>["resetUiPending"];
+  beginResetUiHold: ReturnType<typeof useResetUiHold>["beginResetUiHold"];
+  clearResetUiHold: ReturnType<typeof useResetUiHold>["clearResetUiHold"];
+};
+
+export function useHostActionsRuntime(params: HostActionsRuntimeParams): HostActionsRuntime {
   const actionLatencyRef = useRef<Record<string, number>>({});
   const lastActionAtRef = useRef<Record<string, number>>({});
   const pendingVisibilityKickAtRef = useRef<number>(0);
@@ -60,11 +98,11 @@ export function useHostActionsRuntime(params: {
   const latestStatusVersionRef = useRef<number>(
     normalizeStatusVersion(params.statusVersion)
   );
-  const expectedStatusVersionRef = useRef<{
-    quickStart: number | null;
-    nextGame: number | null;
-    reset: number | null;
-  }>({ quickStart: null, nextGame: null, reset: null });
+  const expectedStatusVersionRef = useRef<ExpectedStatusVersions>({
+    quickStart: null,
+    nextGame: null,
+    reset: null,
+  });
 
   const auth = getAuth();
   const { sessionId, ensureSession } = useHostSession(params.roomId, async () => {
@@ -203,7 +241,6 @@ function useLatestRef<T>(value: T) {
   return valueRef;
 }
 
-function normalizeStatusVersion(value: number | null | undefined) {
+function normalizeStatusVersion(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
-
