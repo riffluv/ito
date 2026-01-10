@@ -1,12 +1,6 @@
-import { useSoundEffect } from "@/lib/audio/useSoundEffect";
 import { db } from "@/lib/firebase/client";
-import { useHostSession } from "@/lib/hooks/useHostSession";
-import {
-  createHostActionsController,
-  type HostActionsController,
-} from "@/lib/host/HostActionsController";
+import { useHostActionsRuntime } from "@/lib/hooks/hostActions/useHostActionsRuntime";
 import type { RoundStageEvent } from "@/lib/hooks/useRoundTimeline";
-import { setMetric } from "@/lib/utils/metrics";
 import { runQuickStartFromWaiting } from "@/lib/hooks/hostActions/runQuickStartFromWaiting";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
 import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
@@ -14,20 +8,11 @@ import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSu
 import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
 import { runRestartGame } from "@/lib/hooks/hostActions/runRestartGame";
 import { closeCustomTopic as closeCustomTopicHelper } from "@/lib/hooks/hostActions/closeCustomTopic";
-import { useHostActionMetrics } from "@/lib/hooks/hostActions/useHostActionMetrics";
-import { useHostActionRoomStatusSync } from "@/lib/hooks/hostActions/useHostActionRoomStatusSync";
-import { useHostActionStatusVersionSync } from "@/lib/hooks/hostActions/useHostActionStatusVersionSync";
-import { useHostActionTimersCleanup } from "@/lib/hooks/hostActions/useHostActionTimersCleanup";
-import { useActionCooldown } from "@/lib/hooks/hostActions/useActionCooldown";
-import { usePendingVisibilityKick } from "@/lib/hooks/hostActions/usePendingVisibilityKick";
-import { usePresenceStartGate } from "@/lib/hooks/hostActions/usePresenceStartGate";
-import { useResetUiHold } from "@/lib/hooks/hostActions/useResetUiHold";
 import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
-import { getAuth } from "firebase/auth";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -108,101 +93,19 @@ export function useHostActions({
   const [customStartPending, setCustomStartPending] = useState(false);
   const [customText, setCustomText] = useState("");
   const [evalSortedPending, setEvalSortedPending] = useState(false);
-  const actionLatencyRef = useRef<Record<string, number>>({});
-  const quickStartPendingRef = useLatestRef(quickStartPending);
-  const isRestartingRef = useLatestRef(isRestarting);
-  const pendingVisibilityKickAtRef = useRef<number>(0);
   const evalSortedPendingRef = useRef(false);
-  const mountedRef = useRef(true);
-  const lastActionAtRef = useRef<Record<string, number>>({});
-  const latestRoomStatusRef = useLatestRef(roomStatus);
-  const quickStartStuckTimerRef = useRef<number | null>(null);
-  const quickStartEarlySyncTimerRef = useRef<number | null>(null);
-  const quickStartOkAtRef = useRef<number | null>(null);
-  const nextGameStuckTimerRef = useRef<number | null>(null);
-  const nextGameEarlySyncTimerRef = useRef<number | null>(null);
-  const nextGameOkAtRef = useRef<number | null>(null);
-  const resetOkAtRef = useRef<number | null>(null);
-  const resetStuckTimerRef = useRef<number | null>(null);
-  const resetEarlySyncTimerRef = useRef<number | null>(null);
-  const latestStatusVersionRef = useRef<number>(
-    normalizeStatusVersion(statusVersion)
-  );
-  const expectedStatusVersionRef = useRef<{
-    quickStart: number | null;
-    nextGame: number | null;
-    reset: number | null;
-  }>({ quickStart: null, nextGame: null, reset: null });
-  const auth = getAuth();
-  const { sessionId, ensureSession } = useHostSession(roomId, async () => {
-    const idToken = await auth?.currentUser?.getIdToken();
-    return idToken ?? null;
-  });
-  const hostActions = useMemo<HostActionsController>(
-    () =>
-      createHostActionsController({
-        getSessionId: () => sessionId,
-        ensureSession,
-      }),
-    [ensureSession, sessionId]
-  );
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  useHostActionStatusVersionSync({
-    statusVersion,
-    latestStatusVersionRef,
-    expectedStatusVersionRef,
-    resetOkAtRef,
-    quickStartOkAtRef,
-    nextGameOkAtRef,
-  });
-
-  usePendingVisibilityKick({
+  const runtime = useHostActionsRuntime({
     roomId,
-    latestRoomStatusRef,
-    quickStartPendingRef,
-    isRestartingRef,
-    pendingVisibilityKickAtRef,
-  });
-
-  useHostActionTimersCleanup({
-    quickStartStuckTimerRef,
-    quickStartEarlySyncTimerRef,
-    nextGameStuckTimerRef,
-    nextGameEarlySyncTimerRef,
-    resetStuckTimerRef,
-    resetEarlySyncTimerRef,
-  });
-
-  useHostActionRoomStatusSync({
     roomStatus,
-    quickStartStuckTimerRef,
-    quickStartEarlySyncTimerRef,
-    nextGameStuckTimerRef,
-    nextGameEarlySyncTimerRef,
-    resetStuckTimerRef,
-    resetEarlySyncTimerRef,
-    expectedStatusVersionRef,
-    resetOkAtRef,
-    quickStartOkAtRef,
-    nextGameOkAtRef,
+    statusVersion,
+    quickStartPending,
+    isRestarting,
     setQuickStartPending,
     setIsRestarting,
+    presenceReady,
+    presenceDegraded,
+    playerCount,
   });
-
-  const { markActionStart, finalizeAction, abortAction } = useHostActionMetrics({
-    actionLatencyRef,
-  });
-
-  // Host-only start confirmation sound. Global start cue is controlled in Showtime (currently muted).
-  const playOrderConfirm = useSoundEffect("order_confirm");
-  const playResetGame = useSoundEffect("reset_game");
 
   const effectiveDefaultTopicType = useMemo(() => {
     if (defaultTopicType && typeof defaultTopicType === "string") {
@@ -212,27 +115,35 @@ export function useHostActions({
   }, [defaultTopicType]);
 
   const {
+    hostActions,
+    mountedRef,
+    lastActionAtRef,
+    latestRoomStatusRef,
+    latestStatusVersionRef,
+    expectedStatusVersionRef,
+    quickStartStuckTimerRef,
+    quickStartEarlySyncTimerRef,
+    quickStartOkAtRef,
+    nextGameStuckTimerRef,
+    nextGameEarlySyncTimerRef,
+    nextGameOkAtRef,
+    resetOkAtRef,
+    resetStuckTimerRef,
+    resetEarlySyncTimerRef,
+    canProceed,
+    markActionStart,
+    finalizeAction,
+    abortAction,
+    playOrderConfirm,
+    playResetGame,
     presenceForceEligible,
     presenceCanStart,
     presenceWaitRemainingMs,
     ensurePresenceReady,
-  } = usePresenceStartGate({
-    roomId,
-    presenceReady,
-    presenceDegraded,
-    playerCount,
-  });
-
-  useEffect(() => {
-    expectedStatusVersionRef.current = { quickStart: null, nextGame: null, reset: null };
-    setMetric("hostAction", "quickStart.expectedStatusVersion", null);
-    setMetric("hostAction", "nextGame.expectedStatusVersion", null);
-    setMetric("hostAction", "reset.expectedStatusVersion", null);
-  }, [roomId]);
-
-  const { resetUiPending, beginResetUiHold, clearResetUiHold } = useResetUiHold({ roomStatus });
-
-  const canProceed = useActionCooldown({ cooldownMs: 420, lastActionAtRef });
+    resetUiPending,
+    beginResetUiHold,
+    clearResetUiHold,
+  } = runtime;
 
   // NOTE: resetUiHold のタイマー管理は useResetUiHold 側で完結させる
 
@@ -286,6 +197,11 @@ export function useHostActions({
       playOrderConfirm,
       roomId,
       latestRoomStatusRef,
+      quickStartOkAtRef,
+      latestStatusVersionRef,
+      expectedStatusVersionRef,
+      quickStartEarlySyncTimerRef,
+      quickStartStuckTimerRef,
       ensurePresenceReady,
       currentTopic,
       playerCount,
@@ -349,6 +265,11 @@ export function useHostActions({
       roundIds,
       onlineUids,
       latestRoomStatusRef,
+      resetEarlySyncTimerRef,
+      resetStuckTimerRef,
+      resetOkAtRef,
+      latestStatusVersionRef,
+      expectedStatusVersionRef,
       markActionStart,
       finalizeAction,
       hostActions,
@@ -424,6 +345,12 @@ export function useHostActions({
     playerCount,
     hostActions,
     latestRoomStatusRef,
+    nextGameEarlySyncTimerRef,
+    nextGameStuckTimerRef,
+    nextGameOkAtRef,
+    latestStatusVersionRef,
+    expectedStatusVersionRef,
+    lastActionAtRef,
     onStageEvent,
     beginAutoStartLock,
     clearAutoStartLock,
@@ -443,7 +370,7 @@ export function useHostActions({
       mountedRef,
       setEvalSortedPending,
     });
-  }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions]);
+  }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions, mountedRef]);
 
   const handleSubmitCustom = useCallback(
     async (value: string) => {
@@ -515,16 +442,4 @@ export function useHostActions({
     presenceForceEligible,
     presenceWaitRemainingMs,
   };
-}
-
-function useLatestRef<T>(value: T) {
-  const valueRef = useRef(value);
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
-  return valueRef;
-}
-
-function normalizeStatusVersion(value: number | null | undefined) {
-  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
