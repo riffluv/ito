@@ -11,6 +11,7 @@ import type {
 import type { RoomDoc } from "@/lib/types";
 import { setMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import { resolveRevealedMs } from "@/lib/hooks/showtimeFlow/helpers";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const ROUND_FLOW_METRIC_KEYS = [
@@ -53,31 +54,6 @@ type ShowtimePlaybackContext = Record<string, unknown> & {
   status?: string | null;
   success?: boolean | null;
   revealedMs?: number | null;
-};
-
-type TimestampLike = { toMillis: () => number };
-
-const hasToMillis = (value: unknown): value is TimestampLike =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as { toMillis?: unknown }).toMillis === "function";
-
-const resolveRevealedMs = (value: unknown): number | null => {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return value.getTime();
-  }
-  if (hasToMillis(value)) {
-    try {
-      return value.toMillis();
-    } catch {
-      return null;
-    }
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  return null;
 };
 
 type UseRoomShowtimeFlowParams = {
