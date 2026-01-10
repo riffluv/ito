@@ -31,6 +31,13 @@ import { applyCountUpdates } from "@/lib/hooks/lobbyCounts/applyCountUpdates";
 import { createFreezeTracker } from "@/lib/hooks/lobbyCounts/freezeTracker";
 import { recordLobbyMetric } from "@/lib/hooks/lobbyCounts/metrics";
 import { readAggregateCount } from "@/lib/hooks/lobbyCounts/readAggregateCount";
+import {
+  DEFAULT_ACCEPT_FRESH_MS,
+  computeLobbyStaleMs,
+  computeZeroFreezeMsDefault,
+  parseEnvBooleanFlag,
+  parseEnvNumber,
+} from "@/lib/hooks/lobbyCounts/presenceThresholds";
 
 type VerificationCacheEntry = {
   count: number;
@@ -79,44 +86,32 @@ export function subscribePresenceCounts(params: {
   const freezeTracker = createFreezeTracker("presence");
   const DEBUG_UIDS =
     typeof process !== "undefined" &&
-    ((process.env.NEXT_PUBLIC_LOBBY_DEBUG_UIDS || "").toString() === "1" ||
-      (process.env.NEXT_PUBLIC_LOBBY_DEBUG_UIDS || "").toString().toLowerCase() === "true");
+    parseEnvBooleanFlag(process.env.NEXT_PUBLIC_LOBBY_DEBUG_UIDS);
   // 既定値は OFF（読み取り節約）。必要時のみ .env で有効化
-  const VERIFY_SINGLE = (() => {
-    if (typeof process === "undefined") return false;
-    const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE || "")
-      .toString()
-      .toLowerCase();
-    if (!raw) return false; // default OFF
-    return raw === "1" || raw === "true";
-  })();
-  const VERIFY_MULTI = (() => {
-    if (typeof process === "undefined") return false;
-    const raw = (process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI || "")
-      .toString()
-      .toLowerCase();
-    if (!raw) return false; // default OFF
-    return raw === "1" || raw === "true";
-  })();
+  const VERIFY_SINGLE =
+    typeof process !== "undefined" &&
+    parseEnvBooleanFlag(process.env.NEXT_PUBLIC_LOBBY_VERIFY_SINGLE);
+  const VERIFY_MULTI =
+    typeof process !== "undefined" &&
+    parseEnvBooleanFlag(process.env.NEXT_PUBLIC_LOBBY_VERIFY_MULTI);
 
   // ロビー表示はゴースト抑制のため、presenceの鮮度しきい値をさらに短めに（既定8s）
-  const ENV_STALE = Number((process.env.NEXT_PUBLIC_LOBBY_STALE_MS || "").toString());
-  // 心拍より短い鮮度窓はフラッピングを招くため、最低でも heartbeat+5s を確保
-  const MIN_STALE = PRESENCE_HEARTBEAT_MS + 5_000;
-  const LOBBY_STALE_MS = Math.min(
-    PRESENCE_STALE_MS,
-    Math.max(MIN_STALE, Number.isFinite(ENV_STALE) && ENV_STALE > 0 ? ENV_STALE : 35_000)
-  );
+  const ENV_STALE = parseEnvNumber(process.env.NEXT_PUBLIC_LOBBY_STALE_MS);
+  const LOBBY_STALE_MS = computeLobbyStaleMs({
+    envStaleMs: ENV_STALE,
+    presenceStaleMs: PRESENCE_STALE_MS,
+    heartbeatMs: PRESENCE_HEARTBEAT_MS,
+  });
   // 0人からの反跳ね（古いconnが遅れて現れる）を防ぐためのクールダウン
   const zeroFreeze: Record<string, number> = {};
   // 据え置きの既定値（必要なら環境変数で短縮/延長）
-  const ENV_ZERO_FREEZE = Number((process.env.NEXT_PUBLIC_LOBBY_ZERO_FREEZE_MS || "").toString());
-  const ZERO_FREEZE_MS_DEFAULT =
-    Number.isFinite(ENV_ZERO_FREEZE) && ENV_ZERO_FREEZE > 0
-      ? ENV_ZERO_FREEZE
-      : Math.max(20_000, LOBBY_STALE_MS + 5_000); // stale超え+αで安全側に
+  const ENV_ZERO_FREEZE = parseEnvNumber(process.env.NEXT_PUBLIC_LOBBY_ZERO_FREEZE_MS);
+  const ZERO_FREEZE_MS_DEFAULT = computeZeroFreezeMsDefault({
+    envZeroFreezeMs: ENV_ZERO_FREEZE,
+    lobbyStaleMs: LOBBY_STALE_MS,
+  }); // stale超え+αで安全側に
   // 新規参加を即時に検出するための“新鮮さ”しきい値（5秒以内のtsがあればフリーズ解除）
-  const ACCEPT_FRESH_MS = 5_000;
+  const ACCEPT_FRESH_MS = DEFAULT_ACCEPT_FRESH_MS;
 
   // 一度だけデバッグ情報を表示（presentモードの有効値）
   if (typeof window !== "undefined") {
