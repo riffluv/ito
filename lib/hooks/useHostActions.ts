@@ -7,15 +7,13 @@ import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSu
 import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
 import { runRestartGame } from "@/lib/hooks/hostActions/runRestartGame";
 import { closeCustomTopic as closeCustomTopicHelper } from "@/lib/hooks/hostActions/closeCustomTopic";
+import { recordHostUiIntent } from "@/lib/hooks/hostActions/recordHostUiIntent";
 import type {
   QuickStartOptions,
   ResetOptions,
   UseHostActionsOptions,
 } from "@/lib/hooks/hostActions/types";
 import { useHostActionsLocalState } from "@/lib/hooks/hostActions/useHostActionsLocalState";
-import { scheduleNextPaintMetric } from "@/lib/perf/nextPaint";
-import { bumpMetric, setMetric } from "@/lib/utils/metrics";
-import { traceAction } from "@/lib/utils/trace";
 import { useCallback, useMemo } from "react";
 
 declare global {
@@ -119,15 +117,12 @@ export function useHostActions({
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
       if (typeof performance !== "undefined") {
-        const startedAt = performance.now();
-        bumpMetric("hostAction", "ui.quickStart.clicks", 1);
-        setMetric("hostAction", "ui.lastIntent", "quickStart");
-        setMetric("hostAction", "ui.lastIntentAt", Date.now());
-        traceAction("ui.host.quickStart.intent", { roomId });
-        scheduleNextPaintMetric({
-          scope: "hostAction",
-          key: "ui.quickStart.nextPaintMs",
-          startedAt,
+        recordHostUiIntent({
+          roomId,
+          intent: "quickStart",
+          startedAt: performance.now(),
+          clickMetricKey: "ui.quickStart.clicks",
+          nextPaintMetricKey: "ui.quickStart.nextPaintMs",
         });
       }
       return await runQuickStartFromWaiting({
@@ -212,15 +207,12 @@ export function useHostActions({
   const resetGame = useCallback(
     async (options?: ResetOptions) => {
       if (typeof performance !== "undefined") {
-        const startedAt = performance.now();
-        bumpMetric("hostAction", "ui.reset.clicks", 1);
-        setMetric("hostAction", "ui.lastIntent", "reset");
-        setMetric("hostAction", "ui.lastIntentAt", Date.now());
-        traceAction("ui.host.reset.intent", { roomId });
-        scheduleNextPaintMetric({
-          scope: "hostAction",
-          key: "ui.reset.nextPaintMs",
-          startedAt,
+        recordHostUiIntent({
+          roomId,
+          intent: "reset",
+          startedAt: performance.now(),
+          clickMetricKey: "ui.reset.clicks",
+          nextPaintMetricKey: "ui.reset.nextPaintMs",
         });
       }
       const showFeedback = options?.showFeedback ?? true;
@@ -298,15 +290,12 @@ export function useHostActions({
   // ============================================================================
   const handleNextGame = useCallback(async () => {
     if (typeof performance !== "undefined") {
-      const startedAt = performance.now();
-      bumpMetric("hostAction", "ui.nextGame.clicks", 1);
-      setMetric("hostAction", "ui.lastIntent", "nextGame");
-      setMetric("hostAction", "ui.lastIntentAt", Date.now());
-      traceAction("ui.host.nextGame.intent", { roomId });
-      scheduleNextPaintMetric({
-        scope: "hostAction",
-        key: "ui.nextGame.nextPaintMs",
-        startedAt,
+      recordHostUiIntent({
+        roomId,
+        intent: "nextGame",
+        startedAt: performance.now(),
+        clickMetricKey: "ui.nextGame.clicks",
+        nextPaintMetricKey: "ui.nextGame.nextPaintMs",
       });
     }
     await runNextGameWithNextRoundApi({
