@@ -101,6 +101,7 @@ window.dumpBoardState?.()
 - `syncSpinner.reason`: 何が原因で spinner を出しているか（例: `quickStartPending` など）
 - `*.latencyMs` / `*.result` / `*.lastResult`: API/操作の結果（success/failure）
 - `*.statusSyncMs`: 状態同期が追いつくまでの時間（重い時の指標）
+- `ui.*.nextPaintMs`: 押下から「画面が反応した」までの目安（`quickStart/reset/nextGame`）
 
 ### 3-3. `presence`（RTDB Presence）
 「人数判定/入席可否/ホスト判定が怪しい」時に見る。
@@ -114,7 +115,24 @@ window.dumpBoardState?.()
 
 - `client.drop.queueWaitMs` などが大きい場合、操作が詰まっている可能性
 
-### 3-5. `traces`（直近の重要イベント）
+### 3-5. `drag`（ドラッグの直近セッション）
+ドラッグの“体感”と失敗系の切り分けに使います。
+
+- `activationLatencyMs`: 押下→ドラッグ開始までの遅延
+- `lastSessionMs`: 直近ドラッグのセッション時間
+- `lastOutcome` / `lastOutcomeReason`: `slot/return/invalid/ignore/cancel` など
+
+### 3-6. `client.api`（API 往復の体感）
+「重い」の原因が UI なのか、ネットワーク/API なのかを切り分けます。
+
+- `latencyMs`: 直近の `POST` の往復時間（サンプルは `client.api.latencyMs` 分布としても送出）
+- 併せて `api.lastPostRoute` / `api.lastPostMs` / `api.lastError*` も見る
+
+### 3-7. `client.fps` / `client.inp`（描画/入力）
+- `client.inp.rolling`: 体感の“重い”を拾いやすい
+- `client.fps.sample`: FPS サンプル（落ち込みの兆候）
+
+### 3-8. `traces`（直近の重要イベント）
 最後の10件が入ります。原因切り分けの“足跡”です。
 
 例:

@@ -105,9 +105,15 @@ export default function PerformanceMetricsInitializer() {
 
       const perf = metrics.perf ?? {};
       const audio = metrics.audio ?? {};
+      const app = metrics.app ?? {};
       const hostAction = metrics.hostAction ?? {};
       const presence = metrics.presence ?? {};
+      const participants = metrics.participants ?? {};
+      const room = metrics.room ?? {};
       const roomSnapshot = metrics.roomSnapshot ?? {};
+      const phase = metrics.phase ?? {};
+      const roundFlow = metrics.roundFlow ?? {};
+      const safeUpdate = metrics.safeUpdate ?? {};
       const api = metrics.api ?? {};
       const drag = metrics.drag ?? {};
       const clientFps = metrics["client.fps"] ?? {};
@@ -122,9 +128,15 @@ export default function PerformanceMetricsInitializer() {
         at: new Date().toISOString(),
         path: typeof window.location?.pathname === "string" ? window.location.pathname : null,
         perf,
+        app,
         hostAction,
         presence,
+        participants,
+        room,
         roomSnapshot,
+        phase,
+        roundFlow,
+        safeUpdate,
         api,
         drag,
         client: {
