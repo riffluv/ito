@@ -86,6 +86,14 @@ window.dumpBoardState?.()
 
 `dumpItoMetricsJson()` は大きく以下を返します（代表例）。
 
+### 3-0. `meta` / `roomId`（環境情報・添付用）
+貼り付け先（Discord/GitHub など）で「どのビルド/端末/設定か」を揃えるための情報です。
+
+- `roomId`: URL から推定した roomId（取れない場合は null）
+- `meta.appVersion`: ビルド識別（commit/APP_VERSION）
+- `meta.flags.*`: 主要フラグ（perf/support/drop/audio など）
+- `meta.client.*`: `navigator`/接続情報（online/UA/connection など）
+
 ### 3-1. `roomSnapshot`（同期の心臓）
 同期が怪しい時はここが最重要です。
 

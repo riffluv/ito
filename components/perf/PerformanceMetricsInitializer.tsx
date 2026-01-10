@@ -4,6 +4,7 @@ import {
   recordMetricDistribution,
   shouldSendClientMetrics,
 } from "@/lib/perf/metricsClient";
+import { APP_VERSION } from "@/lib/constants/appVersion";
 
 const DEFAULT_FPS_WINDOW = 5000;
 const DEFAULT_INP_WINDOW = 15000;
@@ -50,6 +51,39 @@ declare global {
 function resolveNumber(envValue: string | undefined, fallback: number): number {
   const parsed = Number(envValue);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function resolveRoomIdFromPath(pathname: string | null): string | null {
+  if (!pathname) return null;
+  const match = pathname.match(/^\/(?:rooms|r)\/([^/?#]+)/);
+  const raw = match?.[1] ?? null;
+  if (!raw) return null;
+  const roomId = decodeURIComponent(raw).trim();
+  return roomId.length > 0 ? roomId : null;
+}
+
+type NetworkInformationLike = {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+};
+
+function resolveConnectionInfo(): {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+} | null {
+  if (typeof navigator === "undefined") return null;
+  const connection = (navigator as unknown as { connection?: NetworkInformationLike }).connection;
+  if (!connection) return null;
+  const info: NetworkInformationLike = {};
+  if (typeof connection.effectiveType === "string") info.effectiveType = connection.effectiveType;
+  if (typeof connection.downlink === "number") info.downlink = connection.downlink;
+  if (typeof connection.rtt === "number") info.rtt = connection.rtt;
+  if (typeof connection.saveData === "boolean") info.saveData = connection.saveData;
+  return Object.keys(info).length > 0 ? info : null;
 }
 
 function pickRecentTraceTag(interaction: PerformanceEventTiming) {
@@ -103,6 +137,10 @@ export default function PerformanceMetricsInitializer() {
       const metrics = metricsWindow.__ITO_METRICS__ ?? {};
       const traces = metricsWindow.__ITO_TRACE_BUFFER__ ?? [];
 
+      const pathname = typeof window.location?.pathname === "string" ? window.location.pathname : null;
+      const roomId = resolveRoomIdFromPath(pathname);
+      const connection = resolveConnectionInfo();
+
       const perf = metrics.perf ?? {};
       const audio = metrics.audio ?? {};
       const app = metrics.app ?? {};
@@ -126,7 +164,40 @@ export default function PerformanceMetricsInitializer() {
       return {
         label: typeof label === "string" && label.trim().length > 0 ? label.trim() : null,
         at: new Date().toISOString(),
-        path: typeof window.location?.pathname === "string" ? window.location.pathname : null,
+        path: pathname,
+        roomId,
+        meta: {
+          appVersion: APP_VERSION,
+          nodeEnv: typeof process !== "undefined" ? process.env.NODE_ENV ?? null : null,
+          flags: {
+            perfWarmup: process.env.NEXT_PUBLIC_PERF_WARMUP ?? null,
+            perfInteractionTags: process.env.NEXT_PUBLIC_PERF_INTERACTION_TAGS ?? null,
+            perfRoomSnapshotDefer: process.env.NEXT_PUBLIC_PERF_ROOM_SNAPSHOT_DEFER ?? null,
+            perfFpsWindowMs: process.env.NEXT_PUBLIC_PERF_FPS_WINDOW_MS ?? null,
+            perfInpWindowMs: process.env.NEXT_PUBLIC_PERF_INP_WINDOW_MS ?? null,
+            disableClientMetrics: process.env.NEXT_PUBLIC_DISABLE_CLIENT_METRICS ?? null,
+            showPerfOverlay: process.env.NEXT_PUBLIC_SHOW_PERF_OVERLAY ?? null,
+            enableSupportTools: process.env.NEXT_PUBLIC_ENABLE_SUPPORT_TOOLS ?? null,
+            uiDropOptimistic: process.env.NEXT_PUBLIC_UI_DROP_OPTIMISTIC ?? null,
+            audioResumeOnPointer: process.env.NEXT_PUBLIC_AUDIO_RESUME_ON_POINTER ?? null,
+          },
+          client: {
+            online: typeof navigator !== "undefined" ? navigator.onLine : undefined,
+            visibility:
+              typeof document !== "undefined" ? (document.visibilityState as string | undefined) : undefined,
+            userAgent:
+              typeof navigator !== "undefined" && typeof navigator.userAgent === "string"
+                ? navigator.userAgent.slice(0, 180)
+                : undefined,
+            hardwareConcurrency:
+              typeof navigator !== "undefined" ? (navigator.hardwareConcurrency as number | undefined) : undefined,
+            deviceMemory:
+              typeof navigator !== "undefined"
+                ? ((navigator as unknown as { deviceMemory?: number }).deviceMemory as number | undefined)
+                : undefined,
+            connection,
+          },
+        },
         perf,
         app,
         hostAction,
