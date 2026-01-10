@@ -16,12 +16,6 @@ import type {
 import { useHostActionsLocalState } from "@/lib/hooks/hostActions/useHostActionsLocalState";
 import { useCallback, useMemo } from "react";
 
-declare global {
-  interface Window {
-    __ITO_LAST_RESET?: number;
-  }
-}
-
 export function useHostActions({
   roomId,
   roomStatus,

@@ -383,7 +383,7 @@ export function createQuickStartWithTopic(deps: QuickStartDeps) {
       if (success) {
         try {
           if (typeof window !== "undefined") {
-            delete (window as { __ITO_LAST_RESET?: number }).__ITO_LAST_RESET;
+            delete window.__ITO_LAST_RESET;
           }
         } catch {}
       }
