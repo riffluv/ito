@@ -12,7 +12,15 @@ import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type SetStateAction,
+} from "react";
 
 declare global {
   interface Window {
@@ -37,6 +45,53 @@ type ResetOptions = {
 type HostActionFeedback =
   | { message: string; tone: "info" | "success" }
   | null;
+
+type HostActionsLocalState = {
+  quickStartPending: boolean;
+  setQuickStartPending: Dispatch<SetStateAction<boolean>>;
+  isResetting: boolean;
+  setIsResetting: Dispatch<SetStateAction<boolean>>;
+  isRestarting: boolean;
+  setIsRestarting: Dispatch<SetStateAction<boolean>>;
+  customOpen: boolean;
+  setCustomOpen: Dispatch<SetStateAction<boolean>>;
+  customStartPending: boolean;
+  setCustomStartPending: Dispatch<SetStateAction<boolean>>;
+  customText: string;
+  setCustomText: Dispatch<SetStateAction<string>>;
+  evalSortedPending: boolean;
+  setEvalSortedPending: Dispatch<SetStateAction<boolean>>;
+  evalSortedPendingRef: MutableRefObject<boolean>;
+};
+
+function useHostActionsLocalState(): HostActionsLocalState {
+  const [quickStartPending, setQuickStartPending] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customStartPending, setCustomStartPending] = useState(false);
+  const [customText, setCustomText] = useState("");
+  const [evalSortedPending, setEvalSortedPending] = useState(false);
+  const evalSortedPendingRef = useRef(false);
+
+  return {
+    quickStartPending,
+    setQuickStartPending,
+    isResetting,
+    setIsResetting,
+    isRestarting,
+    setIsRestarting,
+    customOpen,
+    setCustomOpen,
+    customStartPending,
+    setCustomStartPending,
+    customText,
+    setCustomText,
+    evalSortedPending,
+    setEvalSortedPending,
+    evalSortedPendingRef,
+  };
+}
 
 type UseHostActionsOptions = {
   roomId: string;
@@ -86,14 +141,23 @@ export function useHostActions({
   showtimeIntents,
   onStageEvent,
 }: UseHostActionsOptions) {
-  const [quickStartPending, setQuickStartPending] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customStartPending, setCustomStartPending] = useState(false);
-  const [customText, setCustomText] = useState("");
-  const [evalSortedPending, setEvalSortedPending] = useState(false);
-  const evalSortedPendingRef = useRef(false);
+  const {
+    quickStartPending,
+    setQuickStartPending,
+    isResetting,
+    setIsResetting,
+    isRestarting,
+    setIsRestarting,
+    customOpen,
+    setCustomOpen,
+    customStartPending,
+    setCustomStartPending,
+    customText,
+    setCustomText,
+    evalSortedPending,
+    setEvalSortedPending,
+    evalSortedPendingRef,
+  } = useHostActionsLocalState();
   const runtime = useHostActionsRuntime({
     roomId,
     roomStatus,
@@ -219,6 +283,10 @@ export function useHostActions({
       clearResetUiHold,
       resetUiPending,
       roundIds,
+      setQuickStartPending,
+      setCustomOpen,
+      setCustomStartPending,
+      setCustomText,
       onStageEvent,
       canProceed,
     ]
@@ -276,6 +344,7 @@ export function useHostActions({
       onStageEvent,
       beginResetUiHold,
       clearResetUiHold,
+      setIsResetting,
       canProceed,
     ]
   );
@@ -357,6 +426,7 @@ export function useHostActions({
     playOrderConfirm,
     markActionStart,
     finalizeAction,
+    setIsRestarting,
   ]);
 
   const evalSorted = useCallback(async (): Promise<boolean> => {
@@ -370,7 +440,16 @@ export function useHostActions({
       mountedRef,
       setEvalSortedPending,
     });
-  }, [proposal, playOrderConfirm, roomId, showtimeIntents, hostActions, mountedRef]);
+  }, [
+    proposal,
+    playOrderConfirm,
+    roomId,
+    showtimeIntents,
+    hostActions,
+    mountedRef,
+    evalSortedPendingRef,
+    setEvalSortedPending,
+  ]);
 
   const handleSubmitCustom = useCallback(
     async (value: string) => {
@@ -405,6 +484,8 @@ export function useHostActions({
       presenceCanStart,
       onlineUids,
       playerCount,
+      setCustomOpen,
+      setCustomStartPending,
     ]
   );
 
@@ -417,7 +498,7 @@ export function useHostActions({
       clearAutoStartLock,
       onFeedback,
     });
-  }, [clearAutoStartLock, isHost, onFeedback, roomId]);
+  }, [clearAutoStartLock, isHost, onFeedback, roomId, setCustomOpen, setCustomStartPending]);
 
   return {
     quickStart,
