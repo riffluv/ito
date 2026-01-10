@@ -14,6 +14,7 @@ import {
   safeTraceAction,
 } from "@/lib/server/roomCommandShared";
 import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
+import { buildWaitingRoomSyncForReset } from "@/lib/server/roomCommandsReset/helpers";
 
 type WithAuth = { token: string };
 
@@ -129,17 +130,9 @@ export async function resetRoomCommand(params: {
       const sync = buildRoomSyncPatch({
         roomId: params.roomId,
         statusVersion: nextStatusVersion,
-        room: {
-          status: "waiting",
-          topic: null,
-          topicBox: null,
-          round: 0,
-          ui: {
-            roundPreparing: false,
-            recallOpen: params.recallSpectators ?? true,
-            revealPending: false,
-          },
-        },
+        room: buildWaitingRoomSyncForReset({
+          recallOpen: params.recallSpectators ?? true,
+        }),
         command: "reset",
         requestId: params.requestId,
         source: "api",
@@ -222,17 +215,9 @@ export async function resetRoomCommand(params: {
     const sync = buildRoomSyncPatch({
       roomId: params.roomId,
       statusVersion: nextStatusVersion,
-      room: {
-        status: "waiting",
-        topic: null,
-        topicBox: null,
-        round: 0,
-        ui: {
-          roundPreparing: false,
-          recallOpen: params.recallSpectators ?? true,
-          revealPending: false,
-        },
-      },
+      room: buildWaitingRoomSyncForReset({
+        recallOpen: params.recallSpectators ?? true,
+      }),
       command: "reset",
       requestId: params.requestId,
       source: "api",
@@ -247,4 +232,3 @@ export async function resetRoomCommand(params: {
     await releaseLockSafely(params.roomId, lockHolder);
   }
 }
-
