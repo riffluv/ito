@@ -5,16 +5,15 @@ import type { RoomDoc } from "@/lib/types";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
 
-type ProposalAction = "add" | "remove" | "move";
-
-const readProposal = (source: unknown): (string | null)[] => {
-  if (!Array.isArray(source)) return [];
-  return (source as (string | null | undefined)[]).map((value) =>
-    typeof value === "string" && value.length > 0 ? value : null
-  );
-};
-
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+import {
+  clamp,
+  deriveRoundPlayers,
+  isActorAllowedToMutateProposal,
+  isResolveModeSortSubmit,
+  normalizeProposalForRound,
+  readProposal,
+  type ProposalAction,
+} from "@/lib/server/roomCommandsProposal/helpers";
 
 export async function mutateProposal(params: {
   token: string;
@@ -36,20 +35,21 @@ export async function mutateProposal(params: {
     if (!roomSnap.exists) throw codedError("room_not_found", "room_not_found");
     const room = roomSnap.data() as RoomDoc;
     if (room.status !== "clue") return "noop" as const;
-    const resolveMode = (room?.options as { resolveMode?: string } | undefined)?.resolveMode;
-    if (resolveMode && resolveMode !== "sort-submit") return "noop" as const;
+    if (!isResolveModeSortSubmit(room)) return "noop" as const;
 
-    const roundPlayers = Array.isArray(room?.deal?.players)
-      ? (room.deal!.players as string[]).filter((value) => typeof value === "string" && value.trim().length > 0)
-      : [];
+    const roundPlayers = deriveRoundPlayers(room);
     if (roundPlayers.length === 0) return "missing-deal" as const;
     if (!roundPlayers.includes(params.playerId)) return "missing-deal" as const;
     const maxCount = roundPlayers.length;
 
     // 誰でも並び替えできる仕様。ただし現在のラウンド参加者 or ホスト/作成者に限定して悪用を防ぐ
-    const actorIsParticipant = roundPlayers.includes(uid);
-    const actorIsHost = !room.hostId || room.hostId === uid || room.creatorId === uid;
-    if (!actorIsParticipant && !actorIsHost) {
+    if (
+      !isActorAllowedToMutateProposal({
+        uid,
+        room,
+        roundPlayers,
+      })
+    ) {
       throw codedError("forbidden", "forbidden", "actor_not_participant");
     }
 
@@ -58,12 +58,12 @@ export async function mutateProposal(params: {
     const roomSeed = typeof room?.deal?.seed === "string" ? room.deal.seed : null;
     const docSeed = typeof proposalData?.seed === "string" ? (proposalData?.seed as string) : null;
 
-    let current = readProposal(proposalData?.proposal ?? room?.order?.proposal);
-    if (docSeed && roomSeed && docSeed !== roomSeed) {
-      current = [];
-    }
-    const roundSet = new Set(roundPlayers);
-    current = current.map((id) => (typeof id === "string" && roundSet.has(id) ? id : null));
+    const current = normalizeProposalForRound({
+      proposal: readProposal(proposalData?.proposal ?? room?.order?.proposal),
+      roundPlayers,
+      roomSeed,
+      docSeed,
+    });
 
     let normalized: (string | null)[] | null = null;
 
@@ -113,4 +113,3 @@ export async function mutateProposal(params: {
 
   return result ?? "noop";
 }
-

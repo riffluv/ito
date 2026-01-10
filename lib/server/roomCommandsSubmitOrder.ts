@@ -9,6 +9,7 @@ import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import { isNonEmptyNumbersObject } from "@/lib/server/roomCommandsSubmitOrder/helpers";
 
 type WithAuth = { token: string };
 
@@ -38,11 +39,10 @@ export async function submitOrder(params: SubmitOrderParams) {
     const normalizedList = normalizeProposalCompact(params.list, validation.expected).filter(
       (value): value is string => typeof value === "string"
     );
-    const numbersSource =
-      room.order && (room.order as { numbers?: Record<string, unknown> | undefined }).numbers &&
-      Object.keys((room.order as { numbers?: Record<string, unknown> }).numbers ?? {}).length > 0
-        ? (room.order as { numbers?: Record<string, number | null | undefined> }).numbers
-        : (room.deal as { numbers?: Record<string, number | null | undefined> } | undefined)?.numbers ?? {};
+    const orderNumbers = room.order && (room.order as { numbers?: unknown }).numbers;
+    const numbersSource = isNonEmptyNumbersObject(orderNumbers)
+      ? (room.order as { numbers?: Record<string, number | null | undefined> }).numbers
+      : (room.deal as { numbers?: Record<string, number | null | undefined> } | undefined)?.numbers ?? {};
 
     const revealOutcome = buildRevealOutcomePayload({
       list: normalizedList,
@@ -73,4 +73,3 @@ export async function submitOrder(params: SubmitOrderParams) {
   });
   traceAction("order.submit.server", { roomId: params.roomId, uid, size: params.list.length });
 }
-

@@ -4,6 +4,7 @@ import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import { buildEligibleIdSet, filterProposalByEligible } from "@/lib/server/roomCommandsPruneProposal/helpers";
 
 export async function pruneProposalCommand(params: { token: string; roomId: string; eligibleIds: string[] }) {
   const uid = await verifyViewerIdentity(params.token);
@@ -19,12 +20,13 @@ export async function pruneProposalCommand(params: { token: string; roomId: stri
     if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
     if (room.status !== "clue") return;
 
-    const eligible = new Set((params.eligibleIds ?? []).filter((id) => typeof id === "string" && id.trim().length > 0));
+    const eligible = buildEligibleIdSet(params.eligibleIds);
     if (eligible.size === 0) return;
 
-    const proposal = Array.isArray(room?.order?.proposal) ? (room.order!.proposal as (string | null)[]) : [];
-    const filtered = proposal.filter((id) => typeof id === "string" && eligible.has(id));
-    if (filtered.length === proposal.length) return;
+    const proposal = room?.order?.proposal;
+    const filtered = filterProposalByEligible(proposal, eligible);
+    const rawLength = Array.isArray(proposal) ? proposal.length : 0;
+    if (filtered.length === rawLength) return;
 
     tx.update(roomRef, {
       "order.proposal": filtered,
@@ -48,4 +50,3 @@ export async function pruneProposalCommand(params: { token: string; roomId: stri
     eligible: params.eligibleIds?.length ?? 0,
   });
 }
-
