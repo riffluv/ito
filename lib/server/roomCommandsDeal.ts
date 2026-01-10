@@ -10,9 +10,8 @@ import { traceAction, traceError } from "@/lib/utils/trace";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   codedError,
-  fetchPresenceUids,
-  releaseLockSafely,
 } from "@/lib/server/roomCommandShared";
+import { fetchPresenceUids, releaseLockSafely } from "@/lib/server/roomCommandAdminOps";
 import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
 import {
   canBypassDealRateLimit,

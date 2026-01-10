@@ -10,9 +10,9 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import {
   codedError,
-  releaseLockSafely,
   safeTraceAction,
 } from "@/lib/server/roomCommandShared";
+import { releaseLockSafely } from "@/lib/server/roomCommandAdminOps";
 import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
 import { buildWaitingRoomSyncForReset } from "@/lib/server/roomCommandsReset/helpers";
 

@@ -3,11 +3,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import type { RoomDoc } from "@/lib/types";
 import { toMillis } from "@/lib/time";
 import { getAdminDb } from "@/lib/server/firebaseAdmin";
-import {
-  clearRoundPreparingWithRetry,
-  codedError,
-  releaseLockSafely,
-} from "@/lib/server/roomCommandShared";
+import { codedError } from "@/lib/server/roomCommandShared";
+import { clearRoundPreparingWithRetry, releaseLockSafely } from "@/lib/server/roomCommandAdminOps";
 import { acquireRoomLock } from "@/lib/server/roomQueue";
 import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
 import { traceAction, traceError } from "@/lib/utils/trace";

@@ -4,11 +4,11 @@ import { pickOne, type TopicType } from "@/lib/topics";
 import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import {
   codedError,
-  fetchPresenceUids,
   isTopicTypeValue,
   loadTopicSectionsFromFs,
   sanitizeTopicText,
 } from "@/lib/server/roomCommandShared";
+import { fetchPresenceUids } from "@/lib/server/roomCommandAdminOps";
 
 export async function prepareStartGameAutoDeal(params: {
   roomId: string;
@@ -98,4 +98,3 @@ export async function prepareStartGameAutoDeal(params: {
     topicBox,
   };
 }
-

@@ -4,11 +4,8 @@ import { acquireRoomLock } from "@/lib/server/roomQueue";
 import { traceAction, traceError } from "@/lib/utils/trace";
 import type { RoomDoc } from "@/lib/types";
 import type { RoomSyncPatch } from "@/lib/sync/roomSyncPatch";
-import {
-  clearRoundPreparingWithRetry,
-  codedError,
-  releaseLockSafely,
-} from "@/lib/server/roomCommandShared";
+import { codedError } from "@/lib/server/roomCommandShared";
+import { clearRoundPreparingWithRetry, releaseLockSafely } from "@/lib/server/roomCommandAdminOps";
 import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
 import { auditStartGame } from "@/lib/server/startGame/auditStartGame";
 import { prepareStartGameAutoDeal } from "@/lib/server/startGame/prepareStartGameAutoDeal";
