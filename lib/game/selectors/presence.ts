@@ -10,28 +10,29 @@ type PresenceArgs = {
   blockWhenNotReadyEmpty?: boolean;
 };
 
+function readOnlineUids(onlineUids: readonly string[] | null | undefined): readonly string[] {
+  return Array.isArray(onlineUids) ? onlineUids : [];
+}
+
 export function getPresenceEligibleIds({
   baseIds,
   onlineUids,
   presenceReady,
   blockWhenNotReadyEmpty = true,
 }: PresenceArgs): string[] {
+  const onlineList = readOnlineUids(onlineUids);
   // presenceReady が立っておらず、オンライン情報も空なら開始をブロック
-  if (
-    blockWhenNotReadyEmpty &&
-    !presenceReady &&
-    (!Array.isArray(onlineUids) || onlineUids.length === 0)
-  ) {
+  if (blockWhenNotReadyEmpty && !presenceReady && onlineList.length === 0) {
     return [];
   }
   if (!presenceReady) {
     return [...baseIds];
   }
-  if (!Array.isArray(onlineUids) || onlineUids.length === 0) {
+  if (onlineList.length === 0) {
     return [...baseIds];
   }
 
-  const onlineSet = new Set(onlineUids);
+  const onlineSet = new Set(onlineList);
   const filtered = baseIds.filter((id) => onlineSet.has(id));
 
   if (filtered.length === 0) {

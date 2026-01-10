@@ -3,6 +3,34 @@ import { normalizeIdArray } from "@/lib/game/selectors/normalizeIds";
 
 type RoomStatus = RoomDoc["status"];
 
+function isHistoryStatus(status: RoomStatus | undefined): boolean {
+  return status === "reveal" || status === "finished";
+}
+
+function filterEligibleIds(
+  values: readonly (string | null)[],
+  eligible: ReadonlySet<string>
+): string[] {
+  return values.filter(
+    (id): id is string => typeof id === "string" && eligible.has(id)
+  );
+}
+
+function countNonEmptyStrings(values: readonly (string | null)[]): number {
+  return values.filter((value): value is string => typeof value === "string").length;
+}
+
+function countOnlinePlayers(opts: {
+  onlineUids: readonly string[];
+  playerIds?: readonly string[] | null;
+}): number {
+  if (Array.isArray(opts.playerIds) && opts.playerIds.length > 0) {
+    const allowed = new Set(opts.playerIds);
+    return opts.onlineUids.filter((uid) => allowed.has(uid)).length;
+  }
+  return opts.onlineUids.length;
+}
+
 /**
  * 進行中は在室メンバーのみを反映し、reveal/finished は履歴をそのまま表示。
  * UIとロジックの一貫性向上のための純粋関数。
@@ -15,18 +43,14 @@ export function computeVisibleProposal(opts: {
 }): (string | null)[] {
   const status = opts.status;
   const normalizedOrder = normalizeIdArray(opts.orderList || []);
-  if (status === "reveal" || status === "finished") {
+  if (isHistoryStatus(status)) {
     return normalizedOrder;
   }
   const eligible = new Set<string>(opts.eligibleIds || []);
   const normalizedProposal = normalizeIdArray(opts.proposal || []);
-  const filteredProposal = normalizedProposal.filter(
-    (id): id is string => typeof id === "string" && eligible.has(id)
-  );
+  const filteredProposal = filterEligibleIds(normalizedProposal, eligible);
   if (filteredProposal.length > 0) return filteredProposal;
-  const filteredOrder = normalizedOrder.filter(
-    (id): id is string => typeof id === "string" && eligible.has(id)
-  );
+  const filteredOrder = filterEligibleIds(normalizedOrder, eligible);
   if (filteredOrder.length > 0) return filteredOrder;
   return [];
 }
@@ -64,7 +88,7 @@ export function computeBoardActiveProposal(opts: {
 
   const normalizedOrder = normalizeIdArray(opts.orderList || []);
 
-  if (status === "reveal" || status === "finished") {
+  if (isHistoryStatus(status)) {
     return normalizedOrder;
   }
 
@@ -81,9 +105,7 @@ export function computeBoardActiveProposal(opts: {
   }
 
   if (normalizedOrder.some(Boolean)) {
-    const filteredOrder = normalizedOrder.filter(
-      (id): id is string => typeof id === "string" && eligible.has(id)
-    );
+    const filteredOrder = filterEligibleIds(normalizedOrder, eligible);
     if (filteredOrder.length > 0) {
       return filteredOrder;
     }
@@ -127,24 +149,19 @@ export function computeSlotCount(opts: {
   playerIds?: readonly string[] | null;
 }): number {
   const status = opts.status;
-  if (status === "reveal" || status === "finished") {
+  if (isHistoryStatus(status)) {
     return Array.isArray(opts.orderList) ? opts.orderList.length : 0;
   }
   const propLen = Array.isArray(opts.proposal)
-    ? (opts.proposal as readonly (string | null)[]).filter(
-        (v): v is string => typeof v === "string"
-      ).length
+    ? countNonEmptyStrings(opts.proposal as readonly (string | null)[])
     : 0;
   const dealLen = Array.isArray(opts.dealPlayers) ? opts.dealPlayers.length : 0;
 
   if (opts.presenceReady && Array.isArray(opts.onlineUids)) {
-    const onlineCount = (() => {
-      if (Array.isArray(opts.playerIds) && opts.playerIds.length > 0) {
-        const allowed = new Set(opts.playerIds);
-        return opts.onlineUids.filter((uid) => allowed.has(uid)).length;
-      }
-      return opts.onlineUids.length;
-    })();
+    const onlineCount = countOnlinePlayers({
+      onlineUids: opts.onlineUids,
+      playerIds: opts.playerIds,
+    });
     if (onlineCount > 0) {
       return Math.max(propLen, dealLen, onlineCount, opts.playersCount);
     }
@@ -152,4 +169,3 @@ export function computeSlotCount(opts: {
 
   return Math.max(propLen, dealLen, opts.playersCount);
 }
-

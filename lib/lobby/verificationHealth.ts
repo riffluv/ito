@@ -49,7 +49,7 @@ export function updateHealthOnSuccess(
   entry: VerificationHealth,
   now: number
 ): VerificationHealth {
-  entry.healthScore = Math.min(DEFAULT_HEALTH, entry.healthScore + 0.25);
+  entry.healthScore = Math.min(DEFAULT_HEALTH, entry.healthScore + HEALTH_RECOVERY_STEP);
   entry.failures = 0;
   entry.backoffMs = Math.max(MIN_BACKOFF_MS, entry.backoffMs / 2);
   entry.lastVerifiedAt = now;

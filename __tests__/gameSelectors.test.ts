@@ -192,6 +192,19 @@ describe("lib/game/selectors", () => {
       ).toBe(2);
     });
 
+    test("uses full onlineUids length when playerIds is missing", () => {
+      expect(
+        computeSlotCount({
+          status: "clue",
+          proposal: ["a"],
+          dealPlayers: [],
+          presenceReady: true,
+          onlineUids: ["a", "b", "c"],
+          playersCount: 1,
+        })
+      ).toBe(3);
+    });
+
     test("falls back to max(propLen, dealLen, playersCount) when presence is not ready or online is empty", () => {
       expect(
         computeSlotCount({
