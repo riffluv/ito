@@ -14,6 +14,13 @@ import { auditStartGame } from "@/lib/server/startGame/auditStartGame";
 import { prepareStartGameAutoDeal } from "@/lib/server/startGame/prepareStartGameAutoDeal";
 import { publishStartGameSync } from "@/lib/server/startGame/publishStartGameSync";
 import { runStartGameTransaction } from "@/lib/server/startGame/runStartGameTransaction";
+import {
+  buildStartFailureTrace,
+  buildStartLockHolder,
+  buildStartLockedTrace,
+  buildStartRoundPreparingUpdate,
+  normalizeStartGameFlags,
+} from "@/lib/server/roomCommandsStartGame/helpers";
 
 type WithAuth = { token: string };
 
@@ -33,21 +40,15 @@ export async function startGameCommand(params: {
   const roomSnapForAuth = await roomRef.get();
   const roomForAuth = roomSnapForAuth.exists ? (roomSnapForAuth.data() as RoomDoc) : undefined;
   const uid = await verifyHostIdentity(roomForAuth, params.token, params.roomId, params.sessionId);
-  const allowFromFinished = params.allowFromFinished ?? false;
-  const allowFromClue = params.allowFromClue ?? false;
+  const { allowFromFinished, allowFromClue, doAutoDeal } = normalizeStartGameFlags(params);
   const requestId = params.requestId;
-  const doAutoDeal = params.autoDeal === true;
   const syncTs = Date.now();
   let prevStatus: RoomDoc["status"] | null = null;
 
-  const lockHolder = `start:${requestId}`;
+  const lockHolder = buildStartLockHolder(requestId);
   const locked = await acquireRoomLock(params.roomId, lockHolder);
   if (!locked) {
-    traceAction("room.start.locked", {
-      roomId: params.roomId,
-      requestId,
-      holder: lockHolder,
-    });
+    traceAction("room.start.locked", buildStartLockedTrace({ roomId: params.roomId, requestId, holder: lockHolder }));
     throw codedError("rate_limited", "rate_limited");
   }
 
@@ -56,10 +57,11 @@ export async function startGameCommand(params: {
     // Start/NextGame 時の体感遅延（複数API呼び出し＋ガード）を避けるため、
     // server-authoritative な start command 内で roundPreparing を制御する。
     try {
-      await roomRef.update({
-        "ui.roundPreparing": true,
-        lastActiveAt: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
-      });
+      await roomRef.update(
+        buildStartRoundPreparingUpdate({
+          fieldServerTimestamp: FieldValue.serverTimestamp() as unknown as RoomDoc["lastActiveAt"],
+        })
+      );
       roundPreparingActivated = true;
     } catch (error) {
       traceError("ui.roundPreparing.start.begin", error, { roomId: params.roomId });
@@ -114,15 +116,17 @@ export async function startGameCommand(params: {
     try {
       const failureSnap = await roomRef.get();
       const failureRoom = failureSnap.exists ? (failureSnap.data() as RoomDoc) : undefined;
-      traceError("room.start.server.failure", error, {
-        roomId: params.roomId,
-        requestId,
-        prevStatus,
-        status: failureRoom?.status ?? null,
-        roundPreparing: failureRoom?.ui?.roundPreparing ?? null,
-        startRequestId: failureRoom?.startRequestId ?? null,
-        locked: locked ? "1" : "0",
-      });
+      traceError(
+        "room.start.server.failure",
+        error,
+        buildStartFailureTrace({
+          roomId: params.roomId,
+          requestId,
+          prevStatus,
+          failureRoom,
+          locked,
+        })
+      );
     } catch (detailError) {
       traceError("room.start.server.failure.detail", detailError, { roomId: params.roomId, requestId });
     }
