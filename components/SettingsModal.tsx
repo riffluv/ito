@@ -144,7 +144,9 @@ export function SettingsModal({
         notify({ title: "診断ログを取得できませんでした", type: "error" });
         return;
       }
-      const label = roomId ? `support:${roomId}` : "support";
+      const role = isHost ? "host" : "guest";
+      const status = typeof roomStatus === "string" && roomStatus.length > 0 ? roomStatus : "unknown";
+      const label = roomId ? `support:${roomId}:${role}:${status}` : `support:${role}:${status}`;
       const payload = dump(label);
       if (!payload) {
         notify({ title: "診断ログが空でした", type: "warning" });
@@ -162,7 +164,7 @@ export function SettingsModal({
     } finally {
       setSupportCopying(false);
     }
-  }, [roomId, supportCopying]);
+  }, [isHost, roomId, roomStatus, supportCopying]);
 
   // OSのreduce-motion変化を監視
   useEffect(() => {

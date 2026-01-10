@@ -1,6 +1,6 @@
 # パフォーマンス計測ダッシュボード設定ガイド
 
-今回実装したクライアント計測 (`client.fps.sample` / `client.inp.rolling`) を活用するための Sentry メトリクス可視化手順です。
+今回実装したクライアント計測 (`client.fps.sample` / `client.inp.rolling` / `client.api.latencyMs`) を活用するための Sentry メトリクス可視化手順です。
 
 「次に何を計測し、どの差分をもって改善とみなすか」は `docs/PERF_MEASUREMENT_PLAN.md` を参照。
 
@@ -15,6 +15,7 @@
 3. Query に `client.fps.sample` を入力し、Aggregation を `p50`（中央値）もしくは `p95` に設定
 4. Filters に `release` や `environment` を指定して、対象デプロイに絞り込む
 5. 同様に `client.inp.rolling` についても確認
+6. 同様に `client.api.latencyMs`（API 往復）についても確認（`tags.route` / `tags.trace` で絞り込み可能）
 
 ## 2. チャート（Dashboard）の作成
 1. Dashboards → Create Dashboard
@@ -34,6 +35,11 @@
    - **Widget 3 (Web Vitals)**
      - Metric: `web-vitals.fid`, `web-vitals.cls`, etc.
      - Aggregation: p95
+   - **Widget 4 (API latency)**
+     - Metric: `client.api.latencyMs`
+     - Aggregation: p95
+     - Display: Line Chart
+     - Additional Filters: `tags.result:ok`（必要に応じて `tags.route:/api/rooms/:roomId/start` など）
 3. 保存してダッシュボードを共有
 
 ## 3. アラート設定
@@ -42,10 +48,12 @@
 3. Condition: `p95 > 180` ms を 5 分間継続
 4. Actions: 通知チャネル（Slack / Email）を設定
 5. 必要に応じて `client.fps.sample` も同様に設定（例: `p50 < 45` を 3 分継続）
+6. API 側の劣化検知が必要なら `client.api.latencyMs` も追加（例: `p95 > 900`ms を 5 分継続）
 
 ## 4. デバイス別の詳細分析
 - `PerformanceMetricsInitializer` は自動的に `window` タグを付与
 - 追加で `recordMetricDistribution` 呼び出し時に `tags: { device: navigator.userAgent }` などを付けたい場合は、`PerformanceMetricsInitializer` を拡張すればデバイス別比較も可能
+- `NEXT_PUBLIC_PERF_INTERACTION_TAGS=1` の場合、`client.api.latencyMs` には `tags.trace` が付くため「どの操作由来か」も絞り込みできます
 
 ## 5. トラブルシューティング
 - メトリクスが表示されない場合
