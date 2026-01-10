@@ -6,8 +6,17 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { logDebug } from "@/lib/utils/log";
 
 import { fetchPresenceUids } from "./presence";
-
-type RoomUpdateMap = Record<string, unknown>;
+import {
+  computeDedupeDeletes,
+  deriveCreatorUpdates,
+  filterCanonicalPlayers,
+  findPlayerDocByUid,
+  isPlayerRegistered,
+  resolveEffectiveHostId,
+  shouldKeepExistingHost,
+  trimOrNull,
+  type RoomUpdateMap,
+} from "./ensureHostAssignedServer/helpers";
 
 export async function ensureHostAssignedServer(roomId: string, uid: string) {
   const db = getAdminDb();
@@ -17,25 +26,15 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     if (!roomSnap.exists) return;
 
     const room = roomSnap.data() as RoomDoc | undefined;
-    const currentHost =
-      typeof room?.hostId === "string" && room.hostId.trim() ? room.hostId.trim() : null;
+    const currentHost = trimOrNull(room?.hostId);
 
-    const existingCreatorId =
-      typeof room?.creatorId === "string" && room.creatorId.trim() ? room.creatorId.trim() : null;
-    const existingCreatorName =
-      typeof room?.creatorName === "string" && room.creatorName.trim()
-        ? room.creatorName.trim()
-        : null;
-
-    const baseUpdates: RoomUpdateMap = {};
-    if (!existingCreatorId && currentHost) {
-      baseUpdates.creatorId = currentHost;
-      if (typeof room?.hostName === "string" && room.hostName.trim()) {
-        baseUpdates.creatorName = room.hostName.trim();
-      } else if (existingCreatorName === null) {
-        baseUpdates.creatorName = FieldValue.delete();
-      }
-    }
+    const baseUpdates = deriveCreatorUpdates({
+      existingCreatorId: trimOrNull(room?.creatorId),
+      existingCreatorName: trimOrNull(room?.creatorName),
+      currentHostId: currentHost,
+      roomHostName: trimOrNull(room?.hostName),
+      fieldDelete: FieldValue.delete(),
+    });
 
     const playersRef = roomRef.collection("players");
     const playersSnap = await tx.get(playersRef);
@@ -44,31 +43,23 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     const playerDocs = playersSnap.docs as QueryDocumentSnapshot<PlayerDoc>[];
 
     const normalizedHostId = currentHost ? currentHost : null;
-    const hostStillRegistered = normalizedHostId
-      ? playerDocs.some((doc) => {
-          if (doc.id === normalizedHostId) return true;
-          const data = doc.data() as PlayerDoc;
-          return typeof data?.uid === "string" && data.uid === normalizedHostId;
-        })
-      : false;
+    const hostStillRegistered = isPlayerRegistered(playerDocs, normalizedHostId);
 
-    const meDoc =
-      playerDocs.find((doc) => doc.id === uid) ||
-      playerDocs.find((doc) => {
-        const data = doc.data() as PlayerDoc;
-        return typeof data?.uid === "string" && data.uid === uid;
-      });
+    const meDoc = findPlayerDocByUid(playerDocs, uid);
     if (!meDoc) return;
 
-    const canonicalDocs = playerDocs.filter((doc) => {
-      if (doc.id === meDoc.id) return true;
-      const data = doc.data() as PlayerDoc;
-      const sameUid = typeof data?.uid === "string" && data.uid === uid;
-      if (sameUid || doc.id === uid) {
-        tx.delete(doc.ref);
-        return false;
-      }
-      return true;
+    const deleteDocIds = computeDedupeDeletes({
+      playerDocs,
+      uid,
+      keepDocId: meDoc.id,
+    });
+    deleteDocIds.forEach((id) => {
+      const doc = playerDocs.find((d) => d.id === id);
+      if (doc) tx.delete(doc.ref);
+    });
+    const canonicalDocs = filterCanonicalPlayers({
+      playerDocs,
+      deleteDocIds: new Set(deleteDocIds),
     });
 
     const rtdb = getAdminRtdb();
@@ -86,7 +77,14 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     }
 
     const hostOnline = normalizedHostId ? onlineSet.has(normalizedHostId) : false;
-    if (normalizedHostId && normalizedHostId !== uid && hostStillRegistered && hostOnline) {
+    if (
+      shouldKeepExistingHost({
+        currentHostId: normalizedHostId,
+        uid,
+        hostStillRegistered,
+        hostOnline,
+      })
+    ) {
       if (Object.keys(baseUpdates).length > 0) {
         tx.update(roomRef, baseUpdates);
       }
@@ -107,7 +105,11 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
       onlineIds: onlineSet,
     });
 
-    const effectiveHostId = normalizedHostId && hostStillRegistered && hostOnline ? currentHost : null;
+    const effectiveHostId = resolveEffectiveHostId({
+      currentHostId: normalizedHostId,
+      hostStillRegistered,
+      hostOnline,
+    });
     const manager = new HostManager({
       roomId,
       currentHostId: effectiveHostId,
@@ -141,4 +143,3 @@ export async function ensureHostAssignedServer(roomId: string, uid: string) {
     });
   });
 }
-
