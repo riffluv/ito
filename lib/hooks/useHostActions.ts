@@ -1,6 +1,5 @@
 import { db } from "@/lib/firebase/client";
 import { useHostActionsRuntime } from "@/lib/hooks/hostActions/useHostActionsRuntime";
-import type { RoundStageEvent } from "@/lib/hooks/useRoundTimeline";
 import { runQuickStartFromWaiting } from "@/lib/hooks/hostActions/runQuickStartFromWaiting";
 import { runNextGameWithNextRoundApi } from "@/lib/hooks/hostActions/runNextGameWithNextRoundApi";
 import { runEvalSortedSubmit } from "@/lib/hooks/hostActions/runEvalSortedSubmit";
@@ -8,119 +7,22 @@ import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSu
 import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
 import { runRestartGame } from "@/lib/hooks/hostActions/runRestartGame";
 import { closeCustomTopic as closeCustomTopicHelper } from "@/lib/hooks/hostActions/closeCustomTopic";
-import { scheduleNextPaintMetric } from "@/lib/perf/nextPaint";
 import type {
-  ShowtimeIntentHandlers,
-  ShowtimeIntentMetadata,
-} from "@/lib/showtime/types";
+  QuickStartOptions,
+  ResetOptions,
+  UseHostActionsOptions,
+} from "@/lib/hooks/hostActions/types";
+import { useHostActionsLocalState } from "@/lib/hooks/hostActions/useHostActionsLocalState";
+import { scheduleNextPaintMetric } from "@/lib/perf/nextPaint";
 import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-  type Dispatch,
-  type MutableRefObject,
-  type SetStateAction,
-} from "react";
+import { useCallback, useMemo } from "react";
 
 declare global {
   interface Window {
     __ITO_LAST_RESET?: number;
   }
 }
-
-type QuickStartOptions = {
-  broadcast?: boolean;
-  playSound?: boolean;
-  markShowtimeStart?: boolean;
-  intentMeta?: ShowtimeIntentMetadata;
-};
-
-type ResetOptions = {
-  showFeedback?: boolean;
-  playSound?: boolean;
-  includeOnline?: boolean;
-  recallSpectators?: boolean;
-};
-
-type HostActionFeedback =
-  | { message: string; tone: "info" | "success" }
-  | null;
-
-type HostActionsLocalState = {
-  quickStartPending: boolean;
-  setQuickStartPending: Dispatch<SetStateAction<boolean>>;
-  isResetting: boolean;
-  setIsResetting: Dispatch<SetStateAction<boolean>>;
-  isRestarting: boolean;
-  setIsRestarting: Dispatch<SetStateAction<boolean>>;
-  customOpen: boolean;
-  setCustomOpen: Dispatch<SetStateAction<boolean>>;
-  customStartPending: boolean;
-  setCustomStartPending: Dispatch<SetStateAction<boolean>>;
-  customText: string;
-  setCustomText: Dispatch<SetStateAction<string>>;
-  evalSortedPending: boolean;
-  setEvalSortedPending: Dispatch<SetStateAction<boolean>>;
-  evalSortedPendingRef: MutableRefObject<boolean>;
-};
-
-function useHostActionsLocalState(): HostActionsLocalState {
-  const [quickStartPending, setQuickStartPending] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [isRestarting, setIsRestarting] = useState(false);
-  const [customOpen, setCustomOpen] = useState(false);
-  const [customStartPending, setCustomStartPending] = useState(false);
-  const [customText, setCustomText] = useState("");
-  const [evalSortedPending, setEvalSortedPending] = useState(false);
-  const evalSortedPendingRef = useRef(false);
-
-  return {
-    quickStartPending,
-    setQuickStartPending,
-    isResetting,
-    setIsResetting,
-    isRestarting,
-    setIsRestarting,
-    customOpen,
-    setCustomOpen,
-    customStartPending,
-    setCustomStartPending,
-    customText,
-    setCustomText,
-    evalSortedPending,
-    setEvalSortedPending,
-    evalSortedPendingRef,
-  };
-}
-
-type UseHostActionsOptions = {
-  roomId: string;
-  roomStatus?: string;
-  statusVersion?: number | null;
-  isHost: boolean;
-  isRevealAnimating: boolean;
-  autoStartLocked: boolean;
-  beginAutoStartLock: (
-    duration: number,
-    options?: { broadcast?: boolean; delayMs?: number }
-  ) => void;
-  clearAutoStartLock: () => void;
-  actualResolveMode: "sort-submit";
-  defaultTopicType?: string | null;
-  roundIds?: string[] | null;
-  onlineUids?: string[] | null | undefined;
-  proposal?: (string | null)[] | null;
-  currentTopic?: string | null;
-  onFeedback?: (payload: HostActionFeedback) => void;
-  presenceReady?: boolean;
-  presenceDegraded?: boolean;
-  playerCount?: number;
-  showtimeIntents?: ShowtimeIntentHandlers;
-  onStageEvent?: (event: RoundStageEvent) => void;
-};
 
 export function useHostActions({
   roomId,
@@ -324,8 +226,7 @@ export function useHostActions({
       const showFeedback = options?.showFeedback ?? true;
       const shouldPlaySound = options?.playSound ?? true;
       const includeOnline = options?.includeOnline ?? true;
-      const recallSpectators =
-        options?.recallSpectators ?? true;
+      const recallSpectators = options?.recallSpectators ?? true;
       await runResetRoomToWaiting({
         roomId,
         roundIds,
