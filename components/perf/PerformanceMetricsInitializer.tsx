@@ -112,6 +112,7 @@ export default function PerformanceMetricsInitializer() {
       const drag = metrics.drag ?? {};
       const clientFps = metrics["client.fps"] ?? {};
       const clientInp = metrics["client.inp"] ?? {};
+      const clientApi = metrics["client.api"] ?? {};
       const dropRecords = Object.fromEntries(
         Object.entries(metrics).filter(([key]) => key.startsWith("client.drop"))
       );
@@ -129,6 +130,7 @@ export default function PerformanceMetricsInitializer() {
         client: {
           fps: clientFps,
           inp: clientInp,
+          api: clientApi,
         },
         audio,
         dropRecords: Object.keys(dropRecords).length > 0 ? dropRecords : null,

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/firebase/client";
-import { setMetric } from "@/lib/utils/metrics";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
 import { traceAction } from "@/lib/utils/trace";
+import { recordMetricDistribution } from "@/lib/perf/metricsClient";
 
 export type ApiError = Error & {
   code?: string;
@@ -18,6 +19,38 @@ const API_TIMEOUT_MS =
   Number.isFinite(parsedApiTimeout) && parsedApiTimeout > 0
     ? parsedApiTimeout
     : DEFAULT_API_TIMEOUT_MS;
+
+function normalizeApiUrlForMetrics(url: string): string {
+  let normalized = url;
+  const queryIndex = normalized.indexOf("?");
+  if (queryIndex >= 0) {
+    normalized = normalized.slice(0, queryIndex);
+  }
+  normalized = normalized.replace(/^https?:\/\/[^/]+/i, "");
+  normalized = normalized.replace(/^\/?/, "/");
+
+  // room-scoped routes
+  normalized = normalized.replace(/^\/api\/rooms\/[^/]+\//, "/api/rooms/:roomId/");
+
+  // spectator routes
+  normalized = normalized.replace(
+    /^\/api\/spectator\/invites\/[^/]+\//,
+    "/api/spectator/invites/:inviteId/"
+  );
+  normalized = normalized.replace(
+    /^\/api\/spectator\/sessions\/[^/]+\//,
+    "/api/spectator/sessions/:sessionId/"
+  );
+
+  return normalized;
+}
+
+function shouldRecordApiTiming(normalizedUrl: string): boolean {
+  // High-frequency endpoints: sample or skip to avoid excessive noise.
+  if (normalizedUrl.includes("/heartbeat")) return false;
+  if (normalizedUrl.includes("/proposal")) return Math.random() < 0.05;
+  return true;
+}
 
 export const toApiError = (
   code: string | undefined,
@@ -110,6 +143,8 @@ export async function postJson<T>(
   url: string,
   body: Record<string, unknown>
 ): Promise<T> {
+  const normalizedUrl = normalizeApiUrlForMetrics(url);
+  const startedAt = typeof performance !== "undefined" ? performance.now() : null;
   const controller =
     typeof AbortController !== "undefined" ? new AbortController() : null;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
@@ -125,6 +160,7 @@ export async function postJson<T>(
 
   let res: Response;
   try {
+    bumpMetric("api", "post.calls", 1);
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -134,8 +170,18 @@ export async function postJson<T>(
     });
   } catch (error) {
     if ((error as { name?: string }).name === "AbortError") {
+      bumpMetric("api", "post.timeouts", 1);
       traceAction("api.timeout", { url, timeoutMs: String(API_TIMEOUT_MS) });
       setMetric("api", "lastTimeout", `${API_TIMEOUT_MS}@${url}`);
+      setMetric("api", "lastTimeoutRoute", normalizedUrl);
+      if (startedAt !== null && typeof performance !== "undefined" && shouldRecordApiTiming(normalizedUrl)) {
+        const elapsedMs = Math.max(0, performance.now() - startedAt);
+        recordMetricDistribution("client.api.latencyMs", elapsedMs, {
+          method: "POST",
+          route: normalizedUrl,
+          result: "timeout",
+        });
+      }
       const err = new Error("network timeout") as ApiError;
       err.code = "timeout";
       err.details = { timeoutMs: API_TIMEOUT_MS };
@@ -161,11 +207,33 @@ export async function postJson<T>(
     json = null;
   }
 
+  if (startedAt !== null && typeof performance !== "undefined") {
+    const elapsedMs = Math.max(0, performance.now() - startedAt);
+    setMetric("api", "lastPostRoute", normalizedUrl);
+    setMetric("api", "lastPostMs", Math.round(elapsedMs));
+    setMetric("api", "lastPostAt", Date.now());
+    if (shouldRecordApiTiming(normalizedUrl)) {
+      recordMetricDistribution("client.api.latencyMs", elapsedMs, {
+        method: "POST",
+        route: normalizedUrl,
+        result: res.ok ? "ok" : "error",
+        status: String(res.status),
+      });
+    }
+  } else {
+    setMetric("api", "lastPostRoute", normalizedUrl);
+    setMetric("api", "lastPostAt", Date.now());
+  }
+
   if (!res.ok) {
+    bumpMetric("api", "post.errors", 1);
     const code =
       typeof (json as { error?: unknown })?.error === "string"
         ? (json as { error: string }).error
         : undefined;
+    setMetric("api", "lastErrorStatus", res.status);
+    setMetric("api", "lastErrorCode", code ?? "unknown");
+    setMetric("api", "lastErrorRoute", normalizedUrl);
     if (res.status === 409) {
       const category = classifyConflict(code);
       traceAction("api.conflict.409", { url, code: code ?? "unknown", category });
@@ -202,4 +270,3 @@ export async function postJsonWithRetry<T>(
   }
   throw lastError;
 }
-
