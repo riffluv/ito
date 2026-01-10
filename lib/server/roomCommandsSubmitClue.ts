@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/server/firebaseAdmin";
 import { traceAction } from "@/lib/utils/trace";
 import { sanitizeClue } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import { buildSubmitClueUpdate } from "@/lib/server/roomCommandsSubmitClue/helpers";
 
 type WithAuth = { token: string };
 
@@ -20,11 +21,6 @@ export async function submitClue(params: SubmitClueParams) {
     .doc(params.roomId)
     .collection("players")
     .doc(uid)
-    .update({
-      clue1: clue,
-      ready: true,
-      lastSeen: FieldValue.serverTimestamp(),
-    });
+    .update(buildSubmitClueUpdate({ clue, lastSeen: FieldValue.serverTimestamp() }));
   traceAction("clue.submit.server", { roomId: params.roomId, uid });
 }
-

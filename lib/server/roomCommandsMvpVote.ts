@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/server/firebaseAdmin";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
 import { traceAction } from "@/lib/utils/trace";
+import { buildMvpVoteUpdates } from "@/lib/server/roomCommandsMvpVote/helpers";
 
 export async function castMvpVoteCommand(params: { token: string; roomId: string; targetId: string | null }) {
   const uid = await verifyViewerIdentity(params.token);
@@ -12,17 +13,13 @@ export async function castMvpVoteCommand(params: { token: string; roomId: string
   const playerSnap = await playerRef.get();
   if (!playerSnap.exists) throw codedError("forbidden", "forbidden", "not_member");
 
-  const fieldPath = `mvpVotes.${uid}`;
-  const updates: Record<string, unknown> = {
-    lastActiveAt: FieldValue.serverTimestamp(),
-  };
-  if (!params.targetId) {
-    updates[fieldPath] = FieldValue.delete();
-  } else {
-    updates[fieldPath] = params.targetId;
-  }
-
-  await roomRef.update(updates);
+  await roomRef.update(
+    buildMvpVoteUpdates({
+      uid,
+      targetId: params.targetId,
+      lastActiveAt: FieldValue.serverTimestamp(),
+      fieldDelete: FieldValue.delete(),
+    })
+  );
   traceAction("mvp.vote.server", { roomId: params.roomId, uid, target: params.targetId ?? "" });
 }
-

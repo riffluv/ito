@@ -4,6 +4,7 @@ import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import { buildRoundPreparingUpdate } from "@/lib/server/roomCommandsRoundPreparing/helpers";
 
 export async function setRoundPreparingCommand(params: { token: string; roomId: string; active: boolean }) {
   const uid = await verifyViewerIdentity(params.token);
@@ -16,12 +17,14 @@ export async function setRoundPreparingCommand(params: { token: string; roomId: 
     const room = snap.data() as RoomDoc;
     const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
     if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
-    tx.update(roomRef, {
-      "ui.roundPreparing": params.active,
-      lastActiveAt: FieldValue.serverTimestamp(),
-    });
+    tx.update(
+      roomRef,
+      buildRoundPreparingUpdate({
+        active: params.active,
+        lastActiveAt: FieldValue.serverTimestamp(),
+      })
+    );
   });
 
   traceAction("ui.roundPreparing.set.server", { roomId: params.roomId, uid, active: params.active });
 }
-
