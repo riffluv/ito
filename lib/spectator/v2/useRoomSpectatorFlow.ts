@@ -9,14 +9,21 @@ import {
 import type { UseSpectatorSessionResult } from "@/lib/spectator/v2/useSpectatorSession";
 import type {
   RoomMachineClientEvent,
-  SpectatorReason,
   SpectatorRequestSource,
-  SpectatorStatus,
 } from "@/lib/state/roomMachine";
 import type { RoomStatus } from "@/lib/state/guards";
 import { logDebug } from "@/lib/utils/log";
 import { bumpMetric } from "@/lib/utils/metrics";
 import { traceAction, traceError } from "@/lib/utils/trace";
+import {
+  AUTO_RECALL_MAX_ATTEMPTS,
+  AUTO_RECALL_RETRY_MS,
+  computeSeatRequestTimeoutRemainingMs,
+  deriveIsSpectatorMode,
+  deriveSpectatorMachineState,
+  shouldNotifySeatRequestReset,
+  type SpectatorFsmInputs,
+} from "@/lib/spectator/v2/useRoomSpectatorFlow/helpers";
 import {
   useCallback,
   useEffect,
@@ -25,17 +32,6 @@ import {
   useState,
   type MutableRefObject,
 } from "react";
-
-type SpectatorFsmInputs = {
-  status: SpectatorStatus;
-  node: SpectatorStatus;
-  reason: SpectatorReason;
-  requestSource: SpectatorRequestSource;
-  requestStatus: SeatRequestViewState["status"];
-  requestCreatedAt: number | null;
-  requestFailure: string | null;
-  error: string | null;
-};
 
 export function useRoomSpectatorFlow({
   roomId,
@@ -77,28 +73,44 @@ export function useRoomSpectatorFlow({
   const reattachScheduledRef = useRef(false);
   const spectatorEnteredRef = useRef(false);
 
-  const isSpectatorMode = !isMember && !isHost && spectatorFsm.node !== "idle";
+  const isSpectatorMode = deriveIsSpectatorMode({
+    isMember,
+    isHost,
+    spectatorNode: spectatorFsm.node,
+  });
+
+  const {
+    status: spectatorStatus,
+    node: spectatorNode,
+    reason: spectatorReason,
+    requestSource: spectatorRequestSource,
+    requestStatus: spectatorRequestStatus,
+    requestCreatedAt: spectatorRequestCreatedAt,
+    requestFailure: spectatorRequestFailure,
+    error: spectatorError,
+  } = spectatorFsm;
 
   const spectatorMachineState = useMemo<SpectatorMachineState>(
-    () => ({
-      status: spectatorFsm.status,
-      node: spectatorFsm.node,
-      reason: spectatorFsm.reason,
-      requestSource: spectatorFsm.requestSource,
-      requestStatus: spectatorFsm.requestStatus,
-      requestCreatedAt: spectatorFsm.requestCreatedAt,
-      requestFailure: spectatorFsm.requestFailure,
-      error: spectatorFsm.error,
-    }),
+    () =>
+      deriveSpectatorMachineState({
+        status: spectatorStatus,
+        node: spectatorNode,
+        reason: spectatorReason,
+        requestSource: spectatorRequestSource,
+        requestStatus: spectatorRequestStatus,
+        requestCreatedAt: spectatorRequestCreatedAt,
+        requestFailure: spectatorRequestFailure,
+        error: spectatorError,
+      }),
     [
-      spectatorFsm.status,
-      spectatorFsm.node,
-      spectatorFsm.reason,
-      spectatorFsm.requestSource,
-      spectatorFsm.requestStatus,
-      spectatorFsm.requestCreatedAt,
-      spectatorFsm.requestFailure,
-      spectatorFsm.error,
+      spectatorStatus,
+      spectatorNode,
+      spectatorReason,
+      spectatorRequestSource,
+      spectatorRequestStatus,
+      spectatorRequestCreatedAt,
+      spectatorRequestFailure,
+      spectatorError,
     ]
   );
 
@@ -260,7 +272,7 @@ export function useRoomSpectatorFlow({
     async (source: Exclude<SpectatorRequestSource, null> = "auto") => {
       if (!spectatorRecallEnabled || !isSpectatorMode) return;
       if (seatRequestPending || seatAcceptanceActive) return;
-      if (autoRecallAttemptsRef.current >= 3) return;
+      if (autoRecallAttemptsRef.current >= AUTO_RECALL_MAX_ATTEMPTS) return;
 
       autoRecallAttemptsRef.current += 1;
       bumpMetric("spectator", "autoRecallAttempt");
@@ -273,10 +285,10 @@ export function useRoomSpectatorFlow({
           attempt: autoRecallAttemptsRef.current,
         });
         bumpMetric("spectator", ok ? "autoRecallSuccess" : "autoRecallFailure");
-        if (!ok && autoRecallAttemptsRef.current < 3) {
+        if (!ok && autoRecallAttemptsRef.current < AUTO_RECALL_MAX_ATTEMPTS) {
           autoRecallTimerRef.current = window.setTimeout(
             () => void attemptAutoRecall(source),
-            3000
+            AUTO_RECALL_RETRY_MS
           );
         }
       } catch (error) {
@@ -286,10 +298,10 @@ export function useRoomSpectatorFlow({
           attempt: autoRecallAttemptsRef.current,
         });
         bumpMetric("spectator", "autoRecallFailure");
-        if (autoRecallAttemptsRef.current < 3) {
+        if (autoRecallAttemptsRef.current < AUTO_RECALL_MAX_ATTEMPTS) {
           autoRecallTimerRef.current = window.setTimeout(
             () => void attemptAutoRecall(source),
-            3000
+            AUTO_RECALL_RETRY_MS
           );
         }
       }
@@ -382,9 +394,11 @@ export function useRoomSpectatorFlow({
       seatRequestTimeoutTriggeredRef.current = false;
       return () => {};
     }
-    const timeoutMs = 15000;
     const now = Date.now();
-    const remaining = Math.max(timeoutMs - (now - seatRequestState.requestedAt), 0);
+    const remaining = computeSeatRequestTimeoutRemainingMs({
+      requestedAt: seatRequestState.requestedAt,
+      now,
+    });
     if (remaining <= 0) {
       if (!seatRequestTimeoutTriggeredRef.current) {
         seatRequestTimeoutTriggeredRef.current = true;
@@ -431,10 +445,12 @@ export function useRoomSpectatorFlow({
           source: seatRequestState.source ?? null,
         });
       } else if (
-        previousStatus === "pending" &&
-        currentStatus === "idle" &&
-        isSpectatorMode &&
-        roomStatus === "waiting"
+        shouldNotifySeatRequestReset({
+          previousStatus,
+          currentStatus,
+          isSpectatorMode,
+          roomStatus,
+        })
       ) {
         try {
           notify({
