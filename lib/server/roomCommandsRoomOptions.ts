@@ -4,6 +4,7 @@ import type { RoomDoc } from "@/lib/types";
 import { traceAction } from "@/lib/utils/trace";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import { buildRoomOptionsUpdates } from "@/lib/server/roomCommandsRoomOptions/helpers";
 
 export async function updateRoomOptionsCommand(params: {
   token: string;
@@ -20,17 +21,13 @@ export async function updateRoomOptionsCommand(params: {
   const isHost = !room?.hostId || room.hostId === uid || room?.creatorId === uid;
   if (!isHost) throw codedError("forbidden", "forbidden", "host_only");
 
-  const updates: Record<string, unknown> = {
-    lastActiveAt: FieldValue.serverTimestamp(),
-  };
-  if (params.resolveMode) {
-    updates["options.resolveMode"] = params.resolveMode;
-  }
-  if (params.defaultTopicType) {
-    updates["options.defaultTopicType"] = params.defaultTopicType;
-  }
-
-  await roomRef.update(updates);
+  await roomRef.update(
+    buildRoomOptionsUpdates({
+      resolveMode: params.resolveMode,
+      defaultTopicType: params.defaultTopicType,
+      serverNow: FieldValue.serverTimestamp(),
+    })
+  );
   traceAction("room.options.update.server", {
     roomId: params.roomId,
     uid,
@@ -38,4 +35,3 @@ export async function updateRoomOptionsCommand(params: {
     defaultTopicType: params.defaultTopicType,
   });
 }
-

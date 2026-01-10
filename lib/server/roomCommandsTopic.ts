@@ -10,12 +10,15 @@ import {
   sanitizeTopicText,
 } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
-
-type TopicAction =
-  | { kind: "select"; type: TopicType }
-  | { kind: "shuffle"; type: TopicType | null }
-  | { kind: "custom"; text: string }
-  | { kind: "reset" };
+import {
+  buildTopicCustomRoomUpdates,
+  buildTopicResetRoomUpdates,
+  buildTopicSelectOrShuffleRoomUpdates,
+  deriveTopicTypeFromAction,
+  selectTopicPool,
+  validateTopicTypeForAction,
+  type TopicAction,
+} from "@/lib/server/roomCommandsTopic/helpers";
 
 export async function topicCommand(params: { token: string; roomId: string; action: TopicAction }) {
   const uid = await verifyViewerIdentity(params.token);
@@ -34,20 +37,7 @@ export async function topicCommand(params: { token: string; roomId: string; acti
     if (room?.status === "clue" || room?.status === "reveal") {
       throw codedError("invalid_status", "invalid_status", "reset_forbidden");
     }
-    const updates: Partial<RoomDoc> & Record<string, unknown> = {
-      status: "waiting",
-      result: null,
-      deal: null,
-      order: null,
-      round: 0,
-      topic: null,
-      topicOptions: null,
-      topicBox: null,
-      closedAt: null,
-      expiresAt: null,
-      lastActiveAt: serverNow,
-    };
-    await roomRef.update(updates);
+    await roomRef.update(buildTopicResetRoomUpdates({ serverNow }));
 
     try {
       const playersSnap = await roomRef.collection("players").get();
@@ -69,41 +59,30 @@ export async function topicCommand(params: { token: string; roomId: string; acti
   if (params.action.kind === "custom") {
     const topic = sanitizeTopicText(params.action.text);
     if (!topic) throw codedError("invalid_payload", "invalid_payload", "empty_topic");
-    await roomRef.update({
-      topic,
-      topicBox: "カスタム",
-      topicOptions: null,
-      lastActiveAt: serverNow,
-    });
+    await roomRef.update(buildTopicCustomRoomUpdates({ topic, serverNow }));
     traceAction("topic.custom.server", { roomId: params.roomId, uid });
     return;
   }
 
-  const type = params.action.kind === "select" ? params.action.type : params.action.type ?? null;
+  const type = deriveTopicTypeFromAction(params.action);
   const topicType = type && isTopicTypeValue(type) ? (type as TopicType) : null;
-  const pool = topicType
-    ? topicType === "通常版"
-      ? sections.normal
-      : topicType === "レインボー版"
-        ? sections.rainbow
-        : sections.classic
-    : [];
-  const picked = pickOne(pool) || null;
-
-  if (params.action.kind === "select" && !topicType) {
+  const validation = validateTopicTypeForAction({ action: params.action, topicType });
+  if (validation === "invalid_topic_type") {
     throw codedError("invalid_payload", "invalid_payload", "invalid_topic_type");
   }
-
-  if (params.action.kind === "shuffle" && !topicType) {
+  if (validation === "missing_topic_type") {
     throw codedError("invalid_payload", "invalid_payload", "missing_topic_type");
   }
 
-  await roomRef.update({
-    topicBox: topicType ?? null,
-    topicOptions: null,
-    topic: picked,
-    lastActiveAt: serverNow,
-  });
+  const pool = selectTopicPool(sections, topicType);
+  const picked = pickOne(pool) || null;
+  await roomRef.update(
+    buildTopicSelectOrShuffleRoomUpdates({
+      topicBox: topicType,
+      topic: picked,
+      serverNow,
+    })
+  );
 
   traceAction(params.action.kind === "select" ? "topic.select.server" : "topic.shuffle.server", {
     roomId: params.roomId,
@@ -112,4 +91,3 @@ export async function topicCommand(params: { token: string; roomId: string; acti
     topic: picked ?? undefined,
   });
 }
-
