@@ -16,6 +16,14 @@ import { auditNextRound } from "@/lib/server/nextRound/auditNextRound";
 import { commitNextRoundBatch } from "@/lib/server/nextRound/commitNextRoundBatch";
 import { prepareNextRoundDeal } from "@/lib/server/nextRound/prepareNextRoundDeal";
 import { publishNextRoundSync } from "@/lib/server/nextRound/publishNextRoundSync";
+import {
+  buildNextFailureTrace,
+  buildNextLockHolder,
+  buildNextLockedTrace,
+  isAllowedNextRoundStatus,
+  isIdempotentNextRound,
+  shouldRateLimit,
+} from "@/lib/server/roomCommandsNextRound/helpers";
 
 type WithAuth = { token: string };
 
@@ -49,14 +57,17 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
   const roomRef = db.collection("rooms").doc(params.roomId);
   const rateLimitMs = 700;
   const syncTs = Date.now();
-  const lockHolder = `next:${params.requestId}`;
+  const lockHolder = buildNextLockHolder(params.requestId);
   const locked = await acquireRoomLock(params.roomId, lockHolder);
   if (!locked) {
-    traceAction("room.next.locked", {
-      roomId: params.roomId,
-      requestId: params.requestId,
-      holder: lockHolder,
-    });
+    traceAction(
+      "room.next.locked",
+      buildNextLockedTrace({
+        roomId: params.roomId,
+        requestId: params.requestId,
+        holder: lockHolder,
+      })
+    );
     throw codedError("rate_limited", "rate_limited");
   }
   let roundPreparingActivated = false;
@@ -86,13 +97,7 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
     //    - 通常: reveal / finished / waiting から実行
     //    - clue は「直前の開始処理中」に限り許容するが、本来は next-round を押せる UI には出ない想定。
     //      （status が想定外でもサーバー側で安全に弾けるよう、allowedStatuses は少し広めに取る）
-    const allowedStatuses: RoomDoc["status"][] = [
-      "reveal",
-      "finished",
-      "waiting",
-      "clue",
-    ];
-    if (room?.status && !allowedStatuses.includes(room.status)) {
+    if (room?.status && !isAllowedNextRoundStatus(room.status)) {
       throw codedError(
         "invalid_status",
         "invalid_status",
@@ -102,9 +107,11 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
 
     // Idempotent: 直前と同じ requestId ですでに遷移済みならそのまま返す
     if (
-      room?.nextRequestId &&
-      room.nextRequestId === params.requestId &&
-      room.status === "clue"
+      isIdempotentNextRound({
+        nextRequestId: room?.nextRequestId ?? null,
+        requestId: params.requestId,
+        status: room?.status ?? null,
+      })
     ) {
       const playerCount = Array.isArray(room?.deal?.players)
         ? room.deal!.players!.length
@@ -130,7 +137,13 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
 
     // レートリミット（ルーム単位）
     const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
-    if (lastMs !== null && Date.now() - lastMs < rateLimitMs) {
+    if (
+      shouldRateLimit({
+        lastCommandMs: lastMs,
+        nowMs: Date.now(),
+        rateLimitMs,
+      })
+    ) {
       throw codedError("rate_limited", "rate_limited");
     }
 
@@ -214,15 +227,17 @@ export async function nextRoundCommand(params: NextRoundParams): Promise<NextRou
       const failureRoom = failureSnap.exists
         ? (failureSnap.data() as RoomDoc)
         : undefined;
-      traceError("room.next.server.failure", error, {
-        roomId: params.roomId,
-        requestId: params.requestId,
-        prevStatus: room?.status ?? null,
-        status: failureRoom?.status ?? null,
-        roundPreparing: failureRoom?.ui?.roundPreparing ?? null,
-        nextRequestId: failureRoom?.nextRequestId ?? null,
-        locked: locked ? "1" : "0",
-      });
+      traceError(
+        "room.next.server.failure",
+        error,
+        buildNextFailureTrace({
+          roomId: params.roomId,
+          requestId: params.requestId,
+          prevStatus: room?.status ?? null,
+          failureRoom,
+          locked,
+        })
+      );
     } catch (detailError) {
       traceError("room.next.server.failure.detail", detailError, {
         roomId: params.roomId,
