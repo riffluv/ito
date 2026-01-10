@@ -28,6 +28,10 @@ import {
 import type { Dispatch, SetStateAction } from "react";
 
 import { applyCountUpdates } from "@/lib/hooks/lobbyCounts/applyCountUpdates";
+import {
+  derivePresenceCount,
+  type PresenceRoomSnapshot,
+} from "@/lib/hooks/lobbyCounts/derivePresenceCount";
 import { createFreezeTracker } from "@/lib/hooks/lobbyCounts/freezeTracker";
 import { recordLobbyMetric } from "@/lib/hooks/lobbyCounts/metrics";
 import { readAggregateCount } from "@/lib/hooks/lobbyCounts/readAggregateCount";
@@ -44,13 +48,6 @@ type VerificationCacheEntry = {
   expiresAt: number;
 };
 const CACHE_TTL_MS = 30_000;
-
-type PresenceConnection = {
-  ts?: number;
-  online?: boolean;
-};
-type PresenceConnections = Record<string, PresenceConnection>;
-type PresenceRoomSnapshot = Record<string, PresenceConnections>;
 
 export function subscribePresenceCounts(params: {
   normalizedRoomIds: readonly string[];
@@ -161,50 +158,23 @@ export function subscribePresenceCounts(params: {
         queuedUpdates[id] = value;
       };
 
-      const users = (snap.val() || {}) as PresenceRoomSnapshot; // uid -> connId -> { ts }
-      let n = 0;
       const now = Date.now();
-      let hasFresh = false; // 直近JOIN（5s以内）の兆候
-      const includedUids: string[] | undefined = DEBUG_UIDS ? [] : undefined;
-      const presentUids: string[] | undefined = DEBUG_UIDS ? Object.keys(users) : undefined;
-
-      for (const uid of Object.keys(users)) {
-        if (excludeUidSet.has(uid)) continue; // 自身など除外対象はスキップ
-        const conns: PresenceConnections = users[uid] || {};
-        // より厳格な判定：最新の有効なタイムスタンプのみ
-        let latestValidTs = 0;
-        for (const conn of Object.values<PresenceConnection>(conns)) {
-          if (conn?.online === false) continue;
-          if (conn?.online === true && typeof conn?.ts !== "number") {
-            latestValidTs = Math.max(latestValidTs, now);
-            hasFresh = true;
-            continue;
-          }
-          const ts = typeof conn?.ts === "number" ? conn.ts : 0;
-          if (ts <= 0) continue; // 無効なタイムスタンプ
-          if (ts - now > MAX_CLOCK_SKEW_MS) continue; // 未来すぎる
-          if (now - ts > LOBBY_STALE_MS) continue; // 古すぎる（ロビーは短め）
-          latestValidTs = Math.max(latestValidTs, ts);
-          if (!hasFresh && now - ts <= ACCEPT_FRESH_MS) hasFresh = true;
-        }
-        // クオランティン対象（ただし新鮮なJOINは即解除）
-        const qUntil = quarantine[id]?.[uid] || 0;
-        if (qUntil && latestValidTs > 0) {
-          const isFresh = now - latestValidTs <= ACCEPT_FRESH_MS;
-          if (isFresh) {
-            // 即解除して通常カウント
-            if (quarantine[id]) delete quarantine[id][uid];
-          } else {
-            // 無視
-            continue;
-          }
-        }
-        const isOnline = latestValidTs > 0;
-        if (isOnline) {
-          n += 1;
-          if (DEBUG_UIDS && includedUids) includedUids.push(uid);
-        }
-      }
+      const users = (snap.val() || {}) as PresenceRoomSnapshot; // uid -> connId -> { ts }
+      const presence = derivePresenceCount({
+        users,
+        excludeUidSet,
+        now,
+        maxClockSkewMs: MAX_CLOCK_SKEW_MS,
+        staleMs: LOBBY_STALE_MS,
+        acceptFreshMs: ACCEPT_FRESH_MS,
+        debugUids: DEBUG_UIDS,
+        roomQuarantine: quarantine[id],
+      });
+      quarantine[id] = presence.roomQuarantine;
+      const n = presence.count;
+      const hasFresh = presence.hasFresh;
+      const includedUids = presence.includedUids;
+      const presentUids = presence.presentUids;
 
       if (DEBUG_UIDS) {
         try {
