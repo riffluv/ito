@@ -18,6 +18,11 @@ import { logDebug, logWarn } from "@/lib/utils/log";
 import { fetchPresenceUids, forceDetachAll } from "./presence";
 import { sendSystemMessage } from "./systemChat";
 import { composeWaitingResetPayload } from "./waitingReset";
+import {
+  collectSnapshotReferenceIds,
+  pruneLeaveDedupeEntries,
+  retainOrderSnapshots,
+} from "./leaveRoomAndTransfer/helpers";
 
 type RoomUpdateMap = Record<string, unknown>;
 
@@ -258,21 +263,10 @@ export async function leaveRoomServer(
           ? { ...(room.order.snapshots as Record<string, PlayerSnapshot>) }
           : null;
 
-      const snapshotReferenceIds = new Set<string>();
-      const registerSnapshotId = (value: unknown) => {
-        if (typeof value === "string") {
-          const trimmed = value.trim();
-          if (trimmed) {
-            snapshotReferenceIds.add(trimmed);
-          }
-        }
-      };
-      if (Array.isArray(room?.order?.list)) {
-        room.order.list.forEach(registerSnapshotId);
-      }
-      if (Array.isArray(room?.order?.proposal)) {
-        room.order.proposal.forEach(registerSnapshotId);
-      }
+      const snapshotReferenceIds = collectSnapshotReferenceIds({
+        list: room?.order?.list,
+        proposal: room?.order?.proposal,
+      });
 
       const shouldCaptureSnapshot =
         (room?.status === "reveal" || room?.status === "finished") &&
@@ -297,22 +291,17 @@ export async function leaveRoomServer(
         };
         snapshotWorkingMap = snapshotWorkingMap ?? {};
         snapshotWorkingMap[userId] = snapshotPayload;
-        registerSnapshotId(userId);
+        snapshotReferenceIds.add(userId);
       }
 
       if (snapshotWorkingMap) {
-        const orderedEntries: [string, PlayerSnapshot][] = [];
-        for (const [id, snapshot] of Object.entries(snapshotWorkingMap)) {
-          if (!snapshotReferenceIds.has(id)) {
-            continue;
-          }
-          orderedEntries.push([id, snapshot]);
-        }
-        if (orderedEntries.length > MAX_RETAINED_ORDER_SNAPSHOTS) {
-          orderedEntries.splice(0, orderedEntries.length - MAX_RETAINED_ORDER_SNAPSHOTS);
-        }
-        if (orderedEntries.length > 0) {
-          updates["order.snapshots"] = Object.fromEntries(orderedEntries);
+        const retained = retainOrderSnapshots({
+          snapshots: snapshotWorkingMap,
+          referenceIds: snapshotReferenceIds,
+          maxRetained: MAX_RETAINED_ORDER_SNAPSHOTS,
+        });
+        if (retained) {
+          updates["order.snapshots"] = retained;
         } else if (room?.order?.snapshots) {
           updates["order.snapshots"] = FieldValue.delete();
         }
@@ -408,22 +397,15 @@ export async function leaveRoomServer(
         data && typeof data.entries === "object" && data.entries
           ? (data.entries as Record<string, number>)
           : {};
-      const entries: Record<string, number> = {};
-
-      for (const key of Object.keys(rawEntries)) {
-        const ts = rawEntries[key];
-        if (typeof ts === "number" && now - ts <= LEAVE_DEDUPE_PRUNE_MS) {
-          entries[key] = ts;
-        }
-      }
-
-      const lastTs = entries?.[userId];
-      if (typeof lastTs === "number" && now - lastTs < LEAVE_DEDUPE_WINDOW_MS) {
-        skipNotification = true;
-      }
-
-      entries[userId] = now;
-      tx.set(dedupeRef, { entries }, { merge: true });
+      const next = pruneLeaveDedupeEntries({
+        rawEntries,
+        now,
+        pruneMs: LEAVE_DEDUPE_PRUNE_MS,
+        windowMs: LEAVE_DEDUPE_WINDOW_MS,
+        userId,
+      });
+      skipNotification = skipNotification || next.skipNotification;
+      tx.set(dedupeRef, { entries: next.entries }, { merge: true });
     });
   } catch (error) {
     logWarn("rooms", "leave-room-dedupe-failed", error);
@@ -513,4 +495,3 @@ export async function transferHostServer(
 
   await sendSystemMessage(roomId, systemMessageHostTransferred(resolveSystemPlayerName(targetName)));
 }
-
