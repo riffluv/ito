@@ -14,6 +14,15 @@ import {
   releaseLockSafely,
 } from "@/lib/server/roomCommandShared";
 import { verifyHostIdentity } from "@/lib/server/roomCommandAuth";
+import {
+  canBypassDealRateLimit,
+  countEligibleUids,
+  deriveIsFirstDeal,
+  getExistingDealCount,
+  maybeFallbackDealTarget,
+  shouldReturnIdempotentDealCount,
+  sortDealCandidates,
+} from "@/lib/server/roomCommandsDeal/helpers";
 
 type WithAuth = { token: string };
 
@@ -49,17 +58,13 @@ export async function dealNumbersCommand(params: {
   const rateLimitMs = 700;
   const lastMs = room?.lastCommandAt ? toMillis(room.lastCommandAt) : null;
   // Idempotent: 同じ requestId で既に配札済みなら成功扱い
-  const existingDealCount =
-    room?.deal?.players && Array.isArray(room.deal.players)
-      ? room.deal.players.length
-      : null;
-  if (
-    room?.dealRequestId &&
-    room.dealRequestId === params.requestId &&
-    existingDealCount !== null
-  ) {
-    return existingDealCount;
-  }
+  const existingDealCount = getExistingDealCount(room);
+  const idempotent = shouldReturnIdempotentDealCount({
+    dealRequestId: typeof room?.dealRequestId === "string" ? room.dealRequestId : null,
+    requestId: params.requestId,
+    existingDealCount,
+  });
+  if (idempotent !== null) return idempotent;
 
   // allow the very first deal right after start without waiting,
   // so quickStart/start -> deal のシーケンスが 700ms 未満でも失敗しない
@@ -67,9 +72,11 @@ export async function dealNumbersCommand(params: {
     room && typeof room.deal === "object" && room.deal
       ? (room.deal as { numbers?: Record<string, unknown> | undefined }).numbers
       : undefined;
-  const isFirstDeal = !existingNumbers || Object.keys(existingNumbers).length === 0;
-  const canBypassRateLimit =
-    isFirstDeal && (room?.status === "clue" || room?.status === "waiting");
+  const isFirstDeal = deriveIsFirstDeal(existingNumbers);
+  const canBypassRateLimit = canBypassDealRateLimit({
+    isFirstDeal,
+    status: room?.status ?? null,
+  });
 
   if (!canBypassRateLimit && lastMs !== null && Date.now() - lastMs < rateLimitMs) {
     throw codedError("rate_limited", "rate_limited");
@@ -106,21 +113,12 @@ export async function dealNumbersCommand(params: {
     });
 
     const target = selectDealTargetPlayers(candidates, presenceUids, now);
-    let ordered = [...target].sort((a, b) =>
-      String(a.uid || a.id).localeCompare(String(b.uid || b.id))
-    );
-    const eligibleCount = candidates.filter(
-      (c) => typeof c.uid === "string" && c.uid.trim().length > 0
-    ).length;
-    const suspectedMismatch = eligibleCount > 1 && ordered.length <= 1;
-    if (suspectedMismatch) {
-      const fallbackOrdered = [...candidates].sort((a, b) =>
-        String(a.uid || a.id).localeCompare(String(b.uid || b.id))
-      );
-      if (fallbackOrdered.length > ordered.length) {
-        ordered = fallbackOrdered;
-      }
-    }
+    const eligibleCount = countEligibleUids(candidates);
+    const ordered = maybeFallbackDealTarget({
+      ordered: sortDealCandidates(target),
+      candidates,
+      eligibleCount,
+    });
 
     const playerIds = ordered.map((p) => p.id);
     const generatedNumbers = generateDeterministicNumbers(
@@ -204,4 +202,3 @@ export async function dealNumbersCommand(params: {
     await releaseLockSafely(params.roomId, lockHolder);
   }
 }
-
