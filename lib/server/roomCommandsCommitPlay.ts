@@ -6,10 +6,17 @@ import type { PlayerDoc, RoomDoc } from "@/lib/types";
 import { getAdminDb } from "@/lib/server/firebaseAdmin";
 import { codedError } from "@/lib/server/roomCommandShared";
 import { verifyViewerIdentity } from "@/lib/server/roomCommandAuth";
+import {
+  buildCurrentOrderState,
+  deriveAllowContinue,
+  deriveRoundPlayers,
+  deriveRoundTotal,
+  isPlayerMismatch,
+} from "@/lib/server/roomCommandsCommitPlay/helpers";
 
 export async function commitPlayFromClueCommand(params: { token: string; roomId: string; playerId: string }) {
   const uid = await verifyViewerIdentity(params.token);
-  if (uid !== params.playerId) {
+  if (isPlayerMismatch({ uid, playerId: params.playerId })) {
     throw codedError("forbidden", "forbidden", "player_mismatch");
   }
   const db = getAdminDb();
@@ -21,7 +28,7 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
     if (!roomSnap.exists) throw codedError("room_not_found", "room_not_found");
     const room = roomSnap.data() as RoomDoc;
     if (room.status !== "clue") return;
-    const allowContinue = !!room?.options?.allowContinueAfterFail;
+    const allowContinue = deriveAllowContinue(room);
 
     const meSnap = await tx.get(meRef);
     if (!meSnap.exists) throw codedError("forbidden", "forbidden", "player_not_found");
@@ -29,25 +36,18 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
     const myNum = typeof me?.number === "number" ? me.number : null;
     if (typeof myNum !== "number") throw codedError("forbidden", "forbidden", "number_not_set");
 
-    const roundPlayers: string[] | null = Array.isArray(room?.deal?.players) ? (room.deal!.players as string[]) : null;
-    const roundTotal: number | null = roundPlayers ? roundPlayers.length : null;
+    const roundPlayers = deriveRoundPlayers(room);
+    const roundTotal = deriveRoundTotal(roundPlayers);
     const decidedAtSource = (room?.order as { decidedAt?: unknown } | undefined)?.decidedAt ?? null;
     const decidedAtMs = toMillis(
       decidedAtSource as unknown as number | FirebaseFirestore.Timestamp | FieldValue | Date | null | undefined
     );
-    const currentOrder: OrderState = {
-      list: Array.isArray(room?.order?.list) ? [...room.order!.list] : [],
-      lastNumber: typeof room?.order?.lastNumber === "number" ? room.order.lastNumber : null,
-      failed: !!room?.order?.failed,
-      failedAt: typeof room?.order?.failedAt === "number" ? room.order.failedAt : null,
-      decidedAt: decidedAtMs > 0 ? decidedAtMs : Date.now(),
-      total:
-        typeof roundTotal === "number"
-          ? roundTotal
-          : typeof room?.order?.total === "number"
-            ? room.order.total
-            : undefined,
-    } as OrderState;
+    const currentOrder: OrderState = buildCurrentOrderState({
+      room,
+      decidedAtMs,
+      nowMs: Date.now(),
+      roundTotal,
+    });
 
     if (currentOrder.list.includes(params.playerId)) return;
     if (roundPlayers && !roundPlayers.includes(params.playerId)) return;
@@ -87,4 +87,3 @@ export async function commitPlayFromClueCommand(params: { token: string; roomId:
     });
   });
 }
-
