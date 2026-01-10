@@ -295,6 +295,8 @@ export async function postJson<T>(
       const category = classifyConflict(code);
       traceAction("api.conflict.409", { url, code: code ?? "unknown", category });
       setMetric("api", "last409", `${category}:${code ?? "unknown"}@${url}`);
+      setMetric("api", "last409Route", normalizedUrl);
+      setMetric("api", "last409Code", code ?? "unknown");
       tryKickRoomSyncOnConflict(url, category, code);
     }
     throw toApiError(code, res.status, json, { url, method: "POST" });
@@ -310,6 +312,7 @@ export async function postJsonWithRetry<T>(
 ): Promise<T> {
   const retries = Math.max(0, options?.retries ?? 0);
   const baseDelayMs = Math.max(0, options?.baseDelayMs ?? 120);
+  const normalizedUrl = normalizeApiUrlForMetrics(url);
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -322,6 +325,11 @@ export async function postJsonWithRetry<T>(
       }
       const delayMs = baseDelayMs * (attempt + 1);
       traceAction("api.retry", { url, attempt: attempt + 1, delayMs });
+      bumpMetric("api", "post.retries", 1);
+      setMetric("api", "lastRetryRoute", normalizedUrl);
+      setMetric("api", "lastRetryAttempt", attempt + 1);
+      setMetric("api", "lastRetryDelayMs", delayMs);
+      setMetric("api", "lastRetryAt", Date.now());
       await sleep(delayMs);
     }
   }
