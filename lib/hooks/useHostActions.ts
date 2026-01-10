@@ -8,10 +8,13 @@ import { runSubmitCustomTopicAndMaybeStart } from "@/lib/hooks/hostActions/runSu
 import { runResetRoomToWaiting } from "@/lib/hooks/hostActions/runResetRoomToWaiting";
 import { runRestartGame } from "@/lib/hooks/hostActions/runRestartGame";
 import { closeCustomTopic as closeCustomTopicHelper } from "@/lib/hooks/hostActions/closeCustomTopic";
+import { scheduleNextPaintMetric } from "@/lib/perf/nextPaint";
 import type {
   ShowtimeIntentHandlers,
   ShowtimeIntentMetadata,
 } from "@/lib/showtime/types";
+import { bumpMetric, setMetric } from "@/lib/utils/metrics";
+import { traceAction } from "@/lib/utils/trace";
 import {
   useCallback,
   useMemo,
@@ -213,6 +216,18 @@ export function useHostActions({
 
   const quickStart = useCallback(
     async (options?: QuickStartOptions) => {
+      if (typeof performance !== "undefined") {
+        const startedAt = performance.now();
+        bumpMetric("hostAction", "ui.quickStart.clicks", 1);
+        setMetric("hostAction", "ui.lastIntent", "quickStart");
+        setMetric("hostAction", "ui.lastIntentAt", Date.now());
+        traceAction("ui.host.quickStart.intent", { roomId });
+        scheduleNextPaintMetric({
+          scope: "hostAction",
+          key: "ui.quickStart.nextPaintMs",
+          startedAt,
+        });
+      }
       return await runQuickStartFromWaiting({
         roomId,
         roomStatus,
@@ -294,6 +309,18 @@ export function useHostActions({
 
   const resetGame = useCallback(
     async (options?: ResetOptions) => {
+      if (typeof performance !== "undefined") {
+        const startedAt = performance.now();
+        bumpMetric("hostAction", "ui.reset.clicks", 1);
+        setMetric("hostAction", "ui.lastIntent", "reset");
+        setMetric("hostAction", "ui.lastIntentAt", Date.now());
+        traceAction("ui.host.reset.intent", { roomId });
+        scheduleNextPaintMetric({
+          scope: "hostAction",
+          key: "ui.reset.nextPaintMs",
+          startedAt,
+        });
+      }
       const showFeedback = options?.showFeedback ?? true;
       const shouldPlaySound = options?.playSound ?? true;
       const includeOnline = options?.includeOnline ?? true;
@@ -369,6 +396,18 @@ export function useHostActions({
   // 単一の API 呼び出しで reset + start + topic選択 + deal をアトミックに実行。
   // ============================================================================
   const handleNextGame = useCallback(async () => {
+    if (typeof performance !== "undefined") {
+      const startedAt = performance.now();
+      bumpMetric("hostAction", "ui.nextGame.clicks", 1);
+      setMetric("hostAction", "ui.lastIntent", "nextGame");
+      setMetric("hostAction", "ui.lastIntentAt", Date.now());
+      traceAction("ui.host.nextGame.intent", { roomId });
+      scheduleNextPaintMetric({
+        scope: "hostAction",
+        key: "ui.nextGame.nextPaintMs",
+        startedAt,
+      });
+    }
     await runNextGameWithNextRoundApi({
       roomId,
       roomStatus,
